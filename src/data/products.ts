@@ -1,0 +1,118 @@
+import productNecklace from '@/assets/product-necklace.jpg';
+import productBangles from '@/assets/product-bangles.jpg';
+import productEarrings from '@/assets/product-earrings.jpg';
+import productRings from '@/assets/product-rings.jpg';
+import productAnklets from '@/assets/product-anklets.jpg';
+import productCoins from '@/assets/product-coins.jpg';
+import productPuja from '@/assets/product-puja.jpg';
+import { Product } from '@/context/CartContext';
+
+export const products: Product[] = [
+  {
+    id: '1',
+    name: 'Traditional Temple Necklace',
+    price: 15999,
+    originalPrice: 18999,
+    image: productNecklace,
+    category: 'Necklaces',
+    weight: '45g',
+    purity: '925 Sterling Silver',
+    description: 'Exquisite temple-style necklace with intricate filigree work. Perfect for traditional occasions and festivals.',
+    inStock: true,
+    isNew: true,
+  },
+  {
+    id: '2',
+    name: 'Designer Silver Bangles Set',
+    price: 8999,
+    image: productBangles,
+    category: 'Bangles',
+    weight: '35g',
+    purity: '925 Sterling Silver',
+    description: 'Set of 4 elegant silver bangles with traditional motifs. Stackable design for versatile styling.',
+    inStock: true,
+    isSale: true,
+  },
+  {
+    id: '3',
+    name: 'Oxidized Jhumka Earrings',
+    price: 3499,
+    image: productEarrings,
+    category: 'Earrings',
+    weight: '15g',
+    purity: '925 Sterling Silver',
+    description: 'Classic jhumka earrings with intricate detailing. Lightweight and comfortable for all-day wear.',
+    inStock: true,
+    isNew: true,
+  },
+  {
+    id: '4',
+    name: 'Silver Ring Collection',
+    price: 2999,
+    originalPrice: 3999,
+    image: productRings,
+    category: 'Rings',
+    weight: '8g',
+    purity: '925 Sterling Silver',
+    description: 'Beautiful statement rings with traditional and contemporary designs. Adjustable sizing available.',
+    inStock: true,
+    isSale: true,
+  },
+  {
+    id: '5',
+    name: 'Traditional Payal Anklets',
+    price: 4999,
+    image: productAnklets,
+    category: 'Anklets',
+    weight: '25g',
+    purity: '925 Sterling Silver',
+    description: 'Melodious silver anklets with ghungroo bells. Traditional design with modern comfort.',
+    inStock: true,
+  },
+  {
+    id: '6',
+    name: 'Silver Investment Coins',
+    price: 6999,
+    image: productCoins,
+    category: 'Coins',
+    weight: '50g',
+    purity: '999 Pure Silver',
+    description: 'Pure silver coins for investment and gifting. Certified purity with elegant packaging.',
+    inStock: true,
+    isNew: true,
+  },
+  {
+    id: '7',
+    name: 'Silver Puja Thali Set',
+    price: 12999,
+    image: productPuja,
+    category: 'Puja Items',
+    weight: '120g',
+    purity: '925 Sterling Silver',
+    description: 'Complete silver puja thali set with diya, bowls, and accessories. Perfect for religious ceremonies.',
+    inStock: true,
+  },
+  {
+    id: '8',
+    name: 'Antique Choker Necklace',
+    price: 11999,
+    originalPrice: 14999,
+    image: productNecklace,
+    category: 'Necklaces',
+    weight: '38g',
+    purity: '925 Sterling Silver',
+    description: 'Vintage-inspired choker necklace with antique finish. A timeless piece for elegant occasions.',
+    inStock: true,
+    isSale: true,
+  },
+];
+
+export const categories = [
+  { name: 'Necklaces', count: products.filter(p => p.category === 'Necklaces').length },
+  { name: 'Bangles', count: products.filter(p => p.category === 'Bangles').length },
+  { name: 'Earrings', count: products.filter(p => p.category === 'Earrings').length },
+  { name: 'Rings', count: products.filter(p => p.category === 'Rings').length },
+  { name: 'Anklets', count: products.filter(p => p.category === 'Anklets').length },
+  { name: 'Coins', count: products.filter(p => p.category === 'Coins').length },
+  { name: 'Puja Items', count: products.filter(p => p.category === 'Puja Items').length },
+];
