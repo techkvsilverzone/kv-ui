@@ -56,10 +56,6 @@ export default {
           light: "hsl(var(--silver-light))",
           dark: "hsl(var(--silver-dark))",
         },
-        navy: {
-          DEFAULT: "hsl(var(--navy))",
-          light: "hsl(var(--navy-light))",
-        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -75,6 +71,17 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      backgroundImage: {
+        'gradient-silver': 'linear-gradient(135deg, hsl(var(--silver-light)), hsl(var(--silver)), hsl(var(--silver-light)))',
+        'gradient-hero': 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.7))',
+        'gradient-card': 'linear-gradient(145deg, hsl(0 0% 100%), hsl(0 0% 98%))',
+        'gradient-shine': 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)',
+      },
+      boxShadow: {
+        'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+        'elegant': '0 10px 30px -10px rgba(0, 0, 0, 0.1)',
+        'hover': '0 20px 40px -20px rgba(0, 0, 0, 0.15)',
       },
       keyframes: {
         "accordion-down": {
@@ -109,6 +116,10 @@ export default {
           "0%, 100%": { boxShadow: "0 0 20px hsl(var(--silver) / 0.3)" },
           "50%": { boxShadow: "0 0 40px hsl(var(--silver) / 0.5)" },
         },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -119,16 +130,7 @@ export default {
         "slide-in-right": "slide-in-right 0.3s ease-out",
         "float": "float 3s ease-in-out infinite",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
-      },
-      backgroundImage: {
-        'gradient-silver': 'linear-gradient(135deg, hsl(var(--silver-light)), hsl(var(--silver)), hsl(var(--silver-light)))',
-        'gradient-hero': 'linear-gradient(180deg, hsl(220 25% 15%), hsl(220 30% 8%))',
-        'gradient-card': 'linear-gradient(145deg, hsl(0 0% 100%), hsl(220 20% 97%))',
-      },
-      boxShadow: {
-        'soft': '0 4px 20px -4px hsl(var(--silver-dark) / 0.1)',
-        'elegant': '0 8px 30px -8px hsl(var(--silver-dark) / 0.15)',
-        'hover': '0 12px 40px -12px hsl(var(--silver-dark) / 0.2)',
+        shimmer: 'shimmer 2s linear infinite',
       },
     },
   },

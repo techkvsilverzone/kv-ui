@@ -4,64 +4,51 @@
 
 /* KV Silver Zone - Elegant Silver Design System */
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
 
 @layer base {
   :root {
-    /* Silver-inspired color palette */
-    --background: 220 20% 98%;
-    --foreground: 220 30% 15%;
+    /* Premium Palette - Light Mode */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 30% 15%;
+    --card-foreground: 0 0% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 30% 15%;
+    --popover-foreground: 0 0% 10%;
 
-    /* Primary: Deep charcoal with silver undertones */
-    --primary: 220 25% 20%;
-    --primary-foreground: 220 20% 98%;
+    /* Primary: Deep Charcoal / Soft Black */
+    --primary: 0 0% 15%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Elegant silver */
-    --secondary: 220 15% 92%;
-    --secondary-foreground: 220 30% 15%;
+    /* Secondary: very soft gray */
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 15%;
 
-    /* Muted: Soft silver gray */
-    --muted: 220 15% 95%;
-    --muted-foreground: 220 15% 45%;
+    /* Muted: Subtle backgrounds */
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    /* Accent: Rich burgundy for warmth */
-    --accent: 350 65% 45%;
+    /* Accent: Refined Gold/Silver Mix for highlights */
+    --accent: 40 20% 50%;
     --accent-foreground: 0 0% 100%;
 
-    /* Silver metallic highlight */
-    --silver: 220 20% 75%;
-    --silver-light: 220 25% 88%;
-    --silver-dark: 220 20% 55%;
-
-    /* Navy accent */
-    --navy: 220 60% 25%;
-    --navy-light: 220 50% 35%;
-
+    /* Destructive */
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 220 20% 88%;
-    --input: 220 20% 88%;
-    --ring: 220 25% 20%;
+    /* Borders */
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 15%;
 
-    --radius: 0.5rem;
+    /* Special Silver Colours */
+    --silver: 0 0% 75%;
+    --silver-light: 0 0% 92%;
+    --silver-dark: 0 0% 45%;
 
-    /* Gradients */
-    --gradient-silver: linear-gradient(135deg, hsl(220 20% 92%), hsl(220 15% 82%), hsl(220 20% 92%));
-    --gradient-hero: linear-gradient(180deg, hsl(220 25% 15%), hsl(220 30% 8%));
-    --gradient-shine: linear-gradient(90deg, transparent, hsl(220 30% 95% / 0.4), transparent);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 20% 97%));
-
-    /* Shadows */
-    --shadow-soft: 0 4px 20px -4px hsl(220 30% 15% / 0.1);
-    --shadow-elegant: 0 8px 30px -8px hsl(220 30% 15% / 0.15);
-    --shadow-hover: 0 12px 40px -12px hsl(220 30% 15% / 0.2);
+    --radius: 0.25rem; /* Sharper corners for elegance */
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -73,50 +60,27 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
+  /* Dark mode - Optional but good to have prepared, kept minimal for now as request implies light/elegant */
   .dark {
-    --background: 220 30% 8%;
-    --foreground: 220 20% 95%;
-
-    --card: 220 25% 12%;
-    --card-foreground: 220 20% 95%;
-
-    --popover: 220 25% 12%;
-    --popover-foreground: 220 20% 95%;
-
-    --primary: 220 20% 85%;
-    --primary-foreground: 220 30% 10%;
-
-    --secondary: 220 20% 18%;
-    --secondary-foreground: 220 20% 90%;
-
-    --muted: 220 20% 15%;
-    --muted-foreground: 220 15% 60%;
-
-    --accent: 350 65% 55%;
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 40 20% 50%;
     --accent-foreground: 0 0% 100%;
-
-    --silver: 220 15% 50%;
-    --silver-light: 220 20% 65%;
-    --silver-dark: 220 15% 35%;
-
-    --navy: 220 50% 45%;
-    --navy-light: 220 45% 55%;
-
-    --destructive: 0 62.8% 50%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 220 20% 20%;
-    --input: 220 20% 20%;
-    --ring: 220 20% 80%;
-
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 80%;
   }
 }
 
@@ -130,126 +94,54 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-serif;
+    @apply font-serif tracking-tight text-primary;
   }
 }
 
 @layer components {
-  .font-serif {
-    font-family: 'Cormorant Garamond', serif;
+  .section-padding {
+    @apply py-16 md:py-24;
   }
-
-  .font-sans {
-    font-family: 'Inter', sans-serif;
-  }
-
-  /* Shimmer animation for silver effect */
-  .shimmer {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--silver-light)) 0%,
-      hsl(var(--silver)) 50%,
-      hsl(var(--silver-light)) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 3s ease-in-out infinite;
-  }
-
-  @keyframes shimmer {
-    0%, 100% { background-position: -200% 0; }
-    50% { background-position: 200% 0; }
-  }
-
-  /* Marquee animation */
-  .marquee {
-    animation: marquee 30s linear infinite;
-  }
-
-  .marquee:hover {
-    animation-play-state: paused;
-  }
-
-  @keyframes marquee {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
-
-  /* Card hover effect */
-  .card-hover {
-    @apply transition-all duration-300 ease-out;
-  }
-
-  .card-hover:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-hover);
-  }
-
-  /* Button shine effect */
-  .btn-shine {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .btn-shine::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: var(--gradient-shine);
-    transition: left 0.5s ease;
-  }
-
-  .btn-shine:hover::after {
-    left: 100%;
-  }
-
-  /* Silver text gradient */
+  
+  /* Utilities for specific silver effects */
   .text-silver-gradient {
-    background: linear-gradient(135deg, hsl(var(--silver-dark)), hsl(var(--silver)), hsl(var(--silver-dark)));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-gray-500 via-gray-300 to-gray-500;
   }
 
-  /* Hero gradient overlay */
-  .hero-overlay {
-    background: linear-gradient(
-      180deg,
-      hsl(220 30% 10% / 0.7) 0%,
-      hsl(220 30% 10% / 0.5) 50%,
-      hsl(220 30% 10% / 0.8) 100%
-    );
-  }
-
-  /* Price tag styling */
-  .price-tag {
-    @apply font-semibold text-accent;
-  }
-
-  /* Navigation link hover */
   .nav-link {
-    @apply relative inline-block;
+    @apply relative text-sm uppercase tracking-widest hover:text-accent transition-colors duration-300;
   }
 
   .nav-link::after {
     content: '';
-    @apply absolute bottom-0 left-0 w-full h-0.5 bg-accent origin-left scale-x-0 transition-transform duration-300;
+    @apply absolute -bottom-1 left-0 w-0 h-px bg-accent transition-all duration-300;
   }
 
   .nav-link:hover::after,
   .nav-link.active::after {
-    @apply scale-x-100;
+    @apply w-full;
   }
 
-  /* Product badge */
+  .btn-shine {
+    @apply relative overflow-hidden;
+  }
+  
+  .btn-shine::after {
+    content: '';
+    @apply absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-all duration-500;
+  }
+  
+  .btn-shine:hover::after {
+    @apply left-[100%];
+  }
+
+  /* Badge styling */
   .badge-new {
-    @apply bg-accent text-accent-foreground text-xs font-semibold px-2 py-0.5 rounded-full;
+    @apply bg-primary text-primary-foreground text-[10px] uppercase tracking-wider font-medium px-2 py-1;
   }
 
   .badge-sale {
-    @apply bg-green-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full;
+    @apply bg-destructive text-destructive-foreground text-[10px] uppercase tracking-wider font-medium px-2 py-1;
   }
 }
 
@@ -257,4 +149,17 @@
   .text-balance {
     text-wrap: balance;
   }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.marquee {
+  animation: marquee 30s linear infinite;
+}
+
+.marquee:hover {
+  animation-play-state: paused;
 }

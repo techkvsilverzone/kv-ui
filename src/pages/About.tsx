@@ -37,67 +37,73 @@ const About = () => {
       {/* Hero */}
       <section className="bg-primary text-primary-foreground py-20">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="font-serif text-4xl md:text-5xl font-bold mb-6">
-            Our Story
+          <h1 className="font-serif text-4xl md:text-5xl font-bold mb-6 text-white">
+            Celebrating the Timeless Elegance of Silver
           </h1>
-          <p className="text-lg opacity-80 max-w-2xl mx-auto">
-            For over two decades, KV Silver Zone has been crafting exquisite silver jewelry 
-            that celebrates tradition while embracing modern elegance.
+          <p className="text-lg opacity-80 max-w-3xl mx-auto font-light leading-relaxed">
+            At KV SILVER ZONE, we celebrate the timeless elegance and beauty of silver.
+            Established with a passion for exquisite craftsmanship and exceptional quality,
+            we are a premier destination for both wholesale and retail silver articles.
           </p>
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="py-16 bg-muted/50">
+      {/* Story Section */}
+      <section className="py-16 md:py-24">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="font-serif text-4xl md:text-5xl font-bold text-accent mb-2">
-                  {stat.value}
-                </div>
-                <div className="text-muted-foreground">{stat.label}</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="order-2 md:order-1">
+              <img
+                src="https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&q=80&w=2070"
+                alt="Silver Craftsmanship"
+                className="rounded-lg shadow-xl w-full h-[400px] object-cover"
+              />
+            </div>
+            <div className="order-1 md:order-2 space-y-6">
+              <h2 className="font-serif text-3xl md:text-4xl text-primary">
+                A Legacy of Quality
+              </h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Our journey began with a vision to offer discerning individuals pieces that not only reflect their unique style but also endure as cherished heirlooms. Each item in our collection is carefully curated to ensure it meets our exacting standards for craftsmanship, design, and durability.
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                Beyond our commitment to exquisite silver pieces, we prioritize customer satisfaction above all else. Our dedicated team is here to assist you every step of the way in finding the perfect piece.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Products & Services */}
+      <section className="bg-secondary/30 py-16 md:py-24">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="font-serif text-3xl md:text-4xl text-primary mb-12">
+            Our Collection & Services
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {[
+              "Traditional Kutthuvilakku (Lamp)", "Kudam & Puja Items", "Plates, Tumblers & Dinner Sets",
+              "Jug Sets & Bowls with Trays", "Silver Gift Articles", "Customized Silver Products",
+              "Intricate Kovil Work", "God Kavasam", "Silver Coins"
+            ].map((item, i) => (
+              <div key={i} className="bg-background p-6 rounded-lg shadow-sm border border-border/50 hover:shadow-md transition-shadow">
+                <p className="text-primary font-medium tracking-wide">{item}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Story */}
-      <section className="py-20">
+      {/* Mission */}
+      <section className="py-20 text-center">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-              <div>
-                <h2 className="font-serif text-3xl font-bold text-foreground mb-6">
-                  A Legacy of Trust
-                </h2>
-                <p className="text-muted-foreground mb-4">
-                  Founded in 1998, KV Silver Zone began as a small family-owned shop with a 
-                  passion for silver craftsmanship. Our founder, Mr. K. Venkatesh, started 
-                  with a vision to make pure silver jewelry accessible to everyone.
-                </p>
-                <p className="text-muted-foreground mb-4">
-                  Today, we have grown into one of the most trusted names in silver jewelry, 
-                  serving customers across India with our extensive collection of traditional 
-                  and contemporary designs.
-                </p>
-                <p className="text-muted-foreground">
-                  Our commitment to quality, authenticity, and customer satisfaction remains 
-                  the cornerstone of our business. Every piece that leaves our store carries 
-                  our guarantee of purity and craftsmanship.
-                </p>
-              </div>
-              <div className="bg-muted rounded-2xl aspect-square flex items-center justify-center">
-                <div className="text-center p-8">
-                  <div className="w-24 h-24 mx-auto rounded-full bg-primary flex items-center justify-center mb-4">
-                    <span className="text-primary-foreground font-serif font-bold text-4xl">KV</span>
-                  </div>
-                  <p className="font-serif text-xl font-semibold text-foreground">Est. 1998</p>
-                  <p className="text-muted-foreground">Chennai, India</p>
-                </div>
-              </div>
-            </div>
+          <div className="max-w-3xl mx-auto space-y-8">
+            <h2 className="font-serif text-3xl font-medium text-primary">
+              Visit Us Today
+            </h2>
+            <p className="text-xl text-muted-foreground font-light italic">
+              "Thank you for visiting KV SILVER ZONE. We invite you to explore our collection and discover the perfect silver piece that speaks to you."
+            </p>
           </div>
         </div>
       </section>
@@ -135,9 +141,9 @@ const About = () => {
               Our Mission
             </h2>
             <p className="text-xl text-muted-foreground">
-              "To bring the timeless beauty of pure silver into every home, 
-              crafted with love, certified for quality, and priced for accessibility. 
-              We believe everyone deserves to own a piece of silver that they can 
+              "To bring the timeless beauty of pure silver into every home,
+              crafted with love, certified for quality, and priced for accessibility.
+              We believe everyone deserves to own a piece of silver that they can
               cherish and pass down through generations."
             </p>
             <p className="mt-6 font-serif text-lg text-foreground">

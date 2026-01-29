@@ -37,22 +37,22 @@ const Contact = () => {
     {
       icon: MapPin,
       title: 'Visit Us',
-      details: ['123 Silver Street, Jewelry Market', 'Chennai, Tamil Nadu 600001'],
+      details: ['14, Rajaram St, Gnanamoorthy Nagar Extension', 'Town Planning Colony, Ambattur', 'Chennai, Tamil Nadu 600053'],
     },
     {
       icon: Phone,
       title: 'Call Us',
-      details: ['+91 98765 43210', '+91 44 2345 6789'],
+      details: ['(+91) 90922 24666', '(+91) 88256 49680'],
     },
     {
       icon: Mail,
       title: 'Email Us',
-      details: ['info@kvsilverzone.com', 'support@kvsilverzone.com'],
+      details: ['kvszchennai@gmail.com'],
     },
     {
       icon: Clock,
       title: 'Working Hours',
-      details: ['Mon - Sat: 10:00 AM - 8:00 PM', 'Sunday: 11:00 AM - 6:00 PM'],
+      details: ['Mon - Sat: 10:00 AM - 8:00 PM', 'Sunday: Closed'],
     },
   ];
 
@@ -61,11 +61,11 @@ const Contact = () => {
       {/* Hero */}
       <section className="bg-primary text-primary-foreground py-20">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="font-serif text-4xl md:text-5xl font-bold mb-6">
+          <h1 className="font-serif text-4xl md:text-5xl font-bold mb-6 text-white">
             Contact Support
           </h1>
           <p className="text-lg opacity-80 max-w-2xl mx-auto">
-            Have questions? We're here to help. Reach out to our friendly support 
+            Have questions? We're here to help. Reach out to our friendly support
             team and we'll get back to you as soon as possible.
           </p>
         </div>
@@ -180,29 +180,46 @@ const Contact = () => {
                 <h2 className="font-serif text-3xl font-bold text-foreground mb-6">
                   Quick Help
                 </h2>
-                <Card className="p-6 bg-muted/50">
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-semibold mb-2">Order Tracking</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Track your order status in real-time through your account dashboard.
-                      </p>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">Returns & Exchange</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Easy 15-day returns and lifetime exchange on all jewelry.
-                      </p>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">Savings Scheme Help</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Questions about your monthly savings? We're here to help!
-                      </p>
+                <div className="space-y-8">
+                  <div>
+                    <h3 className="text-xl font-serif mb-6">Store Information</h3>
+                    <div className="space-y-6">
+                      <div className="flex items-start gap-4">
+                        <MapPin className="h-5 w-5 text-primary mt-1" />
+                        <div>
+                          <h4 className="font-medium mb-1">Visit Us</h4>
+                          <p className="text-muted-foreground text-sm leading-relaxed">
+                            14, Rajaram St,<br />
+                            Gnanamoorthy Nagar Extension,<br />
+                            Town Planning Colony, Ambattur,<br />
+                            Chennai, Tamil Nadu 600053
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-4">
+                        <Phone className="h-5 w-5 text-primary mt-1" />
+                        <div>
+                          <h4 className="font-medium mb-1">Call Us</h4>
+                          <p className="text-muted-foreground text-sm">
+                            (+91) 90922 24666<br />
+                            (+91) 88256 49680
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-4">
+                        <Mail className="h-5 w-5 text-primary mt-1" />
+                        <div>
+                          <h4 className="font-medium mb-1">Email Us</h4>
+                          <p className="text-muted-foreground text-sm">
+                            kvszchennai@gmail.com
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </Card>
-
+                </div>
                 <Card className="p-6 mt-6 bg-accent text-accent-foreground">
                   <div className="flex items-center gap-4">
                     <MessageCircle className="h-10 w-10" />
@@ -214,7 +231,7 @@ const Contact = () => {
                   <Button
                     variant="secondary"
                     className="w-full mt-4"
-                    onClick={() => toast({ title: 'Chat', description: 'Live chat coming soon!' })}
+                    onClick={() => window.open('https://wa.me/919092224666', '_blank')}
                   >
                     Start Chat
                   </Button>
@@ -225,13 +242,18 @@ const Contact = () => {
         </div>
       </section>
 
-      {/* Map Placeholder */}
-      <section className="h-96 bg-muted flex items-center justify-center">
-        <div className="text-center">
-          <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Interactive map will be displayed here</p>
-          <p className="text-sm text-muted-foreground">123 Silver Street, Chennai</p>
-        </div>
+      {/* Map Section */}
+      <section className="h-[450px] w-full bg-muted">
+        <iframe
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3885.7411089888187!2d80.16632827676737!3d13.115580411701902!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a5263001ad09bd1%3A0x3ff0b471fab1e15f!2sKv%20silver%20zone!5e0!3m2!1sen!2sin!4v1769663034613!5m2!1sen!2sin"
+          width="100%"
+          height="100%"
+          style={{ border: 0 }}
+          allowFullScreen={true}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          title="KV Silver Zone Location"
+        />
       </section>
     </div>
   );

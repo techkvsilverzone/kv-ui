@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Truck, Award, Headphones } from 'lucide-react';
+import { ArrowRight, Shield, Truck, Award, Headphones, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import heroImage from '@/assets/hero-silver.jpg';
 import savingsImage from '@/assets/savings-scheme.jpg';
@@ -14,85 +14,80 @@ const Index = () => {
     {
       icon: Shield,
       title: 'Certified Purity',
-      description: '100% BIS Hallmarked silver with certified purity guarantee',
+      description: '100% BIS Hallmarked silver',
     },
     {
       icon: Truck,
-      title: 'Free Shipping',
-      description: 'Free insured delivery on orders above ₹5,000',
-    },
-    {
-      icon: Award,
-      title: 'Lifetime Exchange',
-      description: 'Exchange your silver jewelry at full value anytime',
+      title: 'Insured Shipping',
+      description: 'Safe delivery to your doorstep',
     },
     {
       icon: Headphones,
-      title: '24/7 Support',
-      description: 'Dedicated customer support for all your queries',
+      title: 'Premium Support',
+      description: 'Dedicated relationship managers',
     },
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative h-[90vh] min-h-[600px] flex items-center">
+      <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-black/40 z-10" />
           <img
             src={heroImage}
             alt="KV Silver Zone Collection"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover scale-105 animate-float"
+            style={{ animationDuration: '20s' }}
           />
-          <div className="hero-overlay absolute inset-0" />
         </div>
-        
-        <div className="relative container mx-auto px-4 z-10">
-          <div className="max-w-2xl animate-fade-in-up">
-            <span className="inline-block px-4 py-1.5 rounded-full bg-accent/20 text-accent-foreground text-sm font-medium mb-6 border border-accent/30">
-              ✨ Premium Silver Collection
-            </span>
-            <h1 className="font-serif text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
-              Timeless Silver<br />
-              <span className="text-silver-gradient">Eternal Elegance</span>
+
+        <div className="relative container mx-auto px-4 z-20 text-center text-white">
+          <div className="max-w-4xl mx-auto animate-fade-in-up">
+            <h2 className="text-sm md:text-base tracking-[0.3em] uppercase mb-6 text-white/90 font-light">
+              KV Silver Zone Exclusive
+            </h2>
+            <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl font-medium mb-8 leading-tight tracking-tight text-white">
+              Timeless Silver,<br />
+              <span className="italic font-serif">Eternal Elegance</span>
             </h1>
-            <p className="text-lg text-white/80 mb-8 max-w-lg">
-              Discover our exquisite collection of handcrafted silver jewelry. Each piece tells a story of tradition, craftsmanship, and pure elegance.
+            <p className="text-lg md:text-xl text-white/80 mb-10 max-w-xl mx-auto font-light leading-relaxed">
+              Discover our exquisite collection of handcrafted silver jewelry. Designed to define luxury and celebrate tradition.
             </p>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/shop">
-                <Button size="lg" className="btn-shine bg-accent hover:bg-accent/90 text-accent-foreground">
-                  Shop Now
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                <Button size="lg" className="bg-white text-black hover:bg-white/90 min-w-[200px] h-12 text-sm uppercase tracking-wider">
+                  Explore Collection
                 </Button>
               </Link>
               <Link to="/savings-scheme">
-                <Button size="lg" variant="outline" className="border-white text-black hover:bg-white/10 hover:text-white">
-                  Start Saving
+                <Button size="lg" variant="outline" className="border-white text-black hover:bg-white/90 hover:text-black min-w-[200px] h-12 text-sm uppercase tracking-wider backdrop-blur-sm">
+                  Savings Scheme
                 </Button>
               </Link>
             </div>
           </div>
         </div>
+
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 animate-bounce cursor-pointer opacity-70 hover:opacity-100 transition-opacity">
+          <ChevronDown className="h-8 w-8 text-white" strokeWidth={1} />
+        </div>
       </section>
 
-      {/* Features */}
-      <section className="py-16 bg-muted/50">
+      {/* Features - Minimalist Bar */}
+      <section className="border-b border-border">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="flex items-start gap-4 p-6 bg-card rounded-xl shadow-soft"
+                className="flex flex-col items-center text-center p-8 lg:p-12 hover:bg-secondary/30 transition-colors cursor-default group"
               >
-                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
-                  <feature.icon className="h-6 w-6 text-accent" />
-                </div>
-                <div>
-                  <h3 className="font-serif font-semibold text-foreground mb-1">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
-                </div>
+                <feature.icon className="h-8 w-8 text-muted-foreground mb-4 group-hover:text-primary transition-colors" strokeWidth={1} />
+                <h3 className="font-serif text-lg font-medium text-primary mb-1">
+                  {feature.title}
+                </h3>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider opacity-80">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -100,93 +95,91 @@ const Index = () => {
       </section>
 
       {/* Featured Products */}
-      <section className="py-20">
+      <section className="section-padding">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <span className="text-accent text-sm font-medium uppercase tracking-wider">
-              Handpicked for You
+          <div className="flex flex-col items-center text-center mb-16">
+            <span className="text-muted-foreground text-xs uppercase tracking-[0.2em] mb-4">
+              Curated Excellence
             </span>
-            <h2 className="font-serif text-4xl font-bold text-foreground mt-2">
+            <h2 className="font-serif text-4xl md:text-5xl font-normal text-primary">
               Featured Collection
             </h2>
+            <div className="w-24 h-px bg-primary/20 mt-8"></div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 place-items-center">
             {featuredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
-          <div className="text-center mt-10">
+
+          <div className="text-center mt-16">
             <Link to="/shop">
-              <Button variant="outline" size="lg">
-                View All Products
-                <ArrowRight className="ml-2 h-5 w-5" />
+              <Button variant="outline" size="lg" className="border-primary/20 hover:bg-primary hover:text-white px-8 h-12 text-xs uppercase tracking-widest transition-all duration-500">
+                View All Masterpieces
               </Button>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Savings Scheme CTA */}
-      <section className="py-20 bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <span className="inline-block px-4 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-medium mb-6">
-                💰 Monthly Savings Scheme
+      {/* Savings Scheme - Horizontal Split */}
+      <section className="bg-secondary/30">
+        <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[600px]">
+          <div className="order-2 lg:order-1 flex items-center justify-center p-12 lg:p-24">
+            <div className="max-w-lg">
+              <span className="inline-block px-3 py-1 border border-primary/20 rounded-full text-[10px] uppercase tracking-wider mb-8 text-primary/80">
+                Investment Plan
               </span>
-              <h2 className="font-serif text-4xl md:text-5xl font-bold mb-6">
-                Save Smart,<br />Shine Brighter
+              <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-normal mb-8 leading-tight text-primary">
+                Smart Savings,<br />Golden Future
               </h2>
-              <p className="text-lg opacity-80 mb-6">
-                Join our Monthly Savings Scheme and get a bonus month's silver on completing 11 months! Start with as low as ₹1,000/month.
+              <p className="text-muted-foreground text-lg mb-8 font-light leading-relaxed">
+                Secure your future with our flexible monthly savings scheme. Enjoy bonus months and exclusive benefits on maturity.
               </p>
-              <ul className="space-y-3 mb-8">
+
+              <ul className="space-y-4 mb-10">
                 {[
-                  'Flexible monthly installments from ₹1,000',
-                  '1 month bonus silver on 11-month completion',
-                  'No making charges on scheme redemption',
-                  'Lock in silver price at today\'s rate',
+                  'Bonus installment on completion',
+                  'Zero making charges on redemption',
+                  'Locked-in silver rates',
                 ].map((benefit, index) => (
-                  <li key={index} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center">
-                      <span className="text-accent-foreground text-xs">✓</span>
-                    </div>
-                    <span className="opacity-90">{benefit}</span>
+                  <li key={index} className="flex items-center gap-4 text-primary/80">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/40"></span>
+                    <span className="text-sm uppercase tracking-wide">{benefit}</span>
                   </li>
                 ))}
               </ul>
+
               <Link to="/savings-scheme">
-                <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground btn-shine">
-                  Join Now & Save
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                <Button size="lg" className="bg-primary text-white hover:bg-primary/90 min-w-[180px] h-12 text-xs uppercase tracking-widest">
+                  Start Investing
                 </Button>
               </Link>
             </div>
-            <div className="relative">
-              <div className="aspect-square rounded-2xl overflow-hidden shadow-elegant animate-float">
-                <img
-                  src={savingsImage}
-                  alt="Savings Scheme"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
+          </div>
+          <div className="order-1 lg:order-2 relative h-[400px] lg:h-auto overflow-hidden">
+            <img
+              src={savingsImage}
+              alt="Savings Scheme"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+            />
           </div>
         </div>
       </section>
 
       {/* New Arrivals */}
-      <section className="py-20">
+      <section className="section-padding">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <span className="text-accent text-sm font-medium uppercase tracking-wider">
-              Just Landed
+          <div className="flex flex-col items-center text-center mb-16">
+            <span className="text-muted-foreground text-xs uppercase tracking-[0.2em] mb-4">
+              Fresh from Atelier
             </span>
-            <h2 className="font-serif text-4xl font-bold text-foreground mt-2">
+            <h2 className="font-serif text-4xl md:text-5xl font-normal text-primary">
               New Arrivals
             </h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 place-items-center">
             {newArrivals.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
@@ -194,48 +187,23 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Download App CTA */}
-      <section className="py-20 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto">
-            <h2 className="font-serif text-4xl font-bold text-foreground mb-4">
-              Download Our App
-            </h2>
-            <p className="text-muted-foreground mb-8">
-              Shop on the go with our mobile app. Get exclusive offers, track your orders, and manage your savings scheme - all in one place.
-            </p>
-            <div className="flex justify-center gap-8 flex-wrap">
-              <div className="bg-card p-4 rounded-xl shadow-soft">
-                <div className="w-32 h-32 bg-primary rounded-lg flex items-center justify-center mb-2">
-                  <div className="grid grid-cols-5 gap-1">
-                    {Array.from({ length: 25 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-2 h-2 ${
-                          Math.random() > 0.3 ? 'bg-primary-foreground' : 'bg-transparent'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <p className="text-sm text-center text-muted-foreground">iOS App</p>
-              </div>
-              <div className="bg-card p-4 rounded-xl shadow-soft">
-                <div className="w-32 h-32 bg-primary rounded-lg flex items-center justify-center mb-2">
-                  <div className="grid grid-cols-5 gap-1">
-                    {Array.from({ length: 25 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-2 h-2 ${
-                          Math.random() > 0.3 ? 'bg-primary-foreground' : 'bg-transparent'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <p className="text-sm text-center text-muted-foreground">Android App</p>
-              </div>
-            </div>
+      {/* App Download - Minimalist */}
+      <section className="py-24 bg-[#F5F5F7] text-primary relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
+        <div className="container mx-auto px-4 relative z-10 text-center">
+          <h2 className="font-serif text-3xl md:text-4xl font-normal mb-6 text-primary">
+            Experience Luxury on the Go
+          </h2>
+          <p className="text-muted-foreground mb-10 max-w-lg mx-auto font-light">
+            Download our app to browse exclusive collections, track orders, and manage your investment portfolio.
+          </p>
+          <div className="flex justify-center gap-6">
+            <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white h-14 px-8 gap-3 transition-colors">
+              <span className="text-xs uppercase tracking-wider">App Store</span>
+            </Button>
+            <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-white h-14 px-8 gap-3 transition-colors">
+              <span className="text-xs uppercase tracking-wider">Play Store</span>
+            </Button>
           </div>
         </div>
       </section>

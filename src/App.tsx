@@ -22,6 +22,8 @@ import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
+import ScrollToTop from "@/components/ScrollToTop";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -32,6 +34,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ScrollToTop />
             <div className="flex flex-col min-h-screen">
               <header className="fixed top-0 left-0 right-0 z-50">
                 <Marquee />

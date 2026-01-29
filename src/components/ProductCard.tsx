@@ -12,7 +12,8 @@ const ProductCard = ({ product, onQuickView }: ProductCardProps) => {
   const { addToCart } = useCart();
   const { toast } = useToast();
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation if wrapped in Link
     addToCart(product);
     toast({
       title: 'Added to Cart',
@@ -29,60 +30,76 @@ const ProductCard = ({ product, onQuickView }: ProductCardProps) => {
   };
 
   return (
-    <div className="group bg-card rounded-xl overflow-hidden shadow-soft card-hover border border-border/50">
-      {/* Image */}
-      <div className="relative aspect-square overflow-hidden bg-muted">
+    <div className="group relative bg-background">
+      {/* Image Container */}
+      <div className="relative aspect-[3/4] overflow-hidden bg-secondary/20 mb-4 cursor-pointer">
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
-        
+
+        {/* Overlay on Hover */}
+        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
         {/* Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-2">
-          {product.isNew && <span className="badge-new">New</span>}
-          {product.isSale && <span className="badge-sale">Sale</span>}
+        <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+          {product.isNew && (
+            <span className="bg-white text-black text-[10px] uppercase tracking-widest px-2 py-1 font-medium">
+              New
+            </span>
+          )}
+          {product.isSale && (
+            <span className="bg-destructive text-white text-[10px] uppercase tracking-widest px-2 py-1 font-medium">
+              Sale
+            </span>
+          )}
         </div>
 
-        {/* Quick Actions */}
-        <div className="absolute inset-0 bg-primary/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+        {/* Quick Actions - Appearing on bottom */}
+        <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 flex justify-center gap-2 z-20">
           <Button
             size="icon"
-            variant="secondary"
-            className="rounded-full"
+            className="bg-white text-black hover:bg-primary hover:text-white rounded-none w-10 h-10 transition-colors shadow-sm"
             onClick={handleAddToCart}
           >
-            <ShoppingCart className="h-4 w-4" />
+            <ShoppingCart className="h-4 w-4" strokeWidth={1.5} />
           </Button>
-          <Button size="icon" variant="secondary" className="rounded-full">
-            <Heart className="h-4 w-4" />
+          <Button
+            size="icon"
+            className="bg-white text-black hover:bg-primary hover:text-white rounded-none w-10 h-10 transition-colors shadow-sm"
+          >
+            <Heart className="h-4 w-4" strokeWidth={1.5} />
           </Button>
           {onQuickView && (
             <Button
               size="icon"
-              variant="secondary"
-              className="rounded-full"
-              onClick={() => onQuickView(product)}
+              className="bg-white text-black hover:bg-primary hover:text-white rounded-none w-10 h-10 transition-colors shadow-sm"
+              onClick={(e) => {
+                e.preventDefault();
+                onQuickView(product);
+              }}
             >
-              <Eye className="h-4 w-4" />
+              <Eye className="h-4 w-4" strokeWidth={1.5} />
             </Button>
           )}
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        <p className="text-xs text-muted-foreground mb-1">{product.category}</p>
-        <h3 className="font-serif text-lg font-semibold text-foreground mb-1 line-clamp-1">
+      <div className="text-center space-y-1">
+        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+          {product.category}
+        </p>
+        <h3 className="font-serif text-lg font-normal text-foreground group-hover:text-primary transition-colors cursor-pointer">
           {product.name}
         </h3>
-        <p className="text-xs text-muted-foreground mb-2">
-          {product.weight} • {product.purity}
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="price-tag text-lg">{formatPrice(product.price)}</span>
+        <div className="flex items-center justify-center gap-3 mt-1">
+          <span className="text-sm font-medium tracking-wide">
+            {formatPrice(product.price)}
+          </span>
           {product.originalPrice && (
-            <span className="text-sm text-muted-foreground line-through">
+            <span className="text-xs text-muted-foreground line-through decoration-muted-foreground/50">
               {formatPrice(product.originalPrice)}
             </span>
           )}
