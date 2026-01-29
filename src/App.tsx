@@ -33,9 +33,11 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <div className="flex flex-col min-h-screen">
-              <Marquee />
-              <Navbar />
-              <main className="flex-1">
+              <header className="fixed top-0 left-0 right-0 z-50">
+                <Marquee />
+                <Navbar />
+              </header>
+              <main className="flex-1 pt-[112px]">
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/shop" element={<Shop />} />
