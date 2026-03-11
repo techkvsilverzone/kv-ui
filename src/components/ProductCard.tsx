@@ -95,6 +95,9 @@ const ProductCard = ({ product, onQuickView }: ProductCardProps) => {
           src={product.image}
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).src = '/placeholder.svg';
+          }}
         />
 
         {/* Overlay on Hover */}
