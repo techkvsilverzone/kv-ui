@@ -124,13 +124,7 @@ const Login = () => {
                   Sign up
                 </Link>
               </p>
-            </div>
-
-            <div className="mt-6 p-4 bg-muted rounded-lg text-sm text-muted-foreground">
-              <p className="font-medium text-foreground mb-1">Demo Accounts:</p>
-              <p>User: any email + password</p>
-              <p>Admin: admin@kvsilverzone.com + any password</p>
-            </div>
+            </div>            
           </Card>
         </div>
       </div>
