@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Search, Filter, Grid, List, ChevronDown } from 'lucide-react';
+import { Search, Filter, Grid, List, ChevronDown, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,40 +19,32 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import ProductCard from '@/components/ProductCard';
-import { products, categories } from '@/data/products';
+import { productService } from '@/services/product';
 
 const Shop = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState('featured');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategories.length === 0 || selectedCategories.includes(product.category);
-    return matchesSearch && matchesCategory;
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['products', selectedCategory, searchQuery, sortBy],
+    queryFn: () => productService.getProducts({
+      category: selectedCategory || undefined,
+      search: searchQuery || undefined,
+      sortBy: (sortBy === 'price-low' ? 'price_asc' : sortBy === 'price-high' ? 'price_desc' : 'newest') as any
+    }),
   });
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    switch (sortBy) {
-      case 'price-low':
-        return a.price - b.price;
-      case 'price-high':
-        return b.price - a.price;
-      case 'newest':
-        return a.isNew ? -1 : 1;
-      default:
-        return 0;
-    }
+  const { data: categoriesData = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: productService.getCategories,
   });
+
+  const categories = Array.isArray(categoriesData) ? categoriesData : [];
 
   const toggleCategory = (category: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((c) => c !== category)
-        : [...prev, category]
-    );
+    setSelectedCategory(prev => prev === category ? '' : category);
   };
 
   const FilterSidebar = () => (
@@ -62,19 +55,18 @@ const Shop = () => {
         <div className="space-y-3">
           {categories.map((category) => (
             <label
-              key={category.name}
+              key={category}
               className="flex items-center justify-between cursor-pointer group"
             >
               <div className="flex items-center gap-3">
                 <Checkbox
-                  checked={selectedCategories.includes(category.name)}
-                  onCheckedChange={() => toggleCategory(category.name)}
+                  checked={selectedCategory === category}
+                  onCheckedChange={() => toggleCategory(category)}
                 />
                 <span className="text-sm group-hover:text-accent transition-colors">
-                  {category.name}
+                  {category}
                 </span>
               </div>
-              <span className="text-xs text-muted-foreground">({category.count})</span>
             </label>
           ))}
         </div>
@@ -119,7 +111,10 @@ const Shop = () => {
       <Button
         variant="outline"
         className="w-full"
-        onClick={() => setSelectedCategories([])}
+        onClick={() => {
+          setSelectedCategory('');
+          setSearchQuery('');
+        }}
       >
         Clear All Filters
       </Button>
@@ -218,30 +213,35 @@ const Shop = () => {
 
             {/* Results Count */}
             <p className="text-sm text-muted-foreground mb-6">
-              Showing {sortedProducts.length} of {products.length} products
+              Showing {products.length} products
             </p>
 
             {/* Products Grid */}
-            <div
-              className={`grid gap-6 ${
-                viewMode === 'grid'
-                  ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
-                  : 'grid-cols-1'
-              }`}
-            >
-              {sortedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-
-            {sortedProducts.length === 0 && (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="h-10 w-10 text-accent animate-spin mb-4" />
+                <p className="text-muted-foreground animate-pulse">Loading products...</p>
+              </div>
+            ) : products.length > 0 ? (
+              <div
+                className={`grid gap-6 ${
+                  viewMode === 'grid'
+                    ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
+                    : 'grid-cols-1'
+                }`}
+              >
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
               <div className="text-center py-16">
                 <p className="text-muted-foreground">No products found matching your criteria.</p>
                 <Button
                   variant="link"
                   onClick={() => {
                     setSearchQuery('');
-                    setSelectedCategories([]);
+                    setSelectedCategory('');
                   }}
                 >
                   Clear all filters

@@ -1,5 +1,6 @@
 import { Award, Users, History, Target } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import aboutBanner from '@/assets/about_banner.png';
 
 const About = () => {
   const stats = [
@@ -54,7 +55,7 @@ const About = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="order-2 md:order-1">
               <img
-                src="https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&q=80&w=2070"
+                src={aboutBanner}
                 alt="Silver Craftsmanship"
                 className="rounded-lg shadow-xl w-full h-[400px] object-cover"
               />

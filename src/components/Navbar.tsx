@@ -31,6 +31,7 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Collections', path: '/shop' },
+    { name: 'Silver Rate', path: '/silver-rate' },
     { name: 'Savings Scheme', path: '/savings-scheme' },
     { name: 'About', path: '/about' },
     { name: 'Contact', path: '/contact' },
@@ -97,12 +98,14 @@ const Navbar = () => {
 
           {/* Actions (Right) */}
           <div className="flex-1 flex items-center justify-end gap-1 md:gap-3">
-            <Button variant="ghost" size="icon" className="hidden sm:flex text-muted-foreground hover:text-accent transition-colors">
-              <Heart className="h-5 w-5" strokeWidth={1.5} />
-            </Button>
+            <Link to="/wishlist">
+              <Button variant="ghost" size="icon" className="hidden sm:flex text-muted-foreground hover:text-white transition-colors">
+                <Heart className="h-5 w-5" strokeWidth={1.5} />
+              </Button>
+            </Link>
 
             <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-accent transition-colors">
+              <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-white transition-colors">
                 <ShoppingCart className="h-5 w-5" strokeWidth={1.5} />
                 {totalItems > 0 && (
                   <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
@@ -115,29 +118,32 @@ const Navbar = () => {
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground font-normal">
+                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-white font-normal">
                     <User className="h-4 w-4" strokeWidth={1.5} />
                     <span className="hidden md:inline text-xs uppercase tracking-wider">{user?.name}</span>
                     <ChevronDown className="h-3 w-3 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 bg-card border-border/50">
-                  <DropdownMenuItem asChild className="focus:bg-muted/50 cursor-pointer">
+                  <DropdownMenuItem asChild className="text-foreground focus:bg-muted/50 focus:text-foreground cursor-pointer">
                     <Link to="/profile">My Profile</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="focus:bg-muted/50 cursor-pointer">
+                  <DropdownMenuItem asChild className="text-foreground focus:bg-muted/50 focus:text-foreground cursor-pointer">
                     <Link to="/profile">My Orders</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="text-foreground focus:bg-muted/50 focus:text-foreground cursor-pointer">
+                    <Link to="/wishlist">My Wishlist</Link>
                   </DropdownMenuItem>
                   {user?.isAdmin && (
                     <>
                       <DropdownMenuSeparator className="bg-border/50" />
-                      <DropdownMenuItem asChild className="focus:bg-muted/50 cursor-pointer">
+                      <DropdownMenuItem asChild className="text-foreground focus:bg-muted/50 focus:text-foreground cursor-pointer">
                         <Link to="/admin">Admin Panel</Link>
                       </DropdownMenuItem>
                     </>
                   )}
                   <DropdownMenuSeparator className="bg-border/50" />
-                  <DropdownMenuItem onClick={logout} className="text-destructive focus:bg-destructive/10 cursor-pointer">
+                  <DropdownMenuItem onClick={logout} className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer">
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>

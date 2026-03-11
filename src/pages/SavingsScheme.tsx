@@ -13,11 +13,17 @@ import {
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import savingsImage from '@/assets/savings-scheme.jpg';
+import { savingsService } from '@/services/savings';
+import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const SavingsScheme = () => {
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [monthlyAmount, setMonthlyAmount] = useState('5000');
   const [duration, setDuration] = useState('11');
+  const [isEnrolling, setIsEnrolling] = useState(false);
 
   const calculateTotal = () => {
     const amount = parseInt(monthlyAmount) || 0;
@@ -60,11 +66,41 @@ const SavingsScheme = () => {
     },
   ];
 
-  const handleEnroll = () => {
-    toast({
-      title: 'Enrollment Initiated',
-      description: 'Our team will contact you shortly to complete your enrollment.',
-    });
+  const handleEnroll = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: 'Login required',
+        description: 'Please login to enroll in the savings scheme.',
+        variant: 'destructive',
+      });
+      navigate('/login');
+      return;
+    }
+
+    setIsEnrolling(true);
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      await savingsService.enroll({
+        monthlyAmount: parseInt(monthlyAmount, 10),
+        duration: parseInt(duration, 10),
+        startDate: today.toISOString().split('T')[0],
+      });
+
+      toast({
+        title: 'Enrollment Initiated',
+        description: 'Your savings scheme enrollment is active now.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Enrollment failed',
+        description: error.message || 'Unable to enroll right now.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsEnrolling(false);
+    }
   };
 
   return (
@@ -219,8 +255,9 @@ const SavingsScheme = () => {
                   size="lg"
                   className="bg-accent hover:bg-accent/90 text-accent-foreground btn-shine"
                   onClick={handleEnroll}
+                  disabled={isEnrolling}
                 >
-                  Enroll Now
+                  {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
                 <p className="text-sm text-muted-foreground mt-4">

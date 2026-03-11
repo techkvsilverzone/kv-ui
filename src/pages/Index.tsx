@@ -1,14 +1,17 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Truck, Award, Headphones, ChevronDown } from 'lucide-react';
+import { ArrowRight, Shield, Truck, Award, Headphones, ChevronDown, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import heroImage from '@/assets/hero-silver.jpg';
 import savingsImage from '@/assets/savings-scheme.jpg';
 import ProductCard from '@/components/ProductCard';
-import { products } from '@/data/products';
+import { productService } from '@/services/product';
 
 const Index = () => {
-  const featuredProducts = products.slice(0, 4);
-  const newArrivals = products.filter(p => p.isNew).slice(0, 4);
+  const { data: featuredProducts = [], isLoading } = useQuery({
+    queryKey: ['featured-products'],
+    queryFn: productService.getFeatured,
+  });
 
   const features = [
     {
@@ -107,11 +110,17 @@ const Index = () => {
             <div className="w-24 h-px bg-primary/20 mt-8"></div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 place-items-center">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 text-accent animate-spin" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 place-items-center">
+              {featuredProducts.slice(0, 4).map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
 
           <div className="text-center mt-16">
             <Link to="/shop">
@@ -180,9 +189,15 @@ const Index = () => {
             </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 place-items-center">
-            {newArrivals.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+            {isLoading ? (
+              Array(4).fill(0).map((_, i) => (
+                <div key={i} className="w-full h-80 bg-muted animate-pulse rounded-lg"></div>
+              ))
+            ) : (
+              featuredProducts.slice(0, 4).map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))
+            )}
           </div>
         </div>
       </section>

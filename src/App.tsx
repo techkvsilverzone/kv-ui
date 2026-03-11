@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
@@ -19,12 +19,29 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Cart from "./pages/Cart";
 import Payment from "./pages/Payment";
 import Profile from "./pages/Profile";
+import Wishlist from "./pages/Wishlist";
 import Admin from "./pages/Admin";
+import ProductDetail from "./pages/ProductDetail";
+import OrderTracking from "./pages/OrderTracking";
+import SilverRatePage from "./pages/SilverRate";
 import NotFound from "./pages/NotFound";
 
 import ScrollToTop from "@/components/ScrollToTop";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+    },
+  },
+  queryCache: new QueryCache({
+    onError: (error: unknown, query) => {
+      const message = (query.meta?.errorMessage as string) ?? 'Something went wrong';
+      console.error(`[API Error] ${message}:`, error);
+    },
+  }),
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -53,7 +70,11 @@ const App = () => (
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/payment" element={<Payment />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/admin" element={<Admin />} />
+                  <Route path="/product/:id" element={<ProductDetail />} />
+                  <Route path="/order/:id" element={<OrderTracking />} />
+                  <Route path="/silver-rate" element={<SilverRatePage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

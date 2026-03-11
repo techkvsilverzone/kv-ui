@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { authService } from '@/services/auth';
 
 const ForgotPassword = () => {
   const { toast } = useToast();
@@ -17,15 +18,22 @@ const ForgotPassword = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    toast({
-      title: 'Reset link sent!',
-      description: 'Check your email for password reset instructions.',
-    });
-    setIsSubmitted(true);
-    setIsLoading(false);
+    try {
+      await authService.forgotPassword(email);
+      toast({
+        title: 'Reset link sent!',
+        description: 'Check your email for password reset instructions.',
+      });
+      setIsSubmitted(true);
+    } catch (error: any) {
+      toast({
+        title: 'Request failed',
+        description: error.message || 'Unable to send reset link right now.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useCart } from '@/context/CartContext';
 
 const Cart = () => {
-  const { items, updateQuantity, removeFromCart, totalPrice, clearCart } = useCart();
+  const { items, updateQuantity, removeFromCart, totalPrice, clearCart, isCartSyncing, isItemUpdating } = useCart();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -44,67 +44,100 @@ const Cart = () => {
           Shopping Cart
         </h1>
 
+        {isCartSyncing && (
+          <div className="mb-6 rounded-md border border-border bg-muted/40 p-3">
+            <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+              <span>Syncing your cart...</span>
+              <span>Please wait</span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-full w-1/3 rounded-full bg-accent animate-pulse" />
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
-            {items.map((item) => (
-              <Card key={item.id} className="p-4">
-                <div className="flex gap-4">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-24 h-24 object-cover rounded-lg"
-                  />
-                  <div className="flex-1">
-                    <div className="flex justify-between">
-                      <div>
-                        <h3 className="font-serif font-semibold text-foreground">
-                          {item.name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {item.weight} • {item.purity}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeFromCart(item.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-between mt-4">
-                      <div className="flex items-center gap-2">
+            {items.map((item) => {
+              const isUpdating = isItemUpdating(item.id) || isCartSyncing;
+
+              return (
+                <Card key={item.id} className={`p-4 transition-opacity ${isUpdating ? 'opacity-85' : ''}`}>
+                  <div className="flex gap-4">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-24 h-24 object-cover rounded-lg"
+                    />
+                    <div className="flex-1">
+                      <div className="flex justify-between">
+                        <div>
+                          <h3 className="font-serif font-semibold text-foreground">
+                            {item.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {item.weight} • {item.purity}
+                          </p>
+                        </div>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => removeFromCart(item.id)}
+                          className="text-destructive hover:text-destructive"
+                          disabled={isUpdating}
                         >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="w-8 text-center font-medium">{item.quantity}</span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        >
-                          <Plus className="h-4 w-4" />
+                          {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         </Button>
                       </div>
-                      <span className="font-semibold text-accent">
-                        {formatPrice(item.price * item.quantity)}
-                      </span>
+
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            disabled={isUpdating}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <span className="w-8 text-center font-medium">{item.quantity}</span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            disabled={isUpdating}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                          {isUpdating && (
+                            <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              Updating...
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-semibold text-accent">
+                          {formatPrice(item.price * item.quantity)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
 
-            <Button variant="outline" onClick={clearCart}>
-              Clear Cart
+            <Button variant="outline" onClick={clearCart} disabled={isCartSyncing || items.some((item) => isItemUpdating(item.id))}>
+              {isCartSyncing ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Clearing...
+                </span>
+              ) : (
+                'Clear Cart'
+              )}
             </Button>
           </div>
 
@@ -123,18 +156,18 @@ const Cart = () => {
                   <span className="text-green-600">Free</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax (GST 3%)</span>
-                  <span>{formatPrice(totalPrice * 0.03)}</span>
+                  <span className="text-muted-foreground">Tax (GST 5%)</span>
+                  <span>{formatPrice(totalPrice * 0.05)}</span>
                 </div>
                 <hr />
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total</span>
-                  <span className="text-accent">{formatPrice(totalPrice * 1.03)}</span>
+                  <span className="text-accent">{formatPrice(totalPrice * 1.05)}</span>
                 </div>
               </div>
 
               <Link to="/payment">
-                <Button className="w-full btn-shine" size="lg">
+                <Button className="w-full btn-shine" size="lg" disabled={isCartSyncing || items.some((item) => isItemUpdating(item.id))}>
                   Proceed to Checkout
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>

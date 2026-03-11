@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { contactService } from '@/services/contact';
 
 const Contact = () => {
   const { toast } = useToast();
@@ -23,14 +24,33 @@ const Contact = () => {
     subject: '',
     message: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: 'Message Sent!',
-      description: 'Our team will get back to you within 24 hours.',
-    });
-    setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+
+    setIsSubmitting(true);
+    try {
+      await contactService.sendEnquiry({
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject || 'General Enquiry',
+        message: formData.message,
+      });
+      toast({
+        title: 'Message Sent!',
+        description: 'Our team will get back to you within 24 hours.',
+      });
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+    } catch (error: any) {
+      toast({
+        title: 'Message failed',
+        description: error.message || 'Unable to send message right now.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactInfo = [
@@ -168,8 +188,8 @@ const Contact = () => {
                       className="mt-1"
                     />
                   </div>
-                  <Button type="submit" size="lg" className="btn-shine">
-                    Send Message
+                  <Button type="submit" size="lg" className="btn-shine" disabled={isSubmitting}>
+                    {isSubmitting ? 'Sending...' : 'Send Message'}
                     <Send className="ml-2 h-5 w-5" />
                   </Button>
                 </form>
