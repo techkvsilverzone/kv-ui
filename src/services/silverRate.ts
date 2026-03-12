@@ -7,8 +7,22 @@ export interface SilverRate {
   ratePerKg: number;
   purity: string;
   updatedBy?: string;
-  createdAt: string;
+  createdAt?: string;
 }
+
+interface ApiSilverRate extends Partial<SilverRate> {
+  _id?: string;
+}
+
+const normalizeRate = (r: ApiSilverRate): SilverRate => ({
+  ...r,
+  id: r.id ?? r._id ?? '',
+  // use explicit date field if present, otherwise fall back to createdAt
+  date: r.date ?? r.createdAt ?? '',
+  ratePerGram: r.ratePerGram ?? 0,
+  ratePerKg: r.ratePerKg ?? 0,
+  purity: r.purity ?? '',
+});
 
 export interface UpdateSilverRatePayload {
   ratePerGram: number;
@@ -17,19 +31,23 @@ export interface UpdateSilverRatePayload {
 
 export const silverRateService = {
   getTodayRate: async (): Promise<SilverRate[]> => {
-    return api.get<SilverRate[]>('/silver-rates/today');
+    const data = await api.get<ApiSilverRate[]>('/silver-rates/today');
+    return data.map(normalizeRate);
   },
 
   getRateHistory: async (days: number = 30): Promise<SilverRate[]> => {
-    return api.get<SilverRate[]>(`/silver-rates/history?days=${days}`);
+    const data = await api.get<ApiSilverRate[]>(`/silver-rates/history?days=${days}`);
+    return data.map(normalizeRate);
   },
 
   // Admin
   updateRate: async (payload: UpdateSilverRatePayload): Promise<SilverRate> => {
-    return api.post<SilverRate>('/admin/silver-rates', payload);
+    const data = await api.post<ApiSilverRate>('/admin/silver-rates', payload);
+    return normalizeRate(data);
   },
 
   getAllRates: async (): Promise<SilverRate[]> => {
-    return api.get<SilverRate[]>('/admin/silver-rates');
+    const data = await api.get<ApiSilverRate[]>('/admin/silver-rates');
+    return data.map(normalizeRate);
   },
 };

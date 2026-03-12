@@ -24,6 +24,13 @@ const SilverRate = () => {
     }).format(price);
   };
 
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
   const getTopRate = (purity: string) => {
     return todayRates.find((r) => r.purity === purity);
   };
@@ -132,25 +139,41 @@ const SilverRate = () => {
                     <thead>
                       <tr className="border-b border-border">
                         <th className="text-left py-3 px-4 font-medium text-muted-foreground">Date</th>
-                        <th className="text-right py-3 px-4 font-medium text-muted-foreground">Purity</th>
-                        <th className="text-right py-3 px-4 font-medium text-muted-foreground">Rate/Gram</th>
-                        <th className="text-right py-3 px-4 font-medium text-muted-foreground">Rate/Kg</th>
+                        <th className="text-right py-3 px-4 font-medium text-muted-foreground">999 Fine (₹/g)</th>
+                        <th className="text-right py-3 px-4 font-medium text-muted-foreground">925 Sterling (₹/g)</th>
+                        <th className="text-right py-3 px-4 font-medium text-muted-foreground">916 Silver (₹/g)</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {historyRates
-                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                        .slice(0, 30)
-                        .map((rate, idx) => (
-                          <tr key={idx} className="border-b border-border last:border-0 hover:bg-muted/30">
-                            <td className="py-3 px-4">
-                              {new Date(rate.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </td>
-                            <td className="py-3 px-4 text-right">{rate.purity}</td>
-                            <td className="py-3 px-4 text-right font-medium">{formatPrice(rate.ratePerGram)}</td>
-                            <td className="py-3 px-4 text-right">{formatPrice(rate.ratePerKg)}</td>
-                          </tr>
-                        ))}
+                      {(() => {
+                        // Group rates by date (date string normalised to YYYY-MM-DD)
+                        const grouped = new Map<string, { dateStr: string; byPurity: Record<string, number> }>();
+                        historyRates.forEach((rate) => {
+                          const key = rate.date ? rate.date.slice(0, 10) : '';
+                          if (!key) return;
+                          if (!grouped.has(key)) {
+                            grouped.set(key, { dateStr: rate.date, byPurity: {} });
+                          }
+                          grouped.get(key)!.byPurity[rate.purity] = rate.ratePerGram;
+                        });
+                        return Array.from(grouped.entries())
+                          .sort(([a], [b]) => b.localeCompare(a))
+                          .slice(0, 30)
+                          .map(([key, { dateStr, byPurity }]) => (
+                            <tr key={key} className="border-b border-border last:border-0 hover:bg-muted/30">
+                              <td className="py-3 px-4">{formatDate(dateStr)}</td>
+                              <td className="py-3 px-4 text-right font-medium">
+                                {byPurity['999'] ? formatPrice(byPurity['999']) : '—'}
+                              </td>
+                              <td className="py-3 px-4 text-right font-medium">
+                                {byPurity['925'] ? formatPrice(byPurity['925']) : '—'}
+                              </td>
+                              <td className="py-3 px-4 text-right font-medium">
+                                {byPurity['916'] ? formatPrice(byPurity['916']) : '—'}
+                              </td>
+                            </tr>
+                          ));
+                      })()}
                     </tbody>
                   </table>
                 </div>
