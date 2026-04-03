@@ -57,12 +57,12 @@ const SavingsScheme = () => {
     {
       icon: Calendar,
       title: 'Flexible Payments',
-      description: 'Choose monthly amounts from ₹1,000 to ₹1,00,000',
+      description: 'Choose any whole-number monthly amount from ₹1,000 and above',
     },
     {
       icon: Check,
       title: 'Zero Making Charges',
-      description: 'No making charges when you redeem your scheme for jewelry',
+      description: 'No making charges when you redeem your scheme for Silver Coins/Bars or Pooja Articles ',
     },
   ];
 
@@ -77,13 +77,23 @@ const SavingsScheme = () => {
       return;
     }
 
+    const amount = Number(monthlyAmount);
+    if (!Number.isInteger(amount) || amount < 1000) {
+      toast({
+        title: 'Invalid monthly amount',
+        description: 'Please enter a whole-number amount of ₹1,000 or more.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsEnrolling(true);
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
       await savingsService.enroll({
-        monthlyAmount: parseInt(monthlyAmount, 10),
+        monthlyAmount: amount,
         duration: parseInt(duration, 10),
         startDate: today.toISOString().split('T')[0],
       });
@@ -188,20 +198,20 @@ const SavingsScheme = () => {
                 <div className="space-y-6">
                   <div>
                     <Label htmlFor="amount">Monthly Investment Amount</Label>
-                    <Select value={monthlyAmount} onValueChange={setMonthlyAmount}>
-                      <SelectTrigger className="mt-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card">
-                        <SelectItem value="1000">₹1,000</SelectItem>
-                        <SelectItem value="2000">₹2,000</SelectItem>
-                        <SelectItem value="5000">₹5,000</SelectItem>
-                        <SelectItem value="10000">₹10,000</SelectItem>
-                        <SelectItem value="25000">₹25,000</SelectItem>
-                        <SelectItem value="50000">₹50,000</SelectItem>
-                        <SelectItem value="100000">₹1,00,000</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      id="amount"
+                      type="number"
+                      inputMode="numeric"
+                      step={1}
+                      min={1000}
+                      value={monthlyAmount}
+                      onChange={(e) => setMonthlyAmount(e.target.value.replace(/[^0-9]/g, ''))}
+                      className="mt-2"
+                      placeholder="Enter amount (e.g. 5000)"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Enter a whole amount only.
+                    </p>
                   </div>
 
                   <div>
@@ -211,9 +221,9 @@ const SavingsScheme = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-card">
-                        <SelectItem value="6">6 Months</SelectItem>
+                        {/* <SelectItem value="6">6 Months</SelectItem> */}
                         <SelectItem value="11">11 Months (+ 1 Month Bonus)</SelectItem>
-                        <SelectItem value="12">12 Months</SelectItem>
+                        {/* <SelectItem value="12">12 Months</SelectItem> */}
                       </SelectContent>
                     </Select>
                   </div>
@@ -283,7 +293,7 @@ const SavingsScheme = () => {
                 { step: '01', title: 'Enroll', desc: 'Choose your monthly amount and register for the scheme' },
                 { step: '02', title: 'Save', desc: 'Pay your installments monthly via UPI, card, or cash' },
                 { step: '03', title: 'Earn', desc: 'Get bonus silver on completing the scheme duration' },
-                { step: '04', title: 'Redeem', desc: 'Exchange your accumulated value for jewelry or silver' },
+                { step: '04', title: 'Redeem', desc: 'Exchange your accumulated value as Silver Coins/Bars or Pooja Articles ' },
               ].map((item, index) => (
                 <div key={index} className="text-center">
                   <div className="w-16 h-16 mx-auto rounded-full bg-accent text-accent-foreground flex items-center justify-center font-serif text-2xl font-bold mb-4">
@@ -317,7 +327,7 @@ const SavingsScheme = () => {
                 },
                 {
                   q: 'What happens if I miss a payment?',
-                  a: 'You have a grace period of 10 days. After that, a nominal late fee applies.',
+                  a: 'User can pay the next month, but redemption will be postponed accordingly',
                 },
                 {
                   q: 'How is the bonus calculated?',

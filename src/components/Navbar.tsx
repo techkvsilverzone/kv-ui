@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, User, Search, ChevronDown, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
@@ -16,9 +16,11 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { totalItems } = useCart();
   const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,6 +41,13 @@ const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const submitSearch = () => {
+    const query = searchQuery.trim();
+    navigate(query ? `/shop?search=${encodeURIComponent(query)}` : '/shop');
+    setIsSearchOpen(false);
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <nav
       className={`transition-all duration-500 border-b ${isScrolled
@@ -49,8 +58,8 @@ const Navbar = () => {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between">
 
-          {/* Mobile Menu & Search Placeholder (Left) */}
-          <div className="flex-1 flex items-center justify-start gap-4">
+          {/* Left Section */}
+          <div className="flex-1 flex items-center justify-start gap-3">
             <Button
               variant="ghost"
               size="icon"
@@ -60,13 +69,35 @@ const Navbar = () => {
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
 
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <img
+                src="/kvlogo.png"
+                alt="KV Silver Zone"
+                className="h-10 w-10 md:h-11 md:w-11 object-contain"
+              />
+              <div className="hidden sm:flex flex-col leading-none">
+                <span className="font-serif text-lg md:text-xl font-bold text-primary tracking-wide group-hover:opacity-90 transition-opacity">
+                  KV SILVER ZONE
+                </span>
+                <span className="text-[9px] md:text-[10px] uppercase tracking-[0.22em] text-muted-foreground group-hover:text-accent transition-colors">
+                  Pure Silver • Pure Trust
+                </span>
+              </div>
+            </Link>
+
             {/* Expandable Search */}
             <div className={`relative flex items-center transition-all duration-300 ${isSearchOpen ? 'w-full max-w-sm ml-4 lg:ml-0' : 'w-auto'}`}>
               <Button
                 variant="ghost"
                 size="icon"
                 className="hidden lg:flex text-muted-foreground hover:text-foreground transition-colors z-10"
-                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                onClick={() => {
+                  if (isSearchOpen && searchQuery.trim()) {
+                    submitSearch();
+                    return;
+                  }
+                  setIsSearchOpen(!isSearchOpen);
+                }}
               >
                 {isSearchOpen ? <X className="h-5 w-5" strokeWidth={1.5} /> : <Search className="h-5 w-5" strokeWidth={1.5} />}
               </Button>
@@ -77,23 +108,19 @@ const Navbar = () => {
                 <input
                   type="text"
                   placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      submitSearch();
+                    }
+                  }}
                   className="w-full bg-secondary/50 border border-input rounded-full py-2 px-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all font-light"
                   autoFocus={isSearchOpen}
                 />
               </div>
             </div>
-          </div>
-
-          {/* Logo (Center) */}
-          <div className="flex-0 text-center">
-            <Link to="/" className="flex flex-col items-center gap-0.5 group">
-              <h1 className="font-serif text-2xl md:text-3xl font-bold text-primary tracking-wide group-hover:opacity-90 transition-opacity">
-                KV SILVER ZONE
-              </h1>
-              <span className="text-[10px] md:text-xs uppercase tracking-[0.3em] text-muted-foreground group-hover:text-accent transition-colors">
-                Pure Silver • Pure Trust
-              </span>
-            </Link>
           </div>
 
           {/* Actions (Right) */}

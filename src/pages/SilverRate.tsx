@@ -5,6 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { silverRateService, type SilverRate as SilverRateType } from '@/services/silverRate';
 
+const metalAliases = {
+  silver: ['silver', '999', '999 fine silver', 'silver 999'],
+  gold22k: ['gold22k', 'gold 22k', '22k', 'gold-22k', '916 gold'],
+};
+
+const getMetalKey = (purity: string): 'silver' | 'gold22k' | null => {
+  const normalized = purity.trim().toLowerCase();
+  if (metalAliases.silver.includes(normalized)) return 'silver';
+  if (metalAliases.gold22k.includes(normalized)) return 'gold22k';
+  return null;
+};
+
 const SilverRate = () => {
   const { data: todayRates = [], isLoading: todayLoading } = useQuery({
     queryKey: ['silver-rates-today'],
@@ -31,13 +43,13 @@ const SilverRate = () => {
     return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
-  const getTopRate = (purity: string) => {
-    return todayRates.find((r) => r.purity === purity);
+  const getTopRate = (metal: 'silver' | 'gold22k') => {
+    return todayRates.find((r) => getMetalKey(r.purity) === metal);
   };
 
-  const getPreviousRate = (purity: string) => {
+  const getPreviousRate = (metal: 'silver' | 'gold22k') => {
     const sorted = historyRates
-      .filter((r) => r.purity === purity)
+      .filter((r) => getMetalKey(r.purity) === metal)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return sorted.length > 1 ? sorted[1] : null;
   };
@@ -49,10 +61,9 @@ const SilverRate = () => {
     return { change, percentage };
   };
 
-  const purityTypes = [
-    { code: '999', label: '999 Fine Silver (24K)', description: 'Investment grade pure silver' },
-    { code: '925', label: '925 Sterling Silver', description: 'Standard jewelry silver' },
-    { code: '916', label: '916 Silver', description: 'Traditional jewelry grade' },
+  const metalTypes = [
+    { key: 'silver' as const, label: 'Silver', description: 'Daily live silver market price' },
+    { key: 'gold22k' as const, label: 'Gold 22K', description: 'Daily live 22K gold market price' },
   ];
 
   return (
@@ -64,10 +75,10 @@ const SilverRate = () => {
             Updated Daily
           </span>
           <h1 className="font-serif text-4xl md:text-5xl font-normal text-primary mb-4">
-            Today's Silver Rate
+            Today's Metal Rates
           </h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Live silver prices at KV Silver Zone. Our rates are updated daily based on market rates from the India Bullion and Jewellers Association (IBJA).
+            Live Silver and Gold 22K prices at KV Silver Zone. Our rates are updated daily based on market rates from the India Bullion and Jewellers Association (IBJA).
           </p>
           <div className="w-24 h-px bg-primary/20 mt-6 mx-auto"></div>
         </div>
@@ -79,19 +90,19 @@ const SilverRate = () => {
         ) : (
           <>
             {/* Rate Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-              {purityTypes.map((purity) => {
-                const rate = getTopRate(purity.code);
-                const prevRate = getPreviousRate(purity.code);
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+              {metalTypes.map((metal) => {
+                const rate = getTopRate(metal.key);
+                const prevRate = getPreviousRate(metal.key);
                 const { change, percentage } = getChange(rate, prevRate);
 
                 return (
-                  <Card key={purity.code} className="p-6 hover:shadow-md transition-shadow">
+                  <Card key={metal.key} className="p-6 hover:shadow-md transition-shadow">
                     <div className="text-center">
                       <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                        {purity.label}
+                        {metal.label}
                       </p>
-                      <p className="text-[10px] text-muted-foreground mb-4">{purity.description}</p>
+                      <p className="text-[10px] text-muted-foreground mb-4">{metal.description}</p>
 
                       <div className="mb-4">
                         <p className="text-3xl font-semibold text-primary">
@@ -139,37 +150,34 @@ const SilverRate = () => {
                     <thead>
                       <tr className="border-b border-border">
                         <th className="text-left py-3 px-4 font-medium text-muted-foreground">Date</th>
-                        <th className="text-right py-3 px-4 font-medium text-muted-foreground">999 Fine (₹/g)</th>
-                        <th className="text-right py-3 px-4 font-medium text-muted-foreground">925 Sterling (₹/g)</th>
-                        <th className="text-right py-3 px-4 font-medium text-muted-foreground">916 Silver (₹/g)</th>
+                        <th className="text-right py-3 px-4 font-medium text-muted-foreground">Silver (₹/g)</th>
+                        <th className="text-right py-3 px-4 font-medium text-muted-foreground">Gold 22K (₹/g)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(() => {
-                        // Group rates by date (date string normalised to YYYY-MM-DD)
-                        const grouped = new Map<string, { dateStr: string; byPurity: Record<string, number> }>();
+                        const grouped = new Map<string, { dateStr: string; byMetal: Record<'silver' | 'gold22k', number | undefined> }>();
                         historyRates.forEach((rate) => {
                           const key = rate.date ? rate.date.slice(0, 10) : '';
                           if (!key) return;
+                          const metal = getMetalKey(rate.purity);
+                          if (!metal) return;
                           if (!grouped.has(key)) {
-                            grouped.set(key, { dateStr: rate.date, byPurity: {} });
+                            grouped.set(key, { dateStr: rate.date, byMetal: { silver: undefined, gold22k: undefined } });
                           }
-                          grouped.get(key)!.byPurity[rate.purity] = rate.ratePerGram;
+                          grouped.get(key)!.byMetal[metal] = rate.ratePerGram;
                         });
                         return Array.from(grouped.entries())
                           .sort(([a], [b]) => b.localeCompare(a))
                           .slice(0, 30)
-                          .map(([key, { dateStr, byPurity }]) => (
+                          .map(([key, { dateStr, byMetal }]) => (
                             <tr key={key} className="border-b border-border last:border-0 hover:bg-muted/30">
                               <td className="py-3 px-4">{formatDate(dateStr)}</td>
                               <td className="py-3 px-4 text-right font-medium">
-                                {byPurity['999'] ? formatPrice(byPurity['999']) : '—'}
+                                {byMetal.silver ? formatPrice(byMetal.silver) : '—'}
                               </td>
                               <td className="py-3 px-4 text-right font-medium">
-                                {byPurity['925'] ? formatPrice(byPurity['925']) : '—'}
-                              </td>
-                              <td className="py-3 px-4 text-right font-medium">
-                                {byPurity['916'] ? formatPrice(byPurity['916']) : '—'}
+                                {byMetal.gold22k ? formatPrice(byMetal.gold22k) : '—'}
                               </td>
                             </tr>
                           ));

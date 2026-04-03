@@ -62,7 +62,7 @@ const Contact = () => {
     {
       icon: Phone,
       title: 'Call Us',
-      details: ['(+91) 90922 24666', '(+91) 88256 49680'],
+      details: ['(+91) 88256 49680'],
     },
     {
       icon: Mail,
@@ -222,7 +222,6 @@ const Contact = () => {
                         <div>
                           <h4 className="font-medium mb-1">Call Us</h4>
                           <p className="text-muted-foreground text-sm">
-                            (+91) 90922 24666<br />
                             (+91) 88256 49680
                           </p>
                         </div>
@@ -251,7 +250,7 @@ const Contact = () => {
                   <Button
                     variant="secondary"
                     className="w-full mt-4"
-                    onClick={() => window.open('https://wa.me/919092224666', '_blank')}
+                    onClick={() => window.open('https://wa.me/918825649680', '_blank')}
                   >
                     Start Chat
                   </Button>

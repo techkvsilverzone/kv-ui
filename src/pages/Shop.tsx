@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Filter, Grid, List, ChevronDown, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -22,15 +23,50 @@ import ProductCard from '@/components/ProductCard';
 import { productService } from '@/services/product';
 
 const Shop = () => {
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedPriceRange, setSelectedPriceRange] = useState<string>('');
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  const priceRanges = [
+    { label: 'Under ₹500', value: '0-500' },
+    { label: '₹500 - ₹1,000', value: '500-1000' },
+    { label: '₹1,000 - ₹2,000', value: '1000-2000' },
+    { label: 'Above ₹5,000', value: '5000+' },
+  ];
+
+  const getPriceBounds = (range: string): { minPrice?: number; maxPrice?: number } => {
+    if (!range) return {};
+    if (range.endsWith('+')) {
+      const min = Number(range.replace('+', ''));
+      return Number.isFinite(min) ? { minPrice: min } : {};
+    }
+
+    const [minRaw, maxRaw] = range.split('-');
+    const min = Number(minRaw);
+    const max = Number(maxRaw);
+
+    return {
+      minPrice: Number.isFinite(min) ? min : undefined,
+      maxPrice: Number.isFinite(max) ? max : undefined,
+    };
+  };
+
+  const { minPrice, maxPrice } = getPriceBounds(selectedPriceRange);
+
+  useEffect(() => {
+    const query = new URLSearchParams(location.search).get('search') || '';
+    setSearchQuery((prev) => (prev === query ? prev : query));
+  }, [location.search]);
+
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['products', selectedCategory, searchQuery, sortBy],
+    queryKey: ['products', selectedCategory, selectedPriceRange, searchQuery, sortBy],
     queryFn: () => productService.getProducts({
       category: selectedCategory || undefined,
+      minPrice,
+      maxPrice,
       search: searchQuery || undefined,
       sortBy: (sortBy === 'price-low' ? 'price_asc' : sortBy === 'price-high' ? 'price_desc' : 'newest') as any
     }),
@@ -45,6 +81,10 @@ const Shop = () => {
 
   const toggleCategory = (category: string) => {
     setSelectedCategory(prev => prev === category ? '' : category);
+  };
+
+  const togglePriceRange = (range: string) => {
+    setSelectedPriceRange((prev) => (prev === range ? '' : range));
   };
 
   const FilterSidebar = () => (
@@ -76,14 +116,12 @@ const Shop = () => {
       <div>
         <h3 className="font-serif text-lg font-semibold mb-4">Price Range</h3>
         <div className="space-y-3">
-          {[
-            { label: 'Under ₹5,000', value: '0-5000' },
-            { label: '₹5,000 - ₹10,000', value: '5000-10000' },
-            { label: '₹10,000 - ₹20,000', value: '10000-20000' },
-            { label: 'Above ₹20,000', value: '20000+' },
-          ].map((range) => (
+          {priceRanges.map((range) => (
             <label key={range.value} className="flex items-center gap-3 cursor-pointer group">
-              <Checkbox />
+              <Checkbox
+                checked={selectedPriceRange === range.value}
+                onCheckedChange={() => togglePriceRange(range.value)}
+              />
               <span className="text-sm group-hover:text-accent transition-colors">
                 {range.label}
               </span>
@@ -92,15 +130,15 @@ const Shop = () => {
         </div>
       </div>
 
-      {/* Purity */}
+      {/* Metal */}
       <div>
-        <h3 className="font-serif text-lg font-semibold mb-4">Silver Purity</h3>
+        <h3 className="font-serif text-lg font-semibold mb-4">Metal</h3>
         <div className="space-y-3">
-          {['999 Pure Silver', '925 Sterling Silver', '916 Silver'].map((purity) => (
-            <label key={purity} className="flex items-center gap-3 cursor-pointer group">
+          {['Silver', 'Gold 22K'].map((metal) => (
+            <label key={metal} className="flex items-center gap-3 cursor-pointer group">
               <Checkbox />
               <span className="text-sm group-hover:text-accent transition-colors">
-                {purity}
+                {metal}
               </span>
             </label>
           ))}
@@ -113,6 +151,7 @@ const Shop = () => {
         className="w-full"
         onClick={() => {
           setSelectedCategory('');
+          setSelectedPriceRange('');
           setSearchQuery('');
         }}
       >
@@ -242,6 +281,7 @@ const Shop = () => {
                   onClick={() => {
                     setSearchQuery('');
                     setSelectedCategory('');
+                    setSelectedPriceRange('');
                   }}
                 >
                   Clear all filters
