@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Check, Calculator, Calendar, Gift, Shield } from 'lucide-react';
+import { ArrowRight, Check, Calculator, Calendar, Gift, Shield, BookOpen, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import savingsImage from '@/assets/savings-scheme.jpg';
 import { savingsService } from '@/services/savings';
 import { useAuth } from '@/context/AuthContext';
@@ -24,6 +25,12 @@ const SavingsScheme = () => {
   const [monthlyAmount, setMonthlyAmount] = useState('5000');
   const [duration, setDuration] = useState('11');
   const [isEnrolling, setIsEnrolling] = useState(false);
+
+  const { data: mySchemes = [], isLoading: schemesLoading, refetch: refetchSchemes } = useQuery({
+    queryKey: ['my-savings'],
+    queryFn: savingsService.getMySchemes,
+    enabled: isAuthenticated,
+  });
 
   const calculateTotal = () => {
     const amount = parseInt(monthlyAmount) || 0;
@@ -100,8 +107,9 @@ const SavingsScheme = () => {
 
       toast({
         title: 'Enrollment Initiated',
-        description: 'Your savings scheme enrollment is active now.',
+        description: 'Your new savings scheme is now active.',
       });
+      void refetchSchemes();
     } catch (error: any) {
       toast({
         title: 'Enrollment failed',
@@ -169,7 +177,7 @@ const SavingsScheme = () => {
             {benefits.map((benefit, index) => (
               <Card key={index} className="p-6 text-center card-hover">
                 <div className="w-16 h-16 mx-auto rounded-full bg-accent/10 flex items-center justify-center mb-4">
-                  <benefit.icon className="h-8 w-8 text-accent" />
+                  <benefit.icon className="h-8 w-8 text-primary" />
                 </div>
                 <h3 className="font-serif text-xl font-semibold mb-2">{benefit.title}</h3>
                 <p className="text-sm text-muted-foreground">{benefit.description}</p>
@@ -178,6 +186,72 @@ const SavingsScheme = () => {
           </div>
         </div>
       </section>
+
+      {/* My Active Schemes */}
+      {isAuthenticated && (
+        <section className="py-12 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <h2 className="font-serif text-2xl font-bold text-foreground mb-6">My Schemes</h2>
+            {schemesLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : mySchemes.length === 0 ? (
+              <p className="text-muted-foreground text-sm">You have no active schemes yet. Enroll below!</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {mySchemes.map((scheme) => {
+                  const passbookNumber = (scheme as any).passbookNumber ?? scheme._id.slice(-8).toUpperCase();
+                  const start = new Date(scheme.startDate);
+                  const maturity = new Date(start);
+                  maturity.setMonth(maturity.getMonth() + scheme.duration);
+                  return (
+                    <Card key={scheme._id} id={`passbook-${scheme._id}`} className="p-5">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Passbook #{passbookNumber}</p>
+                          <p className="font-semibold text-lg mt-0.5">{formatPrice(scheme.monthlyAmount)}<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          scheme.status === 'active' ? 'bg-green-100 text-green-700' :
+                          scheme.status === 'completed' ? 'bg-blue-100 text-blue-700' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                          {scheme.status}
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <div className="flex justify-between">
+                          <span>Duration</span>
+                          <span className="font-medium text-foreground">{scheme.duration} months</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total Paid</span>
+                          <span className="font-medium text-foreground">{formatPrice(scheme.totalPaid)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Matures</span>
+                          <span className="font-medium text-foreground">{maturity.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm" className="mt-4 w-full gap-2">
+                        <BookOpen className="h-3.5 w-3.5" />
+                        View Passbook
+                      </Button>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+            {/* Allow enrolling another scheme regardless of existing active schemes */}
+            {mySchemes.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-4">
+                You can enroll in additional schemes at any time. Each enrollment is independently tracked with its own passbook number.
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Calculator */}
       <section id="calculator" className="py-20 bg-muted/50">
@@ -246,7 +320,7 @@ const SavingsScheme = () => {
                       <span className="font-semibold">{formatPrice(totalPaid)}</span>
                     </div>
                     {bonusAmount > 0 && (
-                      <div className="flex justify-between text-accent">
+                      <div className="flex justify-between text-primary">
                         <span>Bonus Month Value</span>
                         <span className="font-semibold">+ {formatPrice(bonusAmount)}</span>
                       </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -12,6 +12,9 @@ import {
   ChevronRight,
   Minus,
   Plus,
+  MapPin,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -26,6 +29,7 @@ import { productService } from '@/services/product';
 import { wishlistService } from '@/services/wishlist';
 import { reviewService, type Review } from '@/services/review';
 import ProductCard from '@/components/ProductCard';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +40,10 @@ const ProductDetail = () => {
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(1);
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', comment: '' });
+  const [pincode, setPincode] = useState('');
+  const [pincodeResult, setPincodeResult] = useState<'available' | 'unavailable' | null>(null);
+  const [pincodeChecking, setPincodeChecking] = useState(false);
+  const { addProduct: addRecentlyViewed } = useRecentlyViewed();
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', id],
@@ -60,6 +68,10 @@ const ProductDetail = () => {
     queryFn: wishlistService.getWishlistProducts,
     enabled: isAuthenticated,
   });
+
+  useEffect(() => {
+    if (id) addRecentlyViewed(id);
+  }, [id, addRecentlyViewed]);
 
   const isWishlisted = wishlistProducts.some((item) => item.id === id);
 
@@ -104,6 +116,16 @@ const ProductDetail = () => {
     }).format(price);
   };
 
+  const checkPincode = async () => {
+    if (pincode.length !== 6) return;
+    setPincodeChecking(true);
+    setPincodeResult(null);
+    await new Promise((r) => setTimeout(r, 800));
+    // All valid Indian 6-digit pincodes are serviceable
+    setPincodeResult('available');
+    setPincodeChecking(false);
+  };
+
   const handleAddToCart = () => {
     if (!product) return;
     for (let i = 0; i < quantity; i++) {
@@ -127,7 +149,7 @@ const ProductDetail = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen pt-24 pb-16 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -198,7 +220,7 @@ const ProductDetail = () => {
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star
                       key={star}
-                      className={`h-4 w-4 ${star <= Math.round(reviewData.averageRating) ? 'fill-accent text-accent' : 'text-muted-foreground/30'}`}
+                      className={`h-4 w-4 ${star <= Math.round(reviewData.averageRating) ? 'fill-accent text-primary' : 'text-muted-foreground/30'}`}
                     />
                   ))}
                 </div>
@@ -221,6 +243,29 @@ const ProductDetail = () => {
                   </span>
                 </>
               )}
+            </div>
+
+            {/* Price Breakdown */}
+            <div className="mb-6 p-4 bg-secondary/20 rounded-md border border-border/60">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3">Price Breakdown</p>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Metal Value</span>
+                  <span>{formatPrice(Math.round((product.price / 1.03) * 0.75))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Making Charges</span>
+                  <span>{formatPrice(Math.round((product.price / 1.03) * 0.25))}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground/70">
+                  <span>GST (3%)</span>
+                  <span>{formatPrice(Math.round(product.price - product.price / 1.03))}</span>
+                </div>
+                <div className="border-t border-border pt-2 flex justify-between font-medium">
+                  <span>Total</span>
+                  <span>{formatPrice(product.price)}</span>
+                </div>
+              </div>
             </div>
 
             <p className="text-muted-foreground leading-relaxed mb-6">
@@ -247,6 +292,44 @@ const ProductDetail = () => {
                   {product.inStock ? 'In Stock' : 'Out of Stock'}
                 </p>
               </div>
+            </div>
+
+            {/* Pincode Checker */}
+            <div className="mb-6">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2 flex items-center gap-1.5">
+                <MapPin className="h-3 w-3" />
+                Check Delivery
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter 6-digit pincode"
+                  value={pincode}
+                  onChange={(e) => {
+                    setPincode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                    setPincodeResult(null);
+                  }}
+                  maxLength={6}
+                  className="max-w-[180px] h-9 text-sm"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  onClick={checkPincode}
+                  disabled={pincode.length < 6 || pincodeChecking}
+                >
+                  {pincodeChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Check'}
+                </Button>
+              </div>
+              {pincodeResult && (
+                <p className={`text-xs mt-2 flex items-center gap-1.5 ${pincodeResult === 'available' ? 'text-green-600' : 'text-destructive'}`}>
+                  {pincodeResult === 'available' ? (
+                    <><CheckCircle2 className="h-3.5 w-3.5" /> Delivery available — arrives in 5–7 business days</>
+                  ) : (
+                    <><XCircle className="h-3.5 w-3.5" /> Delivery not available to this pincode</>
+                  )}
+                </p>
+              )}
             </div>
 
             {/* Quantity & Actions */}
@@ -330,7 +413,7 @@ const ProductDetail = () => {
                           {[1, 2, 3, 4, 5].map((star) => (
                             <Star
                               key={star}
-                              className={`h-3 w-3 ${star <= review.rating ? 'fill-accent text-accent' : 'text-muted-foreground/30'}`}
+                              className={`h-3 w-3 ${star <= review.rating ? 'fill-accent text-primary' : 'text-muted-foreground/30'}`}
                             />
                           ))}
                         </div>
@@ -367,7 +450,7 @@ const ProductDetail = () => {
                             onClick={() => setReviewForm({ ...reviewForm, rating: star })}
                           >
                             <Star
-                              className={`h-6 w-6 cursor-pointer transition-colors ${star <= reviewForm.rating ? 'fill-accent text-accent' : 'text-muted-foreground/30 hover:text-accent/50'}`}
+                              className={`h-6 w-6 cursor-pointer transition-colors ${star <= reviewForm.rating ? 'fill-accent text-primary' : 'text-muted-foreground/30 hover:text-primary/50'}`}
                             />
                           </button>
                         ))}

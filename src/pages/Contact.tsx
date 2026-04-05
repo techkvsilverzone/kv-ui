@@ -98,7 +98,7 @@ const Contact = () => {
             {contactInfo.map((info, index) => (
               <Card key={index} className="p-6 text-center card-hover">
                 <div className="w-14 h-14 mx-auto rounded-full bg-accent/10 flex items-center justify-center mb-4">
-                  <info.icon className="h-7 w-7 text-accent" />
+                  <info.icon className="h-7 w-7 text-primary" />
                 </div>
                 <h3 className="font-serif text-lg font-semibold mb-2">{info.title}</h3>
                 {info.details.map((detail, i) => (

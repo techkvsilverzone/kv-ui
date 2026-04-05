@@ -1,0 +1,421 @@
+{
+  "version": 1,
+  "bugs": [
+    {
+      "id": "bug-001",
+      "timestamp": "2026-04-05T05:59:48.945Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T05:59:48.945Z"
+    },
+    {
+      "id": "bug-002",
+      "timestamp": "2026-04-05T06:00:30.978Z",
+      "error_message": "Missing guard clause",
+      "file": "src/context/AuthContext.tsx",
+      "root_cause": "No early return/throw for edge case: user.role",
+      "fix": "Added guard clause: if (user.role)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:00:30.978Z"
+    },
+    {
+      "id": "bug-003",
+      "timestamp": "2026-04-05T06:00:47.416Z",
+      "error_message": "Type error",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation | Also: // Shipping config state; interface PinCodeRate { pincode: string; label: string; rate | Also: {/* ═══════ SHIPPING CONFIG ═══════ */}; <TabsContent value=\"shipping\">",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-04-05T06:05:31.802Z"
+    },
+    {
+      "id": "bug-004",
+      "timestamp": "2026-04-05T06:00:52.604Z",
+      "error_message": "CSS fix: enabled",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "enabled: !!user?.isAdmin, → role === 'admin' || role === 'staff',",
+      "fix": "Changed enabled: !!user?.isAdmin, → role === 'admin' || role === 'staff',",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:00:52.604Z"
+    },
+    {
+      "id": "bug-005",
+      "timestamp": "2026-04-05T06:00:57.414Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Had \"/login\"",
+      "fix": "Changed to 'admin'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:00:57.414Z"
+    },
+    {
+      "id": "bug-006",
+      "timestamp": "2026-04-05T06:06:10.431Z",
+      "error_message": "CSS fix: description",
+      "file": "src/pages/SavingsScheme.tsx",
+      "root_cause": "description: 'Your savings scheme enrollment is active now.', → 'Your new savings scheme is now active.',",
+      "fix": "Changed description: 'Your savings scheme enrollment is active now.', → 'Your new savings scheme is now active.',",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:06:10.431Z"
+    },
+    {
+      "id": "bug-007",
+      "timestamp": "2026-04-05T06:06:29.205Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/SavingsScheme.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:06:29.205Z"
+    },
+    {
+      "id": "bug-008",
+      "timestamp": "2026-04-05T06:07:21.052Z",
+      "error_message": "CSS fix: title",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "title: `Offline Stall ${!offlineStallActive ? 'Activated' : 'Deactivated' → `Offline Stall ${next ? 'Activated' : 'Deactivated'",
+      "fix": "Changed title: `Offline Stall ${!offlineStallActive ? 'Activated' : 'Deactivated' → `Offline Stall ${next ? 'Activated' : 'Deactivated'",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:07:21.052Z"
+    },
+    {
+      "id": "bug-009",
+      "timestamp": "2026-04-05T06:14:03.823Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:14:03.823Z"
+    },
+    {
+      "id": "bug-010",
+      "timestamp": "2026-04-05T06:14:09.364Z",
+      "error_message": "CSS fix: category",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "category: selectedCategories.length === 1 ? selectedCategories[0] : selectedCategories.join(',') || undefined, → selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,",
+      "fix": "Changed category: selectedCategories.length === 1 ? selectedCategories[0] : selectedCategories.join(',') || undefined, → selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:14:09.364Z"
+    },
+    {
+      "id": "bug-011",
+      "timestamp": "2026-04-05T06:25:35.803Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:25:35.803Z"
+    },
+    {
+      "id": "bug-012",
+      "timestamp": "2026-04-05T06:25:49.483Z",
+      "error_message": "CSS fix: minPrice, maxPrice",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "minPrice: number | undefined → Number.isFinite(min) ? min : undefined,; maxPrice: number | undefined → Number.isFinite(max) ? max : undefined,",
+      "fix": "Changed minPrice: number | undefined → Number.isFinite(min) ? min : undefined,; maxPrice: number | undefined → Number.isFinite(max) ? max : undefined,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-05T06:26:01.855Z"
+    },
+    {
+      "id": "bug-013",
+      "timestamp": "2026-04-05T06:26:17.311Z",
+      "error_message": "Wrong operator: !== should be ===",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Used \"!==\" instead of \"===\"",
+      "fix": "Changed operator !== → ===",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:26:17.311Z"
+    },
+    {
+      "id": "bug-014",
+      "timestamp": "2026-04-05T06:27:12.146Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:27:12.146Z"
+    },
+    {
+      "id": "bug-015",
+      "timestamp": "2026-04-05T06:27:56.958Z",
+      "error_message": "Missing guard clause",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "No early return/throw for edge case: e.key === 'Enter'",
+      "fix": "Added guard clause: if (e.key === 'Enter')",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:27:56.958Z"
+    },
+    {
+      "id": "bug-016",
+      "timestamp": "2026-04-05T06:57:52.993Z",
+      "error_message": "Missing await",
+      "file": "src/services/returns.ts",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T06:57:52.993Z"
+    },
+    {
+      "id": "bug-017",
+      "timestamp": "2026-04-05T07:00:30.386Z",
+      "error_message": "Wrong return value",
+      "file": "src/services/admin.ts",
+      "root_cause": "Was returning: api.get<User[]>('/admin/users');",
+      "fix": "Now returns: users.map(u => ({ ...u, id: u.id || (u as any)._id",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T07:00:30.386Z"
+    },
+    {
+      "id": "bug-018",
+      "timestamp": "2026-04-05T07:00:38.897Z",
+      "error_message": "Type error",
+      "file": "src/services/returns.ts",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T07:00:38.897Z"
+    },
+    {
+      "id": "bug-019",
+      "timestamp": "2026-04-05T07:00:45.230Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Had ').slice(-6)}</TableCell>\n                        ",
+      "fix": "Changed to ').slice(-6)}</TableCell>\n                        ",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T07:00:45.230Z"
+    },
+    {
+      "id": "bug-020",
+      "timestamp": "2026-04-05T07:14:17.205Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/services/returns.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T07:14:17.205Z"
+    },
+    {
+      "id": "bug-021",
+      "timestamp": "2026-04-05T08:06:03.845Z",
+      "error_message": "Wrong return value",
+      "file": "src/services/coupon.ts",
+      "root_cause": "Was returning: api.get<Coupon[]>('/admin/coupons');",
+      "fix": "Now returns: coupons.map(c => ({ ...c, id: c.id || c._id || '' ",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T08:06:03.845Z"
+    },
+    {
+      "id": "bug-022",
+      "timestamp": "2026-04-05T08:06:39.397Z",
+      "error_message": "Type error",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T08:06:39.397Z"
+    },
+    {
+      "id": "bug-023",
+      "timestamp": "2026-04-05T08:06:49.443Z",
+      "error_message": "CSS fix: mutationFn, queryKey, title",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "mutationFn: silverRateService.updateRate, → productService.deleteCategory,; queryKey: ['admin-silver-rates'] → ['categories']; title: 'Silver Rate Updated' → 'Category Removed'",
+      "fix": "Changed mutationFn: silverRateService.updateRate, → productService.deleteCategory,; queryKey: ['admin-silver-rates'] → ['categories']; title: 'Silver Rate Updated' → 'Category Removed'",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-05T08:07:22.167Z"
+    },
+    {
+      "id": "bug-024",
+      "timestamp": "2026-04-05T08:07:00.269Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: {/* Edit / View Product modal */}; <Dialog open={productModalMode !== null} onOpenChange={(open | Also: {/* Edit Customer modal */}; <Dialog open={editingUser !== null} onOpenChange={(open) => ",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-04-05T08:08:38.492Z"
+    },
+    {
+      "id": "bug-025",
+      "timestamp": "2026-04-05T08:09:28.710Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T08:09:28.710Z"
+    },
+    {
+      "id": "bug-026",
+      "timestamp": "2026-04-05T08:09:43.994Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "src/App.tsx",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T08:09:43.994Z"
+    }
+  ]
+}

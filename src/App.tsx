@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,6 +26,14 @@ import ProductDetail from "./pages/ProductDetail";
 import OrderTracking from "./pages/OrderTracking";
 import SilverRatePage from "./pages/SilverRate";
 import NotFound from "./pages/NotFound";
+import OrderConfirmation from "./pages/OrderConfirmation";
+import RecentlyViewed from "./pages/RecentlyViewed";
+import Offers from "./pages/Offers";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsConditions from "./pages/TermsConditions";
+import FAQ from "./pages/FAQ";
+import CustomerDashboard from "./pages/CustomerDashboard";
+import GiftVouchers from "./pages/GiftVouchers";
 
 import ScrollToTop from "@/components/ScrollToTop";
 
@@ -43,7 +52,29 @@ const queryClient = new QueryClient({
   }),
 });
 
-const App = () => (
+const colorThemeCssVars: Record<string, { primary: string; ring: string }> = {
+  'ocean-teal': { primary: '195 50% 45%', ring: '195 50% 45%' },
+  'rose-gold': { primary: '350 40% 50%', ring: '350 40% 50%' },
+  'icy-silver': { primary: '210 25% 45%', ring: '210 25% 45%' },
+  'deep-amethyst': { primary: '270 40% 45%', ring: '270 40% 45%' },
+};
+
+const App = () => {
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('kv-theme-config');
+      if (!stored) return;
+      const { theme, isDark } = JSON.parse(stored) as { theme: string; isDark: boolean };
+      document.documentElement.classList.toggle('dark', isDark);
+      const vars = colorThemeCssVars[theme];
+      if (vars) {
+        document.documentElement.style.setProperty('--primary', vars.primary);
+        document.documentElement.style.setProperty('--ring', vars.ring);
+      }
+    } catch { /* ignore malformed config */ }
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <CartProvider>
@@ -75,6 +106,14 @@ const App = () => (
                   <Route path="/product/:id" element={<ProductDetail />} />
                   <Route path="/order/:id" element={<OrderTracking />} />
                   <Route path="/silver-rate" element={<SilverRatePage />} />
+                  <Route path="/order-confirmation/:id" element={<OrderConfirmation />} />
+                  <Route path="/recently-viewed" element={<RecentlyViewed />} />
+                  <Route path="/offers" element={<Offers />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsConditions />} />
+                  <Route path="/faq" element={<FAQ />} />
+                  <Route path="/dashboard" element={<CustomerDashboard />} />
+                  <Route path="/gift-vouchers" element={<GiftVouchers />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
@@ -85,6 +124,7 @@ const App = () => (
       </CartProvider>
     </AuthProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

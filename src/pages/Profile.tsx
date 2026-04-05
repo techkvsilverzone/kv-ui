@@ -161,7 +161,7 @@ const Profile = () => {
               <h2 className="font-serif text-xl font-semibold mb-6">Order History</h2>
               {ordersLoading ? (
                 <div className="flex justify-center py-10">
-                  <Loader2 className="h-8 w-8 animate-spin text-accent" />
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : orders.length > 0 ? (
                 <div className="space-y-4">
@@ -178,7 +178,7 @@ const Profile = () => {
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <p className="font-semibold text-accent">{formatPrice(order.totalAmount)}</p>
+                          <p className="font-semibold text-primary">{formatPrice(order.totalAmount)}</p>
                           <span
                             className={`text-xs px-2 py-1 rounded-full ${
                               order.status === 'Delivered'
@@ -227,7 +227,7 @@ const Profile = () => {
               <h2 className="font-serif text-xl font-semibold mb-6">Savings Scheme</h2>
               {savingsLoading ? (
                 <div className="flex justify-center py-10">
-                  <Loader2 className="h-8 w-8 animate-spin text-accent" />
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : savings.length > 0 ? (
                 <div className="space-y-4">
@@ -271,7 +271,7 @@ const Profile = () => {
                 </div>
               ) : (
                 <div className="bg-accent/10 rounded-lg p-6 text-center">
-                  <h3 className="font-serif text-2xl font-bold text-accent mb-2">
+                  <h3 className="font-serif text-2xl font-bold text-primary mb-2">
                     Not Enrolled Yet
                   </h3>
                   <p className="text-muted-foreground mb-4">
@@ -290,7 +290,7 @@ const Profile = () => {
               <h2 className="font-serif text-xl font-semibold mb-6">Return Requests</h2>
               {returnsLoading ? (
                 <div className="flex justify-center py-10">
-                  <Loader2 className="h-8 w-8 animate-spin text-accent" />
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : myReturns.length > 0 ? (
                 <div className="space-y-4">

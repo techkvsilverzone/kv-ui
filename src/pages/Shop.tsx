@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
   SelectContent,
@@ -25,17 +26,31 @@ import { productService } from '@/services/product';
 const Shop = () => {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedPriceRange, setSelectedPriceRange] = useState<string>('');
+  const DEFAULT_FILTER_CONFIG = {
+    hiddenCategories: [] as string[],
+    metals: ['Silver', 'Gold 22K'],
+    priceRanges: [
+      { label: 'Under ₹500', value: '0-500' },
+      { label: '₹500 - ₹1,000', value: '500-1000' },
+      { label: '₹1,000 - ₹2,000', value: '1000-2000' },
+      { label: 'Above ₹5,000', value: '5000+' },
+    ],
+  };
+
+  const [filterConfig] = useState(() => {
+    try {
+      const stored = localStorage.getItem('kv-filter-config');
+      return stored ? { ...DEFAULT_FILTER_CONFIG, ...JSON.parse(stored) } : DEFAULT_FILTER_CONFIG;
+    } catch {
+      return DEFAULT_FILTER_CONFIG;
+    }
+  });
+
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedPriceRange, setSelectedPriceRange] = useState('');
+  const [selectedMetals, setSelectedMetals] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
-  const priceRanges = [
-    { label: 'Under ₹500', value: '0-500' },
-    { label: '₹500 - ₹1,000', value: '500-1000' },
-    { label: '₹1,000 - ₹2,000', value: '1000-2000' },
-    { label: 'Above ₹5,000', value: '5000+' },
-  ];
 
   const getPriceBounds = (range: string): { minPrice?: number; maxPrice?: number } => {
     if (!range) return {};
@@ -43,11 +58,9 @@ const Shop = () => {
       const min = Number(range.replace('+', ''));
       return Number.isFinite(min) ? { minPrice: min } : {};
     }
-
     const [minRaw, maxRaw] = range.split('-');
     const min = Number(minRaw);
     const max = Number(maxRaw);
-
     return {
       minPrice: Number.isFinite(min) ? min : undefined,
       maxPrice: Number.isFinite(max) ? max : undefined,
@@ -62,13 +75,14 @@ const Shop = () => {
   }, [location.search]);
 
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['products', selectedCategory, selectedPriceRange, searchQuery, sortBy],
+    queryKey: ['products', selectedCategories, selectedPriceRange, selectedMetals, searchQuery, sortBy],
     queryFn: () => productService.getProducts({
-      category: selectedCategory || undefined,
+      category: selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,
+      metal: selectedMetals.length > 0 ? selectedMetals.join(',') : undefined,
       minPrice,
       maxPrice,
       search: searchQuery || undefined,
-      sortBy: (sortBy === 'price-low' ? 'price_asc' : sortBy === 'price-high' ? 'price_desc' : 'newest') as any
+      sortBy: (sortBy === 'price-low' ? 'price_asc' : sortBy === 'price-high' ? 'price_desc' : 'newest') as any,
     }),
   });
 
@@ -78,13 +92,33 @@ const Shop = () => {
   });
 
   const categories = Array.isArray(categoriesData) ? categoriesData : [];
+  const visibleCategories = categories.filter(c => !filterConfig.hiddenCategories.includes(c));
 
   const toggleCategory = (category: string) => {
-    setSelectedCategory(prev => prev === category ? '' : category);
+    setSearchQuery(''); // clear search when filtering
+    setSelectedCategories(prev =>
+      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
+    );
   };
 
   const togglePriceRange = (range: string) => {
-    setSelectedPriceRange((prev) => (prev === range ? '' : range));
+    setSearchQuery('');
+    setSelectedPriceRange(prev => prev === range ? '' : range);
+  };
+
+  const toggleMetal = (metal: string) => {
+    setSearchQuery(''); // clear search when filtering
+    setSelectedMetals(prev =>
+      prev.includes(metal) ? prev.filter(m => m !== metal) : [...prev, metal]
+    );
+  };
+
+  const handleSearchChange = (value: string) => {
+    // clear all filters when typing a search
+    setSelectedCategories([]);
+    setSelectedPriceRanges([]);
+    setSelectedMetals([]);
+    setSearchQuery(value);
   };
 
   const FilterSidebar = () => (
@@ -93,17 +127,17 @@ const Shop = () => {
       <div>
         <h3 className="font-serif text-lg font-semibold mb-4">Categories</h3>
         <div className="space-y-3">
-          {categories.map((category) => (
+          {visibleCategories.map((category) => (
             <label
               key={category}
               className="flex items-center justify-between cursor-pointer group"
             >
               <div className="flex items-center gap-3">
                 <Checkbox
-                  checked={selectedCategory === category}
+                  checked={selectedCategories.includes(category)}
                   onCheckedChange={() => toggleCategory(category)}
                 />
-                <span className="text-sm group-hover:text-accent transition-colors">
+                <span className="text-sm group-hover:text-primary transition-colors">
                   {category}
                 </span>
               </div>
@@ -112,32 +146,48 @@ const Shop = () => {
         </div>
       </div>
 
-      {/* Price Range */}
+      {/* Price Range — single select */}
       <div>
         <h3 className="font-serif text-lg font-semibold mb-4">Price Range</h3>
-        <div className="space-y-3">
-          {priceRanges.map((range) => (
-            <label key={range.value} className="flex items-center gap-3 cursor-pointer group">
-              <Checkbox
-                checked={selectedPriceRange === range.value}
-                onCheckedChange={() => togglePriceRange(range.value)}
-              />
-              <span className="text-sm group-hover:text-accent transition-colors">
+        <RadioGroup
+          value={selectedPriceRange}
+          onValueChange={(val) => {
+            setSearchQuery('');
+            setSelectedPriceRange(val === selectedPriceRange ? '' : val);
+          }}
+          className="space-y-3"
+        >
+          {filterConfig.priceRanges.map((range) => (
+            <label
+              key={range.value}
+              className="flex items-center gap-3 cursor-pointer group"
+              onClick={() => {
+                if (selectedPriceRange === range.value) {
+                  setSearchQuery('');
+                  setSelectedPriceRange('');
+                }
+              }}
+            >
+              <RadioGroupItem value={range.value} id={`price-${range.value}`} />
+              <span className="text-sm group-hover:text-primary transition-colors">
                 {range.label}
               </span>
             </label>
           ))}
-        </div>
+        </RadioGroup>
       </div>
 
       {/* Metal */}
       <div>
         <h3 className="font-serif text-lg font-semibold mb-4">Metal</h3>
         <div className="space-y-3">
-          {['Silver', 'Gold 22K'].map((metal) => (
+          {filterConfig.metals.map((metal) => (
             <label key={metal} className="flex items-center gap-3 cursor-pointer group">
-              <Checkbox />
-              <span className="text-sm group-hover:text-accent transition-colors">
+              <Checkbox
+                checked={selectedMetals.includes(metal)}
+                onCheckedChange={() => toggleMetal(metal)}
+              />
+              <span className="text-sm group-hover:text-primary transition-colors">
                 {metal}
               </span>
             </label>
@@ -150,8 +200,9 @@ const Shop = () => {
         variant="outline"
         className="w-full"
         onClick={() => {
-          setSelectedCategory('');
+          setSelectedCategories([]);
           setSelectedPriceRange('');
+          setSelectedMetals([]);
           setSearchQuery('');
         }}
       >
@@ -191,7 +242,7 @@ const Shop = () => {
                 <Input
                   placeholder="Search products..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -258,7 +309,7 @@ const Shop = () => {
             {/* Products Grid */}
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <Loader2 className="h-10 w-10 text-accent animate-spin mb-4" />
+                <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
                 <p className="text-muted-foreground animate-pulse">Loading products...</p>
               </div>
             ) : products.length > 0 ? (
@@ -280,8 +331,9 @@ const Shop = () => {
                   variant="link"
                   onClick={() => {
                     setSearchQuery('');
-                    setSelectedCategory('');
+                    setSelectedCategories([]);
                     setSelectedPriceRange('');
+                    setSelectedMetals([]);
                   }}
                 >
                   Clear all filters

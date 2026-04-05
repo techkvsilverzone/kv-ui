@@ -46,7 +46,8 @@ export const couponService = {
 
   // Admin
   getAllCoupons: async (): Promise<Coupon[]> => {
-    return api.get<Coupon[]>('/admin/coupons');
+    const coupons = await api.get<(Coupon & { _id?: string })[]>('/admin/coupons');
+    return coupons.map(c => ({ ...c, id: c.id || c._id || '' }));
   },
 
   createCoupon: async (payload: CreateCouponPayload): Promise<Coupon> => {

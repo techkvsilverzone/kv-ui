@@ -17,6 +17,7 @@ export interface Product {
   inStock: boolean;
   isNew?: boolean;
   isSale?: boolean;
+  isGiftVoucher?: boolean;
 }
 
 export interface CartItem extends Product {
@@ -33,6 +34,8 @@ interface CartContextType {
   isItemUpdating: (productId: string) => boolean;
   totalItems: number;
   totalPrice: number;
+  taxAmount: number;
+  totalWithTax: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -247,6 +250,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // 3% GST on non-gift-voucher items (gift vouchers have tax inclusive pricing)
+  const taxableTotal = items.reduce(
+    (sum, item) => (item.isGiftVoucher ? sum : sum + item.price * item.quantity),
+    0,
+  );
+  const taxAmount = taxableTotal * 0.03;
+  const totalWithTax = totalPrice + taxAmount;
 
   return (
     <CartContext.Provider
@@ -260,6 +270,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isItemUpdating,
         totalItems,
         totalPrice,
+        taxAmount,
+        totalWithTax,
       }}
     >
       {children}

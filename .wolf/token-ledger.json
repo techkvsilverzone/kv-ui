@@ -1,0 +1,1094 @@
+{
+  "version": 1,
+  "created_at": "2026-04-03T18:17:27.827Z",
+  "lifetime": {
+    "total_tokens_estimated": 211909,
+    "total_reads": 43,
+    "total_writes": 139,
+    "total_sessions": 4,
+    "anatomy_hits": 33,
+    "anatomy_misses": 10,
+    "repeated_reads_blocked": 43,
+    "estimated_savings_vs_bare_cli": 633549
+  },
+  "sessions": [
+    {
+      "id": "session-2026-04-05-1128",
+      "started": "2026-04-05T05:58:01.402Z",
+      "ended": "2026-04-05T06:08:39.520Z",
+      "reads": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/plans/saas_feature_plan.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/.wolf/anatomy.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/.wolf/cerebrum.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/.wolf/buglog.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 3054,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/context/AuthContext.tsx",
+          "tokens_estimated": 1223,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/context/CartContext.tsx",
+          "tokens_estimated": 2318,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/SavingsScheme.tsx",
+          "tokens_estimated": 4101,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/App.tsx",
+          "tokens_estimated": 1040,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 16326,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/admin.ts",
+          "tokens_estimated": 500,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/savings.ts",
+          "tokens_estimated": 206,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Signup.tsx",
+          "tokens_estimated": 2109,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/order.ts",
+          "tokens_estimated": 385,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/.wolf/memory.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 906,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 712,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 68,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 88,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/context/AuthContext.tsx",
+          "tokens_estimated": 156,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 18,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 47,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 14,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 31,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 129,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 336,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 560,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 80,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/context/CartContext.tsx",
+          "tokens_estimated": 81,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/context/CartContext.tsx",
+          "tokens_estimated": 113,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/context/CartContext.tsx",
+          "tokens_estimated": 157,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/context/CartContext.tsx",
+          "tokens_estimated": 72,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/CustomerDashboard.tsx",
+          "tokens_estimated": 2512,
+          "action": "create"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/components/PassbookView.tsx",
+          "tokens_estimated": 1539,
+          "action": "create"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/components/InvoiceView.tsx",
+          "tokens_estimated": 1400,
+          "action": "create"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/GiftVouchers.tsx",
+          "tokens_estimated": 1960,
+          "action": "create"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 380,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 1321,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/SavingsScheme.tsx",
+          "tokens_estimated": 213,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/SavingsScheme.tsx",
+          "tokens_estimated": 147,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/SavingsScheme.tsx",
+          "tokens_estimated": 52,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/SavingsScheme.tsx",
+          "tokens_estimated": 1079,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Signup.tsx",
+          "tokens_estimated": 146,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Signup.tsx",
+          "tokens_estimated": 143,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Signup.tsx",
+          "tokens_estimated": 148,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Signup.tsx",
+          "tokens_estimated": 326,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 97,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 58,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/App.tsx",
+          "tokens_estimated": 113,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/App.tsx",
+          "tokens_estimated": 78,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 31262,
+        "output_tokens_estimated": 15280,
+        "reads_count": 15,
+        "writes_count": 35,
+        "repeated_reads_blocked": 6,
+        "anatomy_lookups": 10
+      }
+    },
+    {
+      "id": "session-2026-04-05-1140",
+      "started": "2026-04-05T06:10:37.903Z",
+      "ended": "2026-04-05T06:14:15.363Z",
+      "reads": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 3390,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 326,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 26,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 3390,
+        "output_tokens_estimated": 352,
+        "reads_count": 1,
+        "writes_count": 2,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-05-1140",
+      "started": "2026-04-05T06:10:37.903Z",
+      "ended": "2026-04-05T06:29:05.380Z",
+      "reads": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 3520,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 18072,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/product.ts",
+          "tokens_estimated": 702,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 326,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 26,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 128,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 274,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 166,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 147,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 49,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 794,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 50,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/product.ts",
+          "tokens_estimated": 53,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 20,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 425,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 77,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 2219,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/API_CHANGES.md",
+          "tokens_estimated": 2095,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 22294,
+        "output_tokens_estimated": 7104,
+        "reads_count": 3,
+        "writes_count": 17,
+        "repeated_reads_blocked": 5,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-05-1140",
+      "started": "2026-04-05T06:10:37.903Z",
+      "ended": "2026-04-05T06:58:04.121Z",
+      "reads": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 3520,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 20805,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/product.ts",
+          "tokens_estimated": 702,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 370,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 326,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 26,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 128,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 274,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 166,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 147,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 49,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 794,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 50,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/product.ts",
+          "tokens_estimated": 53,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 20,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 425,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 77,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 2219,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/API_CHANGES.md",
+          "tokens_estimated": 2095,
+          "action": "create"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 112,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 71,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 25397,
+        "output_tokens_estimated": 7311,
+        "reads_count": 4,
+        "writes_count": 20,
+        "repeated_reads_blocked": 6,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-05-1140",
+      "started": "2026-04-05T06:10:37.903Z",
+      "ended": "2026-04-05T07:00:51.101Z",
+      "reads": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 3520,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 20816,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/product.ts",
+          "tokens_estimated": 702,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 370,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/admin.ts",
+          "tokens_estimated": 500,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 326,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 26,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 128,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 274,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 166,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 147,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 49,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 794,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 50,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/product.ts",
+          "tokens_estimated": 53,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 20,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 425,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 77,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 2219,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/API_CHANGES.md",
+          "tokens_estimated": 2095,
+          "action": "create"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 112,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 71,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/admin.ts",
+          "tokens_estimated": 52,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 137,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 74,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 25908,
+        "output_tokens_estimated": 7574,
+        "reads_count": 5,
+        "writes_count": 23,
+        "repeated_reads_blocked": 7,
+        "anatomy_lookups": 5
+      }
+    },
+    {
+      "id": "session-2026-04-05-1140",
+      "started": "2026-04-05T06:10:37.903Z",
+      "ended": "2026-04-05T07:14:22.694Z",
+      "reads": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 3520,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 20819,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/product.ts",
+          "tokens_estimated": 702,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 370,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/admin.ts",
+          "tokens_estimated": 500,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 326,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 26,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 128,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 274,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 166,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 147,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 49,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 794,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Shop.tsx",
+          "tokens_estimated": 50,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/product.ts",
+          "tokens_estimated": 53,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 20,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 425,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 77,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 2219,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/API_CHANGES.md",
+          "tokens_estimated": 2095,
+          "action": "create"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 112,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 71,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/admin.ts",
+          "tokens_estimated": 52,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 137,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 74,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 98,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/returns.ts",
+          "tokens_estimated": 175,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 25911,
+        "output_tokens_estimated": 7847,
+        "reads_count": 5,
+        "writes_count": 25,
+        "repeated_reads_blocked": 8,
+        "anatomy_lookups": 5
+      }
+    },
+    {
+      "id": "session-2026-04-05-1332",
+      "started": "2026-04-05T08:02:38.806Z",
+      "ended": "2026-04-05T08:10:53.199Z",
+      "reads": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/.wolf/cerebrum.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/plans/admin_panel_fixes_plan.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/.wolf/anatomy.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/.wolf/buglog.json",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 20819,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/admin.ts",
+          "tokens_estimated": 525,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/product.ts",
+          "tokens_estimated": 708,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/coupon.ts",
+          "tokens_estimated": 495,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/App.tsx",
+          "tokens_estimated": 1606,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/.wolf/memory.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/coupon.ts",
+          "tokens_estimated": 62,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/admin.ts",
+          "tokens_estimated": 203,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/services/product.ts",
+          "tokens_estimated": 125,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 311,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 580,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 555,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 677,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 352,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 1476,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 303,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 793,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 518,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 1353,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/pages/Admin.tsx",
+          "tokens_estimated": 440,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/App.tsx",
+          "tokens_estimated": 83,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/App.tsx",
+          "tokens_estimated": 279,
+          "action": "edit"
+        },
+        {
+          "file": "d:/KraftLabs/KV Silver Zone/Source/kv-silver-zone/src/App.tsx",
+          "tokens_estimated": 16,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 24153,
+        "output_tokens_estimated": 8126,
+        "reads_count": 10,
+        "writes_count": 17,
+        "repeated_reads_blocked": 10,
+        "anatomy_lookups": 5
+      }
+    }
+  ],
+  "daemon_usage": [],
+  "waste_flags": [],
+  "optimization_report": {
+    "last_generated": null,
+    "patterns": []
+  }
+}

@@ -24,6 +24,7 @@ interface CategoriesResponse {
 
 export interface ProductFilters {
   category?: string;
+  metal?: string;
   minPrice?: number;
   maxPrice?: number;
   search?: string;
@@ -75,5 +76,13 @@ export const productService = {
   getCategories: async (): Promise<string[]> => {
     const response = await api.get<CategoriesResponse>('/products/categories');
     return response.data;
+  },
+
+  createCategory: async (name: string): Promise<void> => {
+    return api.post<void>('/products/categories', { name });
+  },
+
+  deleteCategory: async (name: string): Promise<void> => {
+    return api.delete<void>(`/products/categories/${encodeURIComponent(name)}`);
   },
 };

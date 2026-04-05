@@ -367,7 +367,7 @@ const Payment = () => {
                 <hr />
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total</span>
-                  <span className="text-accent">{formatPrice(totalWithTax)}</span>
+                  <span className="text-primary">{formatPrice(totalWithTax)}</span>
                 </div>
               </div>
 

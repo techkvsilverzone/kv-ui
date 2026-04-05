@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -8,79 +8,79 @@
 
 @layer base {
   :root {
-    /* Premium Palette - Light Mode */
-    --background: 0 0% 100%;
-    --foreground: 0 0% 10%;
+    /* Premium Palette - Minimalist Ocean Teal / Soft Indigo */
+    --background: 0 0% 99.5%;
+    --foreground: 0 0% 5%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 215 20% 30%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --popover-foreground: 215 20% 30%;
 
-    /* Primary: Deep Charcoal / Soft Black */
-    --primary: 0 0% 15%;
+    /* Primary: Soft Oceanic Teal */
+    --primary: 195 50% 45%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: very soft gray */
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 15%;
+    /* Secondary: Soft Grayish Blue */
+    --secondary: 210 30% 96%;
+    --secondary-foreground: 215 20% 30%;
 
-    /* Muted: Subtle backgrounds */
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    /* Muted: Subtle background elements */
+    --muted: 210 20% 96%;
+    --muted-foreground: 0 0% 25%;
 
-    /* Accent: Refined Gold/Silver Mix for highlights */
-    --accent: 40 20% 50%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent: Soft Teal Highlight */
+    --accent: 195 40% 94%;
+    --accent-foreground: 195 50% 40%;
 
     /* Destructive */
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 70% 60%;
     --destructive-foreground: 0 0% 98%;
 
     /* Borders */
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 0 0% 15%;
+    --border: 215 20% 92%;
+    --input: 215 20% 92%;
+    --ring: 195 50% 45%;
 
     /* Special Silver Colours */
-    --silver: 0 0% 75%;
-    --silver-light: 0 0% 92%;
-    --silver-dark: 0 0% 45%;
+    --silver: 210 15% 82%;
+    --silver-light: 210 15% 94%;
+    --silver-dark: 210 15% 60%;
 
-    --radius: 0.25rem; /* Sharper corners for elegance */
+    --radius: 0.5rem; /* Slightly softer corners for a modern friendly look */
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 215 25% 98.5%;
+    --sidebar-foreground: 215 20% 40%;
+    --sidebar-primary: 195 50% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 25% 95%;
+    --sidebar-accent-foreground: 215 20% 30%;
+    --sidebar-border: 215 20% 92%;
+    --sidebar-ring: 195 50% 45%;
   }
 
-  /* Dark mode - Optional but good to have prepared, kept minimal for now as request implies light/elegant */
+  /* Dark mode - Kept minimal and soft */
   .dark {
-    --background: 0 0% 10%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 12%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 10%;
-    --secondary: 0 0% 18%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 40 20% 50%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62.8% 30.6%;
+    --background: 215 25% 12%;
+    --foreground: 210 30% 96%;
+    --card: 215 25% 15%;
+    --card-foreground: 210 30% 96%;
+    --popover: 215 25% 15%;
+    --popover-foreground: 210 30% 96%;
+    --primary: 195 50% 55%;
+    --primary-foreground: 215 25% 12%;
+    --secondary: 215 25% 20%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 215 25% 20%;
+    --muted-foreground: 215 15% 70%;
+    --accent: 195 40% 25%;
+    --accent-foreground: 195 50% 85%;
+    --destructive: 0 62.8% 40%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 0 0% 80%;
+    --border: 215 25% 22%;
+    --input: 215 25% 22%;
+    --ring: 195 50% 55%;
   }
 }
 
@@ -109,7 +109,7 @@
   }
 
   .nav-link {
-    @apply relative text-sm uppercase tracking-widest hover:text-accent transition-colors duration-300;
+    @apply relative text-sm uppercase tracking-widest hover:text-primary transition-colors duration-300;
   }
 
   .nav-link::after {

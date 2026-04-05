@@ -53,7 +53,7 @@ const OrderTracking = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen pt-24 pb-16 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -174,7 +174,7 @@ const OrderTracking = () => {
                 <hr />
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total</span>
-                  <span className="text-accent">{formatPrice(order.totalAmount)}</span>
+                  <span className="text-primary">{formatPrice(order.totalAmount)}</span>
                 </div>
               </div>
             </Card>

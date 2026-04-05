@@ -29,7 +29,8 @@ export const adminService = {
   },
 
   getAllUsers: async (): Promise<User[]> => {
-    return api.get<User[]>('/admin/users');
+    const users = await api.get<User[]>('/admin/users');
+    return users.map(u => ({ ...u, id: u.id || (u as any)._id || '' }));
   },
 
   getAllOrders: async (): Promise<Order[]> => {
@@ -55,5 +56,21 @@ export const adminService = {
 
   updateOrderStatus: async (id: string, status: string): Promise<Order> => {
     return api.put<Order>(`/admin/orders/${id}/status`, { status });
+  },
+
+  deleteOrder: async (id: string): Promise<void> => {
+    return api.delete<void>(`/admin/orders/${id}`);
+  },
+
+  deleteUser: async (id: string): Promise<void> => {
+    return api.delete<void>(`/admin/users/${id}`);
+  },
+
+  updateUser: async (id: string, data: Partial<Pick<User, 'name' | 'phone' | 'city' | 'isAdmin'>>): Promise<User> => {
+    return api.put<User>(`/admin/users/${id}`, data);
+  },
+
+  updateStoreConfig: async (config: { theme: string; isDark: boolean }): Promise<void> => {
+    return api.put<void>('/admin/store-config', config);
   },
 };

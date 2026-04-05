@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Eye, EyeOff, Mail, Lock, User, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,10 +11,15 @@ import { useToast } from '@/hooks/use-toast';
 
 const Signup = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signup } = useAuth();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  // Offline stall mode: activated by Admin panel, passed via ?stall=1 or localStorage flag
+  const offlineStallActive =
+    searchParams.get('stall') === '1' ||
+    localStorage.getItem('kv-offline-stall') === 'true';
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -49,10 +54,17 @@ const Signup = () => {
     try {
       const success = await signup(formData.email, formData.password, formData.name);
       if (success) {
-        toast({
-          title: 'Account created!',
-          description: 'Welcome to KV Silver Zone.',
-        });
+        if (offlineStallActive) {
+          toast({
+            title: 'Welcome! Promo coupon applied 🎉',
+            description: 'A stall event coupon has been credited to your account. Check your profile.',
+          });
+        } else {
+          toast({
+            title: 'Account created!',
+            description: 'Welcome to KV Silver Zone.',
+          });
+        }
         navigate('/');
       }
     } catch (error) {
@@ -71,6 +83,18 @@ const Signup = () => {
       <div className="container mx-auto px-4">
         <div className="max-w-md mx-auto">
           <Card className="p-8">
+            {offlineStallActive && (
+              <div className="flex items-start gap-3 bg-accent/20 border border-accent/40 rounded-lg px-4 py-3 mb-6">
+                <Store className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Stall Event Offer!</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Register now and receive a free promotional coupon automatically credited to your account.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="text-center mb-8">
               <div className="w-16 h-16 mx-auto rounded-full bg-primary flex items-center justify-center mb-4">
                 <span className="text-primary-foreground font-serif font-bold text-2xl">KV</span>
@@ -163,11 +187,11 @@ const Signup = () => {
                 />
                 <label htmlFor="terms" className="text-sm text-muted-foreground leading-tight">
                   I agree to the{' '}
-                  <Link to="#" className="text-accent hover:underline">
+                  <Link to="#" className="text-primary hover:underline">
                     Terms of Service
                   </Link>{' '}
                   and{' '}
-                  <Link to="#" className="text-accent hover:underline">
+                  <Link to="#" className="text-primary hover:underline">
                     Privacy Policy
                   </Link>
                 </label>
@@ -181,7 +205,7 @@ const Signup = () => {
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Already have an account?{' '}
-                <Link to="/login" className="text-accent hover:underline font-medium">
+                <Link to="/login" className="text-primary hover:underline font-medium">
                   Sign in
                 </Link>
               </p>

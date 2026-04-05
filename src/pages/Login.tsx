@@ -86,7 +86,7 @@ const Login = () => {
                   <Label htmlFor="password">Password</Label>
                   <Link
                     to="/forgot-password"
-                    className="text-sm text-accent hover:underline"
+                    className="text-sm text-primary hover:underline"
                   >
                     Forgot password?
                   </Link>
@@ -120,7 +120,7 @@ const Login = () => {
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Don't have an account?{' '}
-                <Link to="/signup" className="text-accent hover:underline font-medium">
+                <Link to="/signup" className="text-primary hover:underline font-medium">
                   Sign up
                 </Link>
               </p>

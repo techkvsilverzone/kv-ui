@@ -1,11 +1,17 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Loader2 } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Loader2, Gift, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import { useCart } from '@/context/CartContext';
+
+const GIFT_WRAP_FEE = 99;
 
 const Cart = () => {
   const { items, updateQuantity, removeFromCart, totalPrice, clearCart, isCartSyncing, isItemUpdating } = useCart();
+  const [giftWrap, setGiftWrap] = useState(false);
+  const [giftMessage, setGiftMessage] = useState('');
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -119,7 +125,7 @@ const Cart = () => {
                             </span>
                           )}
                         </div>
-                        <span className="font-semibold text-accent">
+                        <span className="font-semibold text-primary">
                           {formatPrice(item.price * item.quantity)}
                         </span>
                       </div>
@@ -139,6 +145,44 @@ const Cart = () => {
                 'Clear Cart'
               )}
             </Button>
+
+            {/* Gifting Options */}
+            <Card className="p-5 border border-border/60">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <Gift className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+                  <span className="font-serif text-sm font-medium text-primary">Gift Wrapping</span>
+                </div>
+                <button
+                  onClick={() => setGiftWrap((v) => !v)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${giftWrap ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                  aria-checked={giftWrap}
+                  role="switch"
+                >
+                  <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${giftWrap ? 'translate-x-4' : 'translate-x-1'}`} />
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4 ml-6">
+                Premium KV Silver gift box with ribbon — ₹{GIFT_WRAP_FEE}
+              </p>
+              {giftWrap && (
+                <div className="ml-6">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.5} />
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Personalized Message</span>
+                  </div>
+                  <Textarea
+                    placeholder="Add a heartfelt message for the recipient… (optional)"
+                    value={giftMessage}
+                    onChange={(e) => setGiftMessage(e.target.value)}
+                    maxLength={200}
+                    rows={3}
+                    className="text-sm resize-none"
+                  />
+                  <p className="text-[10px] text-muted-foreground text-right mt-1">{giftMessage.length}/200</p>
+                </div>
+              )}
+            </Card>
           </div>
 
           {/* Order Summary */}
@@ -148,21 +192,23 @@ const Cart = () => {
               
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="text-muted-foreground">Subtotal (incl. GST)</span>
                   <span>{formatPrice(totalPrice)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Shipping</span>
                   <span className="text-green-600">Free</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax (GST 5%)</span>
-                  <span>{formatPrice(totalPrice * 0.05)}</span>
-                </div>
+                {giftWrap && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Gift Wrapping</span>
+                    <span>{formatPrice(GIFT_WRAP_FEE)}</span>
+                  </div>
+                )}
                 <hr />
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total</span>
-                  <span className="text-accent">{formatPrice(totalPrice * 1.05)}</span>
+                  <span className="text-primary">{formatPrice(totalPrice + (giftWrap ? GIFT_WRAP_FEE : 0))}</span>
                 </div>
               </div>
 
@@ -174,7 +220,7 @@ const Cart = () => {
               </Link>
 
               <p className="text-xs text-center text-muted-foreground mt-4">
-                Free shipping on orders above ₹5,000
+                Free insured shipping · GST included in prices
               </p>
             </Card>
           </div>

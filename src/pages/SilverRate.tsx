@@ -85,7 +85,7 @@ const SilverRate = () => {
 
         {todayLoading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-accent" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
           <>
@@ -142,7 +142,7 @@ const SilverRate = () => {
               <h2 className="font-serif text-xl font-semibold mb-6">30-Day Price History</h2>
               {historyLoading ? (
                 <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-accent" />
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               ) : historyRates.length > 0 ? (
                 <div className="overflow-x-auto">
@@ -198,7 +198,7 @@ const SilverRate = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
           <Card className="p-6">
             <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-accent mt-0.5" />
+              <Info className="h-5 w-5 text-primary mt-0.5" />
               <div>
                 <h3 className="font-serif text-lg font-semibold mb-2">Making Charges</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
@@ -209,7 +209,7 @@ const SilverRate = () => {
           </Card>
           <Card className="p-6">
             <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-accent mt-0.5" />
+              <Info className="h-5 w-5 text-primary mt-0.5" />
               <div>
                 <h3 className="font-serif text-lg font-semibold mb-2">Buyback Policy</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">

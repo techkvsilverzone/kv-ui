@@ -23,13 +23,13 @@ const Wishlist = () => {
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-4">
         <div className="flex items-center gap-3 mb-8">
-          <Heart className="h-7 w-7 text-accent" />
+          <Heart className="h-7 w-7 text-primary" />
           <h1 className="font-serif text-4xl font-bold text-foreground">My Wishlist</h1>
         </div>
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-10 w-10 text-accent animate-spin mb-4" />
+            <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
             <p className="text-muted-foreground">Loading wishlist...</p>
           </div>
         ) : wishlistProducts.length > 0 ? (

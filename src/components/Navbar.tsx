@@ -58,82 +58,73 @@ const Navbar = () => {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between">
 
-          {/* Left Section */}
-          <div className="flex-1 flex items-center justify-start gap-3">
+          {/* Left Section: Logo & Mobile Menu */}
+          <div className="flex-shrink-0 flex items-center justify-start gap-2 md:gap-4">
             <Button
               variant="ghost"
               size="icon"
               className="lg:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
 
-            <Link to="/" className="flex items-center gap-2.5 group">
+            <Link to="/" className="flex items-center gap-3 lg:gap-4 group">
               <img
                 src="/kvlogo.png"
                 alt="KV Silver Zone"
-                className="h-10 w-10 md:h-11 md:w-11 object-contain"
+                className="h-12 w-12 md:h-16 md:w-16 object-contain"
               />
-              <div className="hidden sm:flex flex-col leading-none">
-                <span className="font-serif text-lg md:text-xl font-bold text-primary tracking-wide group-hover:opacity-90 transition-opacity">
+              <div className="hidden sm:flex flex-col justify-center leading-tight">
+                <span className="font-serif text-xl md:text-3xl font-bold text-primary tracking-wide group-hover:opacity-90 transition-opacity whitespace-nowrap">
                   KV SILVER ZONE
                 </span>
-                <span className="text-[9px] md:text-[10px] uppercase tracking-[0.22em] text-muted-foreground group-hover:text-accent transition-colors">
+                <span className="text-[10px] md:text-sm uppercase tracking-[0.22em] text-muted-foreground group-hover:text-primary transition-colors">
                   Pure Silver • Pure Trust
                 </span>
               </div>
             </Link>
+          </div>
 
-            {/* Expandable Search */}
-            <div className={`relative flex items-center transition-all duration-300 ${isSearchOpen ? 'w-full max-w-sm ml-4 lg:ml-0' : 'w-auto'}`}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hidden lg:flex text-muted-foreground hover:text-foreground transition-colors z-10"
-                onClick={() => {
-                  if (isSearchOpen && searchQuery.trim()) {
+          {/* Center Section: Always Expanded Search */}
+          <div className="flex-1 min-w-0 flex items-center px-6 md:px-12 lg:px-24 xl:px-32 max-w-4xl">
+            <div className="relative w-full">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
                     submitSearch();
-                    return;
                   }
-                  setIsSearchOpen(!isSearchOpen);
                 }}
-              >
-                {isSearchOpen ? <X className="h-5 w-5" strokeWidth={1.5} /> : <Search className="h-5 w-5" strokeWidth={1.5} />}
-              </Button>
-              <div
-                className={`absolute left-0 top-1/2 -translate-y-1/2 overflow-hidden transition-all duration-300 flex items-center ${isSearchOpen ? 'w-[300px] opacity-100 pl-10' : 'w-0 opacity-0'
-                  }`}
-              >
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      submitSearch();
-                    }
-                  }}
-                  className="w-full bg-secondary/50 border border-input rounded-full py-2 px-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all font-light"
-                  autoFocus={isSearchOpen}
-                />
-              </div>
+                className="w-full bg-secondary/50 border border-input rounded-full py-2.5 pl-11 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all font-light"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
 
           {/* Actions (Right) */}
-          <div className="flex-1 flex items-center justify-end gap-1 md:gap-3">
+          <div className="flex-shrink-0 flex items-center justify-end gap-3 md:gap-6">
             <Link to="/wishlist">
-              <Button variant="ghost" size="icon" className="hidden sm:flex text-muted-foreground hover:text-white transition-colors">
-                <Heart className="h-5 w-5" strokeWidth={1.5} />
+              <Button variant="ghost" size="icon" className="hidden sm:flex text-muted-foreground hover:text-primary transition-colors">
+                <Heart className="h-6 w-6" strokeWidth={1.5} />
               </Button>
             </Link>
 
             <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-white transition-colors">
-                <ShoppingCart className="h-5 w-5" strokeWidth={1.5} />
+              <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary transition-colors">
+                <ShoppingCart className="h-6 w-6" strokeWidth={1.5} />
                 {totalItems > 0 && (
                   <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
                     {totalItems}
@@ -145,10 +136,10 @@ const Navbar = () => {
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-white font-normal">
-                    <User className="h-4 w-4" strokeWidth={1.5} />
-                    <span className="hidden md:inline text-xs uppercase tracking-wider">{user?.name}</span>
-                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  <Button variant="ghost" className="gap-2 px-2 text-muted-foreground hover:text-primary font-normal">
+                    <User className="h-5 w-5" strokeWidth={1.5} />
+                    <span className="hidden md:inline text-sm uppercase tracking-wider">{user?.name}</span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 bg-card border-border/50">
@@ -177,7 +168,7 @@ const Navbar = () => {
               </DropdownMenu>
             ) : (
               <Link to="/login">
-                <Button variant="ghost" size="sm" className="text-xs uppercase tracking-wider font-medium hover:bg-transparent hover:text-accent">
+                <Button variant="ghost" size="sm" className="text-xs uppercase tracking-wider font-medium hover:bg-transparent hover:text-primary">
                   Login
                 </Button>
               </Link>
@@ -192,7 +183,7 @@ const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`nav-link text-xs font-medium tracking-[0.15em] transition-colors ${isActive(link.path)
+                className={`nav-link text-sm font-medium tracking-[0.15em] transition-colors ${isActive(link.path)
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-primary'
                   }`}
@@ -213,7 +204,7 @@ const Navbar = () => {
                   to={link.path}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={`px-4 py-3 text-sm uppercase tracking-wider transition-colors ${isActive(link.path)
-                    ? 'bg-accent/5 text-accent font-semibold border-l-2 border-accent'
+                    ? 'bg-accent/5 text-primary font-semibold border-l-2 border-accent'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
                     }`}
                 >

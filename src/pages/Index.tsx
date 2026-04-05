@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Truck, Award, Headphones, ChevronDown, Loader2 } from 'lucide-react';
+import { ArrowRight, Shield, Award, Headphones, ChevronDown, Loader2, CheckCircle, RotateCcw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import heroImage from '@/assets/hero-silver.jpg';
@@ -13,22 +13,33 @@ const Index = () => {
     queryFn: productService.getFeatured,
   });
 
-  const features = [
+  const trustBar = [
     {
-      icon: Shield,
-      title: 'Certified Purity',
-      description: '100% BIS Hallmarked silver',
+      icon: Award,
+      title: '100% BIS Hallmarked',
+      description: 'Certified Silver',
     },
     {
-      icon: Truck,
+      icon: Shield,
       title: 'Insured Shipping',
-      description: 'Safe delivery to your doorstep',
+      description: 'Every parcel fully covered',
+    },
+    {
+      icon: RotateCcw,
+      title: 'Easy Returns',
+      description: '7-day hassle-free policy',
     },
     {
       icon: Headphones,
-      title: 'Premium Support',
+      title: 'Concierge Support',
       description: 'Dedicated relationship managers',
     },
+  ];
+
+  const occasions = [
+    { label: 'Coins and Bars', query: 'Rings', emoji: '✨' },
+    { label: 'Gifting', query: 'Coins', emoji: '🎁' },
+    { label: 'Puja & Ritual', query: 'Puja Items', emoji: '🪔' },
   ];
 
   return (
@@ -77,21 +88,43 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features - Minimalist Bar */}
+      {/* Trust Bar */}
       <section className="border-b border-border">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
-            {features.map((feature, index) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-border">
+            {trustBar.map((item, index) => (
               <div
                 key={index}
-                className="flex flex-col items-center text-center p-8 lg:p-12 hover:bg-secondary/30 transition-colors cursor-default group"
+                className="flex flex-col items-center text-center p-8 hover:bg-secondary/30 transition-colors cursor-default group"
               >
-                <feature.icon className="h-8 w-8 text-muted-foreground mb-4 group-hover:text-primary transition-colors" strokeWidth={1} />
-                <h3 className="font-serif text-lg font-medium text-primary mb-1">
-                  {feature.title}
-                </h3>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider opacity-80">{feature.description}</p>
+                <item.icon className="h-7 w-7 text-muted-foreground mb-3 group-hover:text-primary transition-colors" strokeWidth={1} />
+                <h3 className="font-serif text-sm font-medium text-primary mb-1">{item.title}</h3>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider opacity-80">{item.description}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Shop by Occasion */}
+      <section className="section-padding border-b border-border bg-secondary/20">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col items-center text-center mb-12">
+            <span className="text-muted-foreground text-xs uppercase tracking-[0.2em] mb-4">Browse by Lifestyle</span>
+            <h2 className="font-serif text-4xl md:text-5xl font-normal text-primary">Shop by Occasion</h2>
+            <div className="w-24 h-px bg-primary/20 mt-8" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-4">
+            {occasions.map(({ label, query, emoji }) => (
+              <Link
+                key={label}
+                to={`/shop?category=${encodeURIComponent(query)}`}
+                className="group flex flex-col items-center gap-3 p-6 rounded-xl border border-border bg-card hover:border-primary/30 hover:bg-primary/5 transition-all duration-300"
+              >
+                <span className="text-3xl">{emoji}</span>
+                <span className="text-xs uppercase tracking-wider text-muted-foreground group-hover:text-primary transition-colors font-medium text-center">{label}</span>
+                <CheckCircle className="h-3.5 w-3.5 text-primary/0 group-hover:text-primary/40 transition-colors" strokeWidth={1.5} />
+              </Link>
             ))}
           </div>
         </div>
@@ -112,7 +145,7 @@ const Index = () => {
 
           {isLoading ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 text-accent animate-spin" />
+              <Loader2 className="h-8 w-8 text-primary animate-spin" />
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 place-items-center">

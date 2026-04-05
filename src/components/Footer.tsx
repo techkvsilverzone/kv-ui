@@ -29,8 +29,10 @@ const Footer = () => {
             <ul className="space-y-4">
               <FooterLink to="/shop" label="Silver Collection" />
               <FooterLink to="/savings-scheme" label="Investment Plan" />
+              <FooterLink to="/offers" label="Deals & Offers" />
               <FooterLink to="/about" label="Our Heritage" />
               <FooterLink to="/contact" label="Concierge" />
+              <FooterLink to="/faq" label="FAQ" />
             </ul>
           </div>
 
@@ -71,11 +73,14 @@ const Footer = () => {
             © 2025 KV Silver Zone. All rights reserved.
           </p>
           <div className="flex gap-8">
-            <Link to="#" className="text-xs text-muted-foreground hover:text-primary uppercase tracking-wider transition-colors">
+            <Link to="/privacy-policy" className="text-xs text-muted-foreground hover:text-primary uppercase tracking-wider transition-colors">
               Privacy
             </Link>
-            <Link to="#" className="text-xs text-muted-foreground hover:text-primary uppercase tracking-wider transition-colors">
+            <Link to="/terms" className="text-xs text-muted-foreground hover:text-primary uppercase tracking-wider transition-colors">
               Terms
+            </Link>
+            <Link to="/faq" className="text-xs text-muted-foreground hover:text-primary uppercase tracking-wider transition-colors">
+              FAQ
             </Link>
           </div>
         </div>

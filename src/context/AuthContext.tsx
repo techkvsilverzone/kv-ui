@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '@/services/auth';
 import { UNAUTHORIZED_EVENT } from '@/lib/api';
 
+export type UserRole = 'admin' | 'staff' | 'customer';
+
 export interface User {
   _id: string;
   id?: string;
@@ -13,9 +15,17 @@ export interface User {
   state?: string;
   pincode?: string;
   isAdmin?: boolean;
+  role?: UserRole;
   createdAt?: string;
   updatedAt?: string;
 }
+
+/** Derive a normalised role from the User object returned by the API. */
+export const getUserRole = (user: User): UserRole => {
+  if (user.role) return user.role;
+  if (user.isAdmin) return 'admin';
+  return 'customer';
+};
 
 interface AuthContextType {
   user: User | null;
