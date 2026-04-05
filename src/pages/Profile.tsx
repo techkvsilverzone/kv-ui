@@ -148,6 +148,9 @@ const Profile = () => {
                 <Button onClick={handleUpdateProfile} className="btn-shine">
                   Save Changes
                 </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/change-password">Change Password</Link>
+                </Button>
                 <Button variant="outline" onClick={logout}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Logout

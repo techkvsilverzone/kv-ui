@@ -338,6 +338,40 @@
       "last_seen": "2026-04-05T08:06:03.845Z"
     },
     {
+      "id": "bug-028",
+      "timestamp": "2026-04-05T15:09:00.000Z",
+      "error_message": "Theme config was not reading from public/admin store-config endpoints",
+      "file": "src/App.tsx",
+      "root_cause": "Theme initialization relied on localStorage only, and admin save used fire-and-forget behavior instead of full endpoint-based read/write flow.",
+      "fix": "Added public store-config service (`GET /store-config`) for app startup, added admin store-config read (`GET /admin/store-config`), and switched admin save to robust update (`PUT /admin/store-config` with POST fallback).",
+      "tags": [
+        "theme",
+        "store-config",
+        "api-integration",
+        "admin"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T15:09:00.000Z"
+    },
+    {
+      "id": "bug-027",
+      "timestamp": "2026-04-05T14:09:00.000Z",
+      "error_message": "Missing change-password UI for customers and admin user management",
+      "file": "src/pages/ChangePassword.tsx",
+      "root_cause": "Application had no UI flow wired to PUT /users/:userId/password and no admin-side per-user password action.",
+      "fix": "Added dedicated Change Password screen for normal users, added admin-only change-password action/modal in customers table, wired authService.changePassword, and added status-specific messages for 400/403/404.",
+      "tags": [
+        "ui-missing",
+        "auth",
+        "password",
+        "admin"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-05T14:09:00.000Z"
+    },
+    {
       "id": "bug-022",
       "timestamp": "2026-04-05T08:06:39.397Z",
       "error_message": "Type error",

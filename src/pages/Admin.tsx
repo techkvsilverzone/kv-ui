@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -18,6 +18,7 @@ import {
   RotateCcw,
   BarChart3,
   Plus,
+  KeyRound,
   X,
   Check,
   XCircle,
@@ -57,11 +58,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth, getUserRole } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { adminService } from '@/services/admin';
+import { authService } from '@/services/auth';
 import { productService } from '@/services/product';
 import { savingsService } from '@/services/savings';
 import { couponService, type CreateCouponPayload } from '@/services/coupon';
 import { returnsService } from '@/services/returns';
 import { silverRateService, type UpdateSilverRatePayload } from '@/services/silverRate';
+import { ApiError } from '@/lib/api';
 
 const Admin = () => {
   const { user, isAuthenticated } = useAuth();
@@ -83,6 +86,8 @@ const Admin = () => {
   // Edit user modal state
   const [editingUser, setEditingUser] = useState<{ id: string; name: string; email: string; phone?: string; city?: string; isAdmin?: boolean } | null>(null);
   const [editUserForm, setEditUserForm] = useState({ name: '', phone: '', city: '' });
+  const [passwordTargetUser, setPasswordTargetUser] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [newUserPassword, setNewUserPassword] = useState('');
 
   // Add Category state
   const [newCategory, setNewCategory] = useState('');
@@ -195,6 +200,13 @@ const Admin = () => {
     queryKey: ['categories'],
     queryFn: productService.getCategories,
     enabled: role === 'admin' || role === 'staff',
+  });
+
+  const { data: adminStoreConfig } = useQuery({
+    queryKey: ['admin-store-config'],
+    queryFn: adminService.getStoreConfig,
+    enabled: role === 'admin',
+    meta: { errorMessage: 'Failed to load store theme config' },
   });
 
   const { data: adminStats, isLoading: statsLoading } = useQuery({
@@ -361,6 +373,50 @@ const Admin = () => {
     },
   });
 
+  const updateStoreConfigMutation = useMutation({
+    mutationFn: adminService.updateStoreConfig,
+    onSuccess: () => {
+      toast({ title: 'Theme Saved', description: 'Global theme preferences have been saved.' });
+    },
+    onError: () => {
+      toast({ title: 'Save failed', description: 'Unable to save theme settings.', variant: 'destructive' });
+    },
+  });
+
+  const changeUserPasswordMutation = useMutation({
+    mutationFn: ({ userId, newPassword }: { userId: string; newPassword: string }) =>
+      authService.changePassword(userId, newPassword),
+    onSuccess: () => {
+      setPasswordTargetUser(null);
+      setNewUserPassword('');
+      toast({
+        title: 'Password Updated',
+        description: 'Customer password changed successfully.',
+      });
+    },
+    onError: (error: unknown) => {
+      let description = 'Failed to change password.';
+
+      if (error instanceof ApiError) {
+        if (error.statusCode === 400) {
+          description = 'Password is weak or invalid.';
+        } else if (error.statusCode === 403) {
+          description = 'You are not allowed to change this user password.';
+        } else if (error.statusCode === 404) {
+          description = 'Target user was not found.';
+        } else if (error.message) {
+          description = error.message;
+        }
+      }
+
+      toast({
+        title: 'Change password failed',
+        description,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const createCategoryMutation = useMutation({
     mutationFn: productService.createCategory,
     onSuccess: () => {
@@ -377,6 +433,19 @@ const Admin = () => {
       toast({ title: 'Category Removed' });
     },
   });
+
+  useEffect(() => {
+    if (!adminStoreConfig) return;
+    if (!colorThemes[adminStoreConfig.theme]) return;
+
+    setActiveTheme(adminStoreConfig.theme);
+    const selected = colorThemes[adminStoreConfig.theme];
+    document.documentElement.style.setProperty('--primary', selected.primary);
+    document.documentElement.style.setProperty('--ring', selected.ring);
+    setIsDark(!!adminStoreConfig.isDark);
+    document.documentElement.classList.toggle('dark', !!adminStoreConfig.isDark);
+    localStorage.setItem('kv-theme-config', JSON.stringify(adminStoreConfig));
+  }, [adminStoreConfig]);
 
   if (!isAuthenticated || (role !== 'admin' && role !== 'staff')) {
     return <Navigate to="/login" />;
@@ -1036,6 +1105,19 @@ const Admin = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
+                            {role === 'admin' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setPasswordTargetUser({ id: u.id, name: u.name, email: u.email });
+                                  setNewUserPassword('');
+                                }}
+                                title="Change Password"
+                              >
+                                <KeyRound className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -1105,6 +1187,57 @@ const Admin = () => {
               </div>
             </DialogContent>
           </Dialog>
+
+          {role === 'admin' && (
+            <Dialog
+              open={passwordTargetUser !== null}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setPasswordTargetUser(null);
+                  setNewUserPassword('');
+                }
+              }}
+            >
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle className="font-serif">Change Customer Password</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-2">
+                  <div>
+                    <Label>User</Label>
+                    <Input
+                      value={passwordTargetUser ? `${passwordTargetUser.name} (${passwordTargetUser.email})` : ''}
+                      disabled
+                      className="mt-1 text-muted-foreground"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="admin-new-password">New Password</Label>
+                    <Input
+                      id="admin-new-password"
+                      type="password"
+                      value={newUserPassword}
+                      onChange={(e) => setNewUserPassword(e.target.value)}
+                      className="mt-1"
+                      placeholder="Enter new password"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      if (!passwordTargetUser || !newUserPassword.trim()) return;
+                      changeUserPasswordMutation.mutate({
+                        userId: passwordTargetUser.id,
+                        newPassword: newUserPassword,
+                      });
+                    }}
+                    disabled={changeUserPasswordMutation.isPending || !newUserPassword.trim()}
+                  >
+                    {changeUserPasswordMutation.isPending ? 'Updating...' : 'Update Password'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
 
           {/* ═══════ SAVINGS SCHEMES ═══════ */}
           <TabsContent value="savings">
@@ -1781,15 +1914,15 @@ const Admin = () => {
                   Persist the selected theme and display mode for all users by saving to the server. Theme is also saved to localStorage for instant fallback.
                 </p>
                 <Button
-                  onClick={() => {
+                  onClick={async () => {
                     const config = { theme: activeTheme, isDark };
                     localStorage.setItem('kv-theme-config', JSON.stringify(config));
-                    adminService.updateStoreConfig(config).catch(() => {/* API may not be implemented yet */});
-                    toast({ title: 'Theme Saved', description: 'Global theme preferences have been saved.' });
+                    await updateStoreConfigMutation.mutateAsync(config);
                   }}
+                  disabled={updateStoreConfigMutation.isPending}
                 >
                   <Check className="h-4 w-4 mr-2" />
-                  Save Global Theme
+                  {updateStoreConfigMutation.isPending ? 'Saving...' : 'Save Global Theme'}
                 </Button>
               </Card>
 

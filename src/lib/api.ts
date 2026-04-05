@@ -44,6 +44,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export { UNAUTHORIZED_EVENT };
+export { ApiError };
 
 export const api = {
   get: <T>(path: string, options?: RequestInit) => request<T>(path, { ...options, method: 'GET' }),

@@ -23,6 +23,10 @@ export const authService = {
     return api.put<User>('/users/me', data);
   },
 
+  changePassword: async (userId: string, newPassword: string): Promise<{ message: string }> => {
+    return api.put<{ message: string }>(`/users/${userId}/password`, { newPassword });
+  },
+
   forgotPassword: async (email: string): Promise<{ message: string }> => {
     return api.post<{ message: string }>('/auth/forgot-password', { email });
   },

@@ -20,6 +20,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Cart from "./pages/Cart";
 import Payment from "./pages/Payment";
 import Profile from "./pages/Profile";
+import ChangePassword from "./pages/ChangePassword";
 import Wishlist from "./pages/Wishlist";
 import Admin from "./pages/Admin";
 import ProductDetail from "./pages/ProductDetail";
@@ -34,6 +35,7 @@ import TermsConditions from "./pages/TermsConditions";
 import FAQ from "./pages/FAQ";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import GiftVouchers from "./pages/GiftVouchers";
+import { storeConfigService } from "@/services/storeConfig";
 
 import ScrollToTop from "@/components/ScrollToTop";
 
@@ -59,19 +61,35 @@ const colorThemeCssVars: Record<string, { primary: string; ring: string }> = {
   'deep-amethyst': { primary: '270 40% 45%', ring: '270 40% 45%' },
 };
 
+const applyTheme = (theme: string, isDark: boolean) => {
+  document.documentElement.classList.toggle('dark', isDark);
+  const vars = colorThemeCssVars[theme];
+  if (vars) {
+    document.documentElement.style.setProperty('--primary', vars.primary);
+    document.documentElement.style.setProperty('--ring', vars.ring);
+  }
+};
+
 const App = () => {
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('kv-theme-config');
-      if (!stored) return;
-      const { theme, isDark } = JSON.parse(stored) as { theme: string; isDark: boolean };
-      document.documentElement.classList.toggle('dark', isDark);
-      const vars = colorThemeCssVars[theme];
-      if (vars) {
-        document.documentElement.style.setProperty('--primary', vars.primary);
-        document.documentElement.style.setProperty('--ring', vars.ring);
+    const loadTheme = async () => {
+      try {
+        const config = await storeConfigService.getPublicStoreConfig();
+        applyTheme(config.theme, !!config.isDark);
+        localStorage.setItem('kv-theme-config', JSON.stringify(config));
+      } catch {
+        try {
+          const stored = localStorage.getItem('kv-theme-config');
+          if (!stored) return;
+          const { theme, isDark } = JSON.parse(stored) as { theme: string; isDark: boolean };
+          applyTheme(theme, !!isDark);
+        } catch {
+          /* ignore malformed config */
+        }
       }
-    } catch { /* ignore malformed config */ }
+    };
+
+    loadTheme();
   }, []);
 
   return (
@@ -101,6 +119,7 @@ const App = () => {
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/payment" element={<Payment />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/change-password" element={<ChangePassword />} />
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/product/:id" element={<ProductDetail />} />

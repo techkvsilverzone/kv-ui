@@ -1,8 +1,14 @@
 import { api } from '../lib/api';
+import { ApiError } from '../lib/api';
 import type { Product } from '../context/CartContext';
 import type { Order } from './order';
 import type { User } from '../context/AuthContext';
 import type { SavingsEnrollment } from './savings';
+
+export interface StoreConfig {
+  theme: string;
+  isDark: boolean;
+}
 
 export interface AdminStats {
   totalRevenue: number;
@@ -70,7 +76,19 @@ export const adminService = {
     return api.put<User>(`/admin/users/${id}`, data);
   },
 
-  updateStoreConfig: async (config: { theme: string; isDark: boolean }): Promise<void> => {
-    return api.put<void>('/admin/store-config', config);
+  getStoreConfig: async (): Promise<StoreConfig> => {
+    return api.get<StoreConfig>('/admin/store-config');
+  },
+
+  updateStoreConfig: async (config: StoreConfig): Promise<void> => {
+    try {
+      await api.put<void>('/admin/store-config', config);
+    } catch (error) {
+      if (error instanceof ApiError && (error.statusCode === 404 || error.statusCode === 405)) {
+        await api.post<void>('/admin/store-config', config);
+        return;
+      }
+      throw error;
+    }
   },
 };

@@ -53,4 +53,14 @@ describe('authService', () => {
     expect(me).toEqual(user);
     expect(updated).toEqual({ ...user, name: 'B' });
   });
+
+  it('changes password with user specific endpoint', async () => {
+    const response = { message: 'Password updated' };
+    vi.mocked(api.put).mockResolvedValue(response);
+
+    const result = await authService.changePassword('u1', 'new-secret');
+
+    expect(api.put).toHaveBeenCalledWith('/users/u1/password', { newPassword: 'new-secret' });
+    expect(result).toEqual(response);
+  });
 });

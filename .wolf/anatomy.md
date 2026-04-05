@@ -136,6 +136,7 @@
 - `About.tsx` — About (~1974 tok)
 - `Admin.tsx` — Admin (~25924 tok)
 - `Cart.tsx` — Cart (~2257 tok)
+- `ChangePassword.tsx` — ChangePassword — renders form — uses useState (~1300 tok)
 - `Contact.tsx` — Contact — renders form, map — uses useState (~3240 tok)
 - `CustomerDashboard.tsx` — statusColors (~2512 tok)
 - `ForgotPassword.tsx` — ForgotPassword — renders form — uses useState (~1196 tok)
@@ -172,6 +173,7 @@
 - `review.ts` — Exports Review, CreateReviewPayload, ProductReviewSummary, reviewService (~286 tok)
 - `savings.ts` — Exports SavingsEnrollmentPayload, SavingsEnrollment, savingsService (~206 tok)
 - `silverRate.ts` — Exports SilverRate, UpdateSilverRatePayload, silverRateService (~429 tok)
+- `storeConfig.ts` — Exports StoreConfig, DEFAULT_STORE_CONFIG, storeConfigService (~130 tok)
 - `wishlist.ts` — API routes: POST, DELETE (2 endpoints) (~752 tok)
 
 ## src/test/

@@ -108,3 +108,8 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 14:06 | Added user/admin change-password flows | src/pages/ChangePassword.tsx, src/pages/Admin.tsx, src/services/auth.ts, src/App.tsx, src/pages/Profile.tsx | success | ~5200 |
+| 14:07 | Added auth service test for password endpoint | src/services/auth.test.ts | success | ~300 |
+| 14:08 | Validated changes (vitest + diagnostics) | src/services/auth.test.ts | passed (project has pre-existing unrelated TS issues) | ~400 |
+| 15:07 | Wired theme to store-config endpoints | src/App.tsx, src/pages/Admin.tsx, src/services/admin.ts, src/services/storeConfig.ts | success | ~3900 |
+| 15:08 | Validated admin theme/service changes | src/services/admin.test.ts | passed | ~250 |
