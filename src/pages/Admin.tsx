@@ -85,6 +85,7 @@ import { savingsService } from '@/services/savings';
 import { couponService, type CreateCouponPayload } from '@/services/coupon';
 import { returnsService } from '@/services/returns';
 import { silverRateService, type UpdateSilverRatePayload } from '@/services/silverRate';
+import { inventoryService } from '@/services/inventory';
 import { ApiError } from '@/lib/api';
 
 const Admin = () => {
@@ -145,31 +146,31 @@ const Admin = () => {
   const [showReconcileModal, setShowReconcileModal] = useState(false);
   const [inventoryForm, setInventoryForm] = useState({ productId: '', quantity: '', reason: '' });
   const [reconcileForm, setReconcileForm] = useState({ productId: '', physicalCount: '' });
-  const [mockInventoryTransactions, setMockInventoryTransactions] = useState([
-    { id: '1', type: 'IN', productId: 'p1', productName: 'Silver Ring 925', quantity: 50, date: '2023-11-20T10:00:00Z', reason: 'New Stock Restock' },
-    { id: '2', type: 'OUT', productId: 'p1', productName: 'Silver Ring 925', quantity: 2, date: '2023-11-21T14:30:00Z', reason: 'Order #12093' },
-    { id: '3', type: 'RECONCILE', productId: 'p2', productName: 'Polished Chain', quantity: -2, date: '2023-11-22T09:15:00Z', reason: 'Monthly Audit Adjustment' },
-  ]);
 
   const handleStockInward = () => {
-    // TODO: Wire API (POST /admin/inventory/inward)
-    toast({ title: 'Stock Inward Recorded', description: 'API not wired yet.' });
-    setShowInwardModal(false);
-    setInventoryForm({ productId: '', quantity: '', reason: '' });
+    if (!inventoryForm.productId || !inventoryForm.quantity) return;
+    inwardMutation.mutate({
+      productId: inventoryForm.productId,
+      quantity: Number(inventoryForm.quantity),
+      reason: inventoryForm.reason,
+    });
   };
 
   const handleStockOutward = () => {
-    // TODO: Wire API (POST /admin/inventory/outward)
-    toast({ title: 'Stock Outward Recorded', description: 'API not wired yet.' });
-    setShowOutwardModal(false);
-    setInventoryForm({ productId: '', quantity: '', reason: '' });
+    if (!inventoryForm.productId || !inventoryForm.quantity) return;
+    outwardMutation.mutate({
+      productId: inventoryForm.productId,
+      quantity: Number(inventoryForm.quantity),
+      reason: inventoryForm.reason,
+    });
   };
 
   const handleReconcile = () => {
-    // TODO: Wire API (POST /admin/inventory/reconcile)
-    toast({ title: 'Inventory Reconciled', description: 'Stock levels updated based on physical count.' });
-    setShowReconcileModal(false);
-    setReconcileForm({ productId: '', physicalCount: '' });
+    if (!reconcileForm.productId || !reconcileForm.physicalCount) return;
+    reconcileMutation.mutate({
+      productId: reconcileForm.productId,
+      physicalCount: Number(reconcileForm.physicalCount),
+    });
   };
 
   const addPincodeRate = () => {
@@ -319,6 +320,27 @@ const Admin = () => {
     meta: { errorMessage: 'Failed to load silver rates' },
   });
 
+  const { data: inventoryTransactions = [], isLoading: inventoryLoading } = useQuery({
+    queryKey: ['admin-inventory-transactions'],
+    queryFn: () => inventoryService.getTransactions(),
+    enabled: role === 'admin' || role === 'staff',
+    meta: { errorMessage: 'Failed to load inventory transactions' },
+  });
+
+  const { data: lowStockItems = [], isLoading: lowStockLoading } = useQuery({
+    queryKey: ['admin-inventory-low-stock'],
+    queryFn: inventoryService.getLowStock,
+    enabled: role === 'admin' || role === 'staff',
+    meta: { errorMessage: 'Failed to load low stock alerts' },
+  });
+
+  const { data: inventorySummary } = useQuery({
+    queryKey: ['admin-inventory-summary'],
+    queryFn: inventoryService.getSummary,
+    enabled: role === 'admin' || role === 'staff',
+    meta: { errorMessage: 'Failed to load inventory summary' },
+  });
+
   /* ── Mutations ── */
   const deleteProductMutation = useMutation({
     mutationFn: adminService.deleteProduct,
@@ -388,6 +410,48 @@ const Admin = () => {
       setShowUpdateRate(false);
       toast({ title: 'Silver Rate Updated' });
     },
+  });
+
+  const inwardMutation = useMutation({
+    mutationFn: inventoryService.recordInward,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-inventory-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-inventory-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-inventory-low-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      setShowInwardModal(false);
+      setInventoryForm({ productId: '', quantity: '', reason: '' });
+      toast({ title: 'Stock Inward Recorded' });
+    },
+    onError: () => toast({ title: 'Failed to record inward', variant: 'destructive' }),
+  });
+
+  const outwardMutation = useMutation({
+    mutationFn: inventoryService.recordOutward,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-inventory-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-inventory-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-inventory-low-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      setShowOutwardModal(false);
+      setInventoryForm({ productId: '', quantity: '', reason: '' });
+      toast({ title: 'Stock Outward Recorded' });
+    },
+    onError: () => toast({ title: 'Failed to record outward', variant: 'destructive' }),
+  });
+
+  const reconcileMutation = useMutation({
+    mutationFn: inventoryService.reconcile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-inventory-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-inventory-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-inventory-low-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      setShowReconcileModal(false);
+      setReconcileForm({ productId: '', physicalCount: '' });
+      toast({ title: 'Inventory Reconciled' });
+    },
+    onError: () => toast({ title: 'Failed to reconcile', variant: 'destructive' }),
   });
 
   const updateProductMutation = useMutation({
@@ -1990,7 +2054,7 @@ const Admin = () => {
           <TabsContent value="inventory">
             <div className="space-y-6">
               {/* Inventory Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Card className="p-6 bg-gradient-to-br from-primary/5 to-transparent">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -1998,7 +2062,20 @@ const Admin = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground font-medium">Total Products</p>
-                      <p className="text-2xl font-bold">{allProducts.length}</p>
+                      <p className="text-2xl font-bold">{productsLoading ? '…' : allProducts.length}</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-6 bg-gradient-to-br from-green-500/5 to-transparent border-green-500/20">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                      <TrendingUp className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground font-medium">Items In Stock</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {productsLoading ? '…' : allProducts.filter(p => p.inStock).length}
+                      </p>
                     </div>
                   </div>
                 </Card>
@@ -2008,8 +2085,10 @@ const Admin = () => {
                       <AlertCircle className="h-6 w-6 text-amber-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground font-medium">Low Stock Alerts</p>
-                      <p className="text-2xl font-bold text-amber-600">4</p>
+                      <p className="text-sm text-muted-foreground font-medium">Out of Stock</p>
+                      <p className="text-2xl font-bold text-amber-600">
+                        {productsLoading ? '…' : allProducts.filter(p => !p.inStock).length}
+                      </p>
                     </div>
                   </div>
                 </Card>
@@ -2020,7 +2099,9 @@ const Admin = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground font-medium">Recent Movements</p>
-                      <p className="text-2xl font-bold text-blue-600">{mockInventoryTransactions.length}</p>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {inventoryLoading ? '…' : inventoryTransactions.length}
+                      </p>
                     </div>
                   </div>
                 </Card>
@@ -2072,7 +2153,7 @@ const Admin = () => {
                               className="mt-1"
                             />
                           </div>
-                          <Button className="w-full" onClick={handleStockInward}>Record Inward</Button>
+                          <Button className="w-full" onClick={handleStockInward} disabled={inwardMutation.isPending || !inventoryForm.productId || !inventoryForm.quantity}>{inwardMutation.isPending ? 'Recording…' : 'Record Inward'}</Button>
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -2116,7 +2197,7 @@ const Admin = () => {
                               className="mt-1"
                             />
                           </div>
-                          <Button variant="destructive" className="w-full" onClick={handleStockOutward}>Record Outward</Button>
+                          <Button variant="destructive" className="w-full" onClick={handleStockOutward} disabled={outwardMutation.isPending || !inventoryForm.productId || !inventoryForm.quantity}>{outwardMutation.isPending ? 'Recording…' : 'Record Outward'}</Button>
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -2154,7 +2235,7 @@ const Admin = () => {
                               className="mt-1"
                             />
                           </div>
-                          <Button className="w-full" onClick={handleReconcile}>Submit Audit</Button>
+                          <Button className="w-full" onClick={handleReconcile} disabled={reconcileMutation.isPending || !reconcileForm.productId || !reconcileForm.physicalCount}>{reconcileMutation.isPending ? 'Submitting…' : 'Submit Audit'}</Button>
                         </div>
                       </DialogContent>
                     </Dialog>
@@ -2174,7 +2255,11 @@ const Admin = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {mockInventoryTransactions.map((tx) => (
+                      {inventoryLoading ? (
+                        <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
+                      ) : inventoryTransactions.length === 0 ? (
+                        <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No transactions yet.</TableCell></TableRow>
+                      ) : inventoryTransactions.map((tx) => (
                         <TableRow key={tx.id}>
                           <TableCell className="text-sm">{new Date(tx.date).toLocaleDateString()}</TableCell>
                           <TableCell>

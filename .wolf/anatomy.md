@@ -173,6 +173,7 @@
 - `review.ts` — Exports Review, CreateReviewPayload, ProductReviewSummary, reviewService (~286 tok)
 - `savings.ts` — Exports SavingsEnrollmentPayload, SavingsEnrollment, savingsService (~206 tok)
 - `silverRate.ts` — Exports SilverRate, UpdateSilverRatePayload, silverRateService (~429 tok)
+- `inventory.ts` — Exports InventoryTransaction, StockInwardPayload, StockOutwardPayload, ReconcilePayload, LowStockItem, InventorySummary, TransactionFilters, inventoryService (~350 tok)
 - `storeConfig.ts` — Exports StoreConfig, DEFAULT_STORE_CONFIG, storeConfigService (~130 tok)
 - `wishlist.ts` — API routes: POST, DELETE (2 endpoints) (~752 tok)
 
