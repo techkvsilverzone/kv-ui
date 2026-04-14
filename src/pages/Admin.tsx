@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   Settings,
   TrendingUp,
+  TrendingDown,
   DollarSign,
   Eye,
   Edit,
@@ -26,6 +27,12 @@ import {
   Sun,
   Moon,
   SlidersHorizontal,
+  ClipboardList,
+  AlertCircle,
+  Scale,
+  History,
+  ChevronsUpDown,
+  Search as SearchIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -47,6 +54,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -117,6 +138,39 @@ const Admin = () => {
     { pincode: '600006', label: 'Mylapore', rate: 50 },
   ]);
   const [newPincode, setNewPincode] = useState({ pincode: '', label: '', rate: '' });
+
+  // Inventory state
+  const [showInwardModal, setShowInwardModal] = useState(false);
+  const [showOutwardModal, setShowOutwardModal] = useState(false);
+  const [showReconcileModal, setShowReconcileModal] = useState(false);
+  const [inventoryForm, setInventoryForm] = useState({ productId: '', quantity: '', reason: '' });
+  const [reconcileForm, setReconcileForm] = useState({ productId: '', physicalCount: '' });
+  const [mockInventoryTransactions, setMockInventoryTransactions] = useState([
+    { id: '1', type: 'IN', productId: 'p1', productName: 'Silver Ring 925', quantity: 50, date: '2023-11-20T10:00:00Z', reason: 'New Stock Restock' },
+    { id: '2', type: 'OUT', productId: 'p1', productName: 'Silver Ring 925', quantity: 2, date: '2023-11-21T14:30:00Z', reason: 'Order #12093' },
+    { id: '3', type: 'RECONCILE', productId: 'p2', productName: 'Polished Chain', quantity: -2, date: '2023-11-22T09:15:00Z', reason: 'Monthly Audit Adjustment' },
+  ]);
+
+  const handleStockInward = () => {
+    // TODO: Wire API (POST /admin/inventory/inward)
+    toast({ title: 'Stock Inward Recorded', description: 'API not wired yet.' });
+    setShowInwardModal(false);
+    setInventoryForm({ productId: '', quantity: '', reason: '' });
+  };
+
+  const handleStockOutward = () => {
+    // TODO: Wire API (POST /admin/inventory/outward)
+    toast({ title: 'Stock Outward Recorded', description: 'API not wired yet.' });
+    setShowOutwardModal(false);
+    setInventoryForm({ productId: '', quantity: '', reason: '' });
+  };
+
+  const handleReconcile = () => {
+    // TODO: Wire API (POST /admin/inventory/reconcile)
+    toast({ title: 'Inventory Reconciled', description: 'Stock levels updated based on physical count.' });
+    setShowReconcileModal(false);
+    setReconcileForm({ productId: '', physicalCount: '' });
+  };
 
   const addPincodeRate = () => {
     const rate = Number(newPincode.rate);
@@ -447,6 +501,74 @@ const Admin = () => {
     localStorage.setItem('kv-theme-config', JSON.stringify(adminStoreConfig));
   }, [adminStoreConfig]);
 
+  // Searchable Product Dropdown Component
+  const ProductSearchSelect = ({ 
+    value, 
+    onValueChange, 
+    products 
+  }: { 
+    value: string; 
+    onValueChange: (val: string) => void; 
+    products: any[] 
+  }) => {
+    const [open, setOpen] = useState(false);
+    const selectedProduct = products.find((p) => p.id === value);
+
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between mt-1 font-normal"
+          >
+            {selectedProduct ? (
+              <span className="truncate">{selectedProduct.name}</span>
+            ) : (
+              <span className="text-muted-foreground">Select product...</span>
+            )}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search product name..." />
+            <CommandList>
+              <CommandEmpty>No product found.</CommandEmpty>
+              <CommandGroup>
+                {products.map((product) => (
+                  <CommandItem
+                    key={product.id}
+                    value={product.name}
+                    onSelect={() => {
+                      onValueChange(product.id === value ? "" : product.id);
+                      setOpen(false);
+                    }}
+                    className="flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{product.name}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase">{product.category}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        product.inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {product.inStock ? 'In Stock' : 'Out of Stock'}
+                      </span>
+                      {value === product.id && <Check className="h-4 w-4 text-primary" />}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
   if (!isAuthenticated || (role !== 'admin' && role !== 'staff')) {
     return <Navigate to="/login" />;
   }
@@ -608,6 +730,10 @@ const Admin = () => {
             <TabsTrigger value="filters" className="gap-2">
               <SlidersHorizontal className="h-4 w-4" />
               Filters
+            </TabsTrigger>
+            <TabsTrigger value="inventory" className="gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Inventory
             </TabsTrigger>
             {/* Theme editor — admin only (financial/branding control) */}
             {!isStaffOnly && (
@@ -1855,6 +1981,230 @@ const Admin = () => {
                 </Table>
               </Card>
 
+            </div>
+          </TabsContent>
+
+          {/* ═══════ INVENTORY MANAGER ═══════ */}
+          <TabsContent value="inventory">
+            <div className="space-y-6">
+              {/* Inventory Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="p-6 bg-gradient-to-br from-primary/5 to-transparent">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Package className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground font-medium">Total Products</p>
+                      <p className="text-2xl font-bold">{allProducts.length}</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-6 bg-gradient-to-br from-amber-500/5 to-transparent border-amber-500/20">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                      <AlertCircle className="h-6 w-6 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground font-medium">Low Stock Alerts</p>
+                      <p className="text-2xl font-bold text-amber-600">4</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-6 bg-gradient-to-br from-blue-500/5 to-transparent border-blue-500/20">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                      <History className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground font-medium">Recent Movements</p>
+                      <p className="text-2xl font-bold text-blue-600">{mockInventoryTransactions.length}</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <Card className="p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                  <div>
+                    <h2 className="font-serif text-xl font-semibold">Stock Ledger</h2>
+                    <p className="text-sm text-muted-foreground">Track movement and verify physical counts.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Dialog open={showInwardModal} onOpenChange={setShowInwardModal}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-green-600 hover:bg-green-700 text-white">
+                          <TrendingUp className="h-4 w-4 mr-2" />
+                          Inward
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Stock Inward</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div>
+                            <Label>Select Product</Label>
+                            <ProductSearchSelect 
+                              value={inventoryForm.productId}
+                              onValueChange={(v) => setInventoryForm({ ...inventoryForm, productId: v })}
+                              products={allProducts}
+                            />
+                          </div>
+                          <div>
+                            <Label>Quantity to Add</Label>
+                            <Input 
+                              type="number"
+                              min="1"
+                              value={inventoryForm.quantity}
+                              onChange={(e) => setInventoryForm({ ...inventoryForm, quantity: e.target.value })}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label>Reason</Label>
+                            <Input 
+                              placeholder="e.g. Supplier delivery"
+                              value={inventoryForm.reason}
+                              onChange={(e) => setInventoryForm({ ...inventoryForm, reason: e.target.value })}
+                              className="mt-1"
+                            />
+                          </div>
+                          <Button className="w-full" onClick={handleStockInward}>Record Inward</Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={showOutwardModal} onOpenChange={setShowOutwardModal}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="text-red-600 border-red-600 hover:bg-red-50">
+                          <TrendingDown className="h-4 w-4 mr-2" />
+                          Outward
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Stock Outward</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div>
+                            <Label>Select Product</Label>
+                            <ProductSearchSelect 
+                              value={inventoryForm.productId}
+                              onValueChange={(v) => setInventoryForm({ ...inventoryForm, productId: v })}
+                              products={allProducts}
+                            />
+                          </div>
+                          <div>
+                            <Label>Quantity to Remove</Label>
+                            <Input 
+                              type="number"
+                              min="1"
+                              value={inventoryForm.quantity}
+                              onChange={(e) => setInventoryForm({ ...inventoryForm, quantity: e.target.value })}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label>Reason</Label>
+                            <Input 
+                              placeholder="e.g. Damaged"
+                              value={inventoryForm.reason}
+                              onChange={(e) => setInventoryForm({ ...inventoryForm, reason: e.target.value })}
+                              className="mt-1"
+                            />
+                          </div>
+                          <Button variant="destructive" className="w-full" onClick={handleStockOutward}>Record Outward</Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={showReconcileModal} onOpenChange={setShowReconcileModal}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="border-primary text-primary hover:bg-primary/5">
+                          <Scale className="h-4 w-4 mr-2" />
+                          Reconcile
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Stock Reconciliation</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="bg-primary/5 p-4 rounded-lg text-sm text-primary mb-2">
+                            <p>Enter the <strong>actual physical count</strong> from your audit. The system will calculate the adjustment automatically.</p>
+                          </div>
+                          <div>
+                            <Label>Select Product</Label>
+                            <ProductSearchSelect 
+                              value={reconcileForm.productId}
+                              onValueChange={(v) => setReconcileForm({ ...reconcileForm, productId: v })}
+                              products={allProducts}
+                            />
+                          </div>
+                          <div>
+                            <Label>Physical Count Found</Label>
+                            <Input 
+                              type="number"
+                              placeholder="Current total on shelf"
+                              value={reconcileForm.physicalCount}
+                              onChange={(e) => setReconcileForm({ ...reconcileForm, physicalCount: e.target.value })}
+                              className="mt-1"
+                            />
+                          </div>
+                          <Button className="w-full" onClick={handleReconcile}>Submit Audit</Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead>Date</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Change</TableHead>
+                        <TableHead>Status Impact</TableHead>
+                        <TableHead>Reason</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {mockInventoryTransactions.map((tx) => (
+                        <TableRow key={tx.id}>
+                          <TableCell className="text-sm">{new Date(tx.date).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              tx.type === 'IN' ? 'bg-green-100 text-green-700' : 
+                              tx.type === 'OUT' ? 'bg-red-100 text-red-700' : 
+                              'bg-primary/10 text-primary'
+                            }`}>
+                              {tx.type}
+                            </span>
+                          </TableCell>
+                          <TableCell className="font-medium text-sm">{tx.productName}</TableCell>
+                          <TableCell className={`text-sm font-semibold ${tx.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {tx.quantity > 0 ? `+${tx.quantity}` : tx.quantity}
+                          </TableCell>
+                          <TableCell>
+                            {tx.quantity < -5 ? (
+                              <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+                                <AlertCircle className="h-3 w-3" />
+                                Low Stock
+                              </span>
+                            ) : (
+                              <span className="text-xs text-green-600 font-medium">Normal</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{tx.reason}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
             </div>
           </TabsContent>
 
