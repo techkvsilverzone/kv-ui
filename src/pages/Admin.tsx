@@ -882,8 +882,9 @@ const Admin = () => {
                             <Label>Type</Label>
                             <Select value={productForm.purity} onValueChange={(v) => setProductForm({ ...productForm, purity: v })}>
                               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Silver">Silver</SelectItem>
+                              <SelectContent className="bg-card">
+                                <SelectItem value="925">925 Silver</SelectItem>
+                                <SelectItem value="999">999 Fine Silver</SelectItem>
                                 <SelectItem value="22K Gold">22K Gold</SelectItem>
                               </SelectContent>
                             </Select>
@@ -1018,8 +1019,8 @@ const Admin = () => {
                     {productModalMode === 'edit' ? (
                       <Select value={editProductForm.category} onValueChange={(v) => setEditProductForm({ ...editProductForm, category: v })}>
                         <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {(allCategories.length > 0 ? allCategories : ['Necklaces', 'Bangles', 'Earrings', 'Rings', 'Anklets', 'Coins', 'Puja Items']).map((c) => (
+                        <SelectContent className="bg-card">
+                          {(allCategories.length > 0 ? allCategories : ['999 Silver', 'Paper / Board', 'Silver', 'Silver coin + Box', 'Silver plated', 'Wood + Silver']).map((c) => (
                             <SelectItem key={c} value={c}>{c}</SelectItem>
                           ))}
                         </SelectContent>
@@ -1033,8 +1034,9 @@ const Admin = () => {
                     {productModalMode === 'edit' ? (
                       <Select value={editProductForm.purity} onValueChange={(v) => setEditProductForm({ ...editProductForm, purity: v })}>
                         <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Silver">Silver</SelectItem>
+                        <SelectContent className="bg-card">
+                          <SelectItem value="925">925 Silver</SelectItem>
+                          <SelectItem value="999">999 Fine Silver</SelectItem>
                           <SelectItem value="22K Gold">22K Gold</SelectItem>
                         </SelectContent>
                       </Select>

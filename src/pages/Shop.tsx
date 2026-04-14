@@ -70,8 +70,17 @@ const Shop = () => {
   const { minPrice, maxPrice } = getPriceBounds(selectedPriceRange);
 
   useEffect(() => {
-    const query = new URLSearchParams(location.search).get('search') || '';
-    setSearchQuery((prev) => (prev === query ? prev : query));
+    const params = new URLSearchParams(location.search);
+    const search = params.get('search') || '';
+    const category = params.get('category');
+    
+    setSearchQuery((prev) => (prev === search ? prev : search));
+    
+    if (category) {
+      setSelectedCategories([category]);
+      setSelectedMetals([]);
+      setSelectedPriceRange('');
+    }
   }, [location.search]);
 
   const { data: products = [], isLoading } = useQuery({

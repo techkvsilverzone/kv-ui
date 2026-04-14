@@ -86,52 +86,62 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Center Section: Always Expanded Search */}
-          <div className="flex-1 min-w-0 flex items-center px-6 md:px-12 lg:px-24 xl:px-32 max-w-4xl">
-            <div className="relative w-full">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    submitSearch();
-                  }
-                }}
-                className="w-full bg-secondary/50 border border-input rounded-full py-2.5 pl-11 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all font-light"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
+          {/* Center Section: Always Expanded Search (Hidden in Admin) */}
+          {!location.pathname.startsWith('/admin') ? (
+            <div className="flex-1 min-w-0 flex items-center px-6 md:px-12 lg:px-24 xl:px-32 max-w-4xl">
+              <div className="relative w-full">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      submitSearch();
+                    }
+                  }}
+                  className="w-full bg-secondary/50 border border-input rounded-full py-2.5 pl-11 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all font-light"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <span className="text-xs uppercase tracking-[0.3em] text-muted-foreground font-semibold">Admin Panel</span>
+            </div>
+          )}
 
           {/* Actions (Right) */}
           <div className="flex-shrink-0 flex items-center justify-end gap-3 md:gap-6">
-            <Link to="/wishlist">
-              <Button variant="ghost" size="icon" className="hidden sm:flex text-muted-foreground hover:text-primary transition-colors">
-                <Heart className="h-6 w-6" strokeWidth={1.5} />
-              </Button>
-            </Link>
+            {!location.pathname.startsWith('/admin') && (
+              <>
+                <Link to="/wishlist">
+                  <Button variant="ghost" size="icon" className="hidden sm:flex text-muted-foreground hover:text-primary transition-colors">
+                    <Heart className="h-6 w-6" strokeWidth={1.5} />
+                  </Button>
+                </Link>
 
-            <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary transition-colors">
-                <ShoppingCart className="h-6 w-6" strokeWidth={1.5} />
-                {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
-                    {totalItems}
-                  </span>
-                )}
-              </Button>
-            </Link>
+                <Link to="/cart">
+                  <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary transition-colors">
+                    <ShoppingCart className="h-6 w-6" strokeWidth={1.5} />
+                    {totalItems > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
+                        {totalItems}
+                      </span>
+                    )}
+                  </Button>
+                </Link>
+              </>
+            )}
 
             {isAuthenticated ? (
               <DropdownMenu>

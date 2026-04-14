@@ -3,7 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useLocation, BrowserRouter, Routes, Route } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
@@ -36,7 +37,6 @@ import FAQ from "./pages/FAQ";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import GiftVouchers from "./pages/GiftVouchers";
 import { storeConfigService } from "@/services/storeConfig";
-
 import ScrollToTop from "@/components/ScrollToTop";
 
 const queryClient = new QueryClient({
@@ -70,6 +70,51 @@ const applyTheme = (theme: string, isDark: boolean) => {
   }
 };
 
+const AppContent = () => {
+  const location = useLocation();
+  const isAdminPath = location.pathname.startsWith('/admin');
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <header className="fixed top-0 left-0 right-0 z-50">
+        <Marquee />
+        <Navbar />
+      </header>
+      <main className={cn("flex-1", isAdminPath ? "pt-[72px]" : "pt-[112px]")}>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/savings-scheme" element={<SavingsScheme />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/payment" element={<Payment />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/change-password" element={<ChangePassword />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/order/:id" element={<OrderTracking />} />
+          <Route path="/silver-rate" element={<SilverRatePage />} />
+          <Route path="/order-confirmation/:id" element={<OrderConfirmation />} />
+          <Route path="/recently-viewed" element={<RecentlyViewed />} />
+          <Route path="/offers" element={<Offers />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsConditions />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/dashboard" element={<CustomerDashboard />} />
+          <Route path="/gift-vouchers" element={<GiftVouchers />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
 const App = () => {
   useEffect(() => {
     const loadTheme = async () => {
@@ -93,56 +138,20 @@ const App = () => {
   }, []);
 
   return (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <CartProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <ScrollToTop />
-            <div className="flex flex-col min-h-screen">
-              <header className="fixed top-0 left-0 right-0 z-50">
-                <Marquee />
-                <Navbar />
-              </header>
-              <main className="flex-1 pt-[112px]">
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/shop" element={<Shop />} />
-                  <Route path="/savings-scheme" element={<SavingsScheme />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/cart" element={<Cart />} />
-                  <Route path="/payment" element={<Payment />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/change-password" element={<ChangePassword />} />
-                  <Route path="/wishlist" element={<Wishlist />} />
-                  <Route path="/admin" element={<Admin />} />
-                  <Route path="/product/:id" element={<ProductDetail />} />
-                  <Route path="/order/:id" element={<OrderTracking />} />
-                  <Route path="/silver-rate" element={<SilverRatePage />} />
-                  <Route path="/order-confirmation/:id" element={<OrderConfirmation />} />
-                  <Route path="/recently-viewed" element={<RecentlyViewed />} />
-                  <Route path="/offers" element={<Offers />} />
-                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                  <Route path="/terms" element={<TermsConditions />} />
-                  <Route path="/faq" element={<FAQ />} />
-                  <Route path="/dashboard" element={<CustomerDashboard />} />
-                  <Route path="/gift-vouchers" element={<GiftVouchers />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </main>
-              <Footer />
-            </div>
-          </BrowserRouter>
-        </TooltipProvider>
-      </CartProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <CartProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <ScrollToTop />
+              <AppContent />
+            </BrowserRouter>
+          </TooltipProvider>
+        </CartProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 };
 

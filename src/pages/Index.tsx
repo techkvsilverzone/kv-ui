@@ -37,9 +37,9 @@ const Index = () => {
   ];
 
   const occasions = [
-    { label: 'Coins and Bars', query: 'Rings', emoji: '✨' },
-    { label: 'Gifting', query: 'Coins', emoji: '🎁' },
-    { label: 'Puja & Ritual', query: 'Puja Items', emoji: '🪔' },
+    { label: 'Coins and Bars', query: 'Silver coin + Box', emoji: '✨' },
+    { label: 'Gifting', query: 'Silver plated', emoji: '🎁' },
+    { label: 'Puja & Ritual', query: 'Wood + Silver', emoji: '🪔' },
   ];
 
   return (

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { TrendingUp, Bell } from 'lucide-react';
 import { silverRateService } from '@/services/silverRate';
 
@@ -29,12 +30,15 @@ const staticUpdates: PriceUpdate[] = [
 
 const Marquee = () => {
   const [isPaused, setIsPaused] = useState(false);
+  const location = useLocation();
 
   const { data: rates = [] } = useQuery({
     queryKey: ['silver-rates-today'],
     queryFn: silverRateService.getTodayRate,
     staleTime: 5 * 60 * 1000, // re-fetch after 5 minutes
   });
+
+  if (location.pathname.startsWith('/admin')) return null;
 
   const metalRates = rates.reduce<Record<'silver' | 'gold22k', typeof rates[number] | undefined>>(
     (acc, rate) => {
