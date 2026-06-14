@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, MessageCircle, Phone, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Seo from '@/components/Seo';
 
 interface FAQItem {
   question: string;
@@ -187,6 +188,10 @@ const FAQ = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="FAQ"
+        description="Answers to common questions about KV Silver Zone — orders, silver rates, savings schemes, shipping, returns and authenticity."
+      />
       {/* Header */}
       <div className="border-b border-border">
         <div className="container mx-auto px-4 py-16 max-w-5xl">

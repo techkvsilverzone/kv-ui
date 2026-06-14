@@ -65,6 +65,8 @@ const Navbar = () => {
               size="icon"
               className="lg:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isMobileMenuOpen}
             >
               {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
@@ -94,6 +96,7 @@ const Navbar = () => {
                 <input
                   type="text"
                   placeholder="Search products..."
+                  aria-label="Search products"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
@@ -108,6 +111,7 @@ const Navbar = () => {
                   <button
                     onClick={() => setSearchQuery('')}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Clear search"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -124,14 +128,14 @@ const Navbar = () => {
           <div className="flex-shrink-0 flex items-center justify-end gap-3 md:gap-6">
             {!location.pathname.startsWith('/admin') && (
               <>
-                <Link to="/wishlist">
-                  <Button variant="ghost" size="icon" className="hidden sm:flex text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/wishlist" aria-label="Wishlist">
+                  <Button variant="ghost" size="icon" className="hidden sm:flex text-muted-foreground hover:text-primary transition-colors" aria-label="Wishlist">
                     <Heart className="h-6 w-6" strokeWidth={1.5} />
                   </Button>
                 </Link>
 
-                <Link to="/cart">
-                  <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/cart" aria-label={`Cart, ${totalItems} item${totalItems === 1 ? '' : 's'}`}>
+                  <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary transition-colors" aria-label={`Cart, ${totalItems} item${totalItems === 1 ? '' : 's'}`}>
                     <ShoppingCart className="h-6 w-6" strokeWidth={1.5} />
                     {totalItems > 0 && (
                       <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">

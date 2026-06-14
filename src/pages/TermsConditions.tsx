@@ -1,4 +1,5 @@
 import { FileText } from 'lucide-react';
+import Seo from '@/components/Seo';
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="mb-10">
@@ -9,6 +10,7 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 
 const TermsConditions = () => (
   <div className="min-h-screen bg-background">
+    <Seo title="Terms & Conditions" description="The terms governing purchases, savings schemes and use of KV Silver Zone." />
     {/* Header */}
     <div className="border-b border-border">
       <div className="container mx-auto px-4 py-16 max-w-4xl">

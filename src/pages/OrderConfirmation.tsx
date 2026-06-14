@@ -1,15 +1,26 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useReactToPrint } from 'react-to-print';
 import { CheckCircle, Package, ArrowRight, ShoppingBag, Loader2, Download, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { orderService } from '@/services/order';
+import InvoiceView from '@/components/InvoiceView';
+import Seo from '@/components/Seo';
 
 const OrderConfirmation = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { toast } = useToast();
+  const [resending, setResending] = useState(false);
+  const invoiceRef = useRef<HTMLDivElement>(null);
+  const handlePrintInvoice = useReactToPrint({
+    contentRef: invoiceRef,
+    documentTitle: 'KV-Silver-Zone-Invoice',
+  });
 
   useEffect(() => {
     if (!isAuthenticated) navigate('/login');
@@ -22,6 +33,23 @@ const OrderConfirmation = () => {
   });
 
   const order = orders.find((o) => o.id === id || o._id === id);
+
+  const handleResend = async () => {
+    if (!order) return;
+    setResending(true);
+    try {
+      await orderService.resendConfirmation(order.id);
+      toast({ title: 'Email sent', description: 'Your order confirmation email has been resent.' });
+    } catch {
+      toast({
+        title: 'Could not resend',
+        description: 'Please try again shortly or contact support.',
+        variant: 'destructive',
+      });
+    } finally {
+      setResending(false);
+    }
+  };
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat('en-IN', {
@@ -40,6 +68,7 @@ const OrderConfirmation = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo title="Order Confirmed" noindex />
       {/* Celebration header */}
       <div className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-accent/10 py-24 px-4 text-center">
         {/* Decorative shimmer lines */}
@@ -145,6 +174,20 @@ const OrderConfirmation = () => {
           </div>
         )}
 
+        {/* Confirmation email */}
+        {order && (
+          <p className="text-center text-sm text-muted-foreground mb-12">
+            A confirmation email has been sent to your registered address.{' '}
+            <button
+              onClick={handleResend}
+              disabled={resending}
+              className="text-primary hover:underline disabled:opacity-50"
+            >
+              {resending ? 'Sending…' : 'Resend email'}
+            </button>
+          </p>
+        )}
+
         {/* Authenticity notice */}
         <div className="bg-primary/5 border border-primary/15 rounded-lg p-6 mb-12 flex gap-4">
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
@@ -168,6 +211,12 @@ const OrderConfirmation = () => {
               </Button>
             </Link>
           )}
+          {order && (
+            <Button variant="outline" onClick={handlePrintInvoice} className="w-full sm:w-auto gap-2">
+              <Download className="h-4 w-4" />
+              Download Invoice
+            </Button>
+          )}
           <Link to="/shop">
             <Button className="w-full sm:w-auto btn-shine gap-2">
               Continue Shopping
@@ -181,6 +230,18 @@ const OrderConfirmation = () => {
             </Button>
           </a>
         </div>
+
+        {/* Off-screen printable invoice */}
+        {order && (
+          <div className="absolute -left-[9999px] top-0" aria-hidden="true">
+            <InvoiceView
+              ref={invoiceRef}
+              order={order}
+              customerName={user?.name}
+              customerEmail={user?.email}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

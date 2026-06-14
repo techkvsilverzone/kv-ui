@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowRight, Check, Calculator, Calendar, Gift, Shield, BookOpen, Loader2 } from 'lucide-react';
+import Seo from '@/components/Seo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -123,6 +124,10 @@ const SavingsScheme = () => {
 
   return (
     <div className="min-h-screen pt-24">
+      <Seo
+        title="Silver Savings Scheme"
+        description="Join the KV Silver Zone monthly savings scheme — save towards silver and earn bonus value. Flexible plans with transparent terms."
+      />
       {/* Hero */}
       <section className="bg-primary text-primary-foreground py-20">
         <div className="container mx-auto px-4">

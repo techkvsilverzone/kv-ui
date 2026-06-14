@@ -8,6 +8,8 @@ import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { validateForm, signupSchema } from '@/lib/validation';
+import Seo from '@/components/Seo';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -26,29 +28,18 @@ const Signup = () => {
     password: '',
     confirmPassword: '',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Passwords do not match.',
-        variant: 'destructive',
-      });
+    const result = validateForm(signupSchema, { ...formData, acceptTerms });
+    if (!result.success) {
+      setErrors(result.errors);
       return;
     }
-
-    if (!acceptTerms) {
-      toast({
-        title: 'Error',
-        description: 'Please accept the terms and conditions.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+    setErrors({});
     setIsLoading(true);
 
     try {
@@ -80,6 +71,7 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen pt-24 pb-16 flex items-center justify-center bg-muted/30">
+      <Seo title="Create Account" noindex />
       <div className="container mx-auto px-4">
         <div className="max-w-md mx-auto">
           <Card className="p-8">
@@ -117,9 +109,10 @@ const Signup = () => {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Your full name"
                     className="pl-10"
-                    required
+                    aria-invalid={!!errors.name}
                   />
                 </div>
+                {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
               </div>
 
               <div>
@@ -133,9 +126,10 @@ const Signup = () => {
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="your@email.com"
                     className="pl-10"
-                    required
+                    aria-invalid={!!errors.email}
                   />
                 </div>
+                {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
               </div>
 
               <div>
@@ -149,8 +143,7 @@ const Signup = () => {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="••••••••"
                     className="pl-10 pr-10"
-                    required
-                    minLength={6}
+                    aria-invalid={!!errors.password}
                   />
                   <button
                     type="button"
@@ -160,6 +153,7 @@ const Signup = () => {
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+                {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
               </div>
 
               <div>
@@ -173,10 +167,10 @@ const Signup = () => {
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                     placeholder="••••••••"
                     className="pl-10"
-                    required
-                    minLength={6}
+                    aria-invalid={!!errors.confirmPassword}
                   />
                 </div>
+                {errors.confirmPassword && <p className="text-xs text-destructive mt-1">{errors.confirmPassword}</p>}
               </div>
 
               <div className="flex items-start gap-2">
@@ -196,6 +190,7 @@ const Signup = () => {
                   </Link>
                 </label>
               </div>
+              {errors.acceptTerms && <p className="text-xs text-destructive -mt-3">{errors.acceptTerms}</p>}
 
               <Button type="submit" className="w-full btn-shine" disabled={isLoading}>
                 {isLoading ? 'Creating account...' : 'Create Account'}

@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { silverRateService, type SilverRate as SilverRateType } from '@/services/silverRate';
+import Seo from '@/components/Seo';
 
 const metalAliases = {
   silver: ['silver', '999', '999 fine silver', 'silver 999'],
@@ -68,6 +69,10 @@ const SilverRate = () => {
 
   return (
     <div className="min-h-screen pt-24 pb-16">
+      <Seo
+        title="Today's Silver Rate"
+        description="Live silver and gold rates per gram at KV Silver Zone. Check today's prices before you buy or enrol in a savings scheme."
+      />
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-12">

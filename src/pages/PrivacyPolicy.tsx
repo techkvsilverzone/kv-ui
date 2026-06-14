@@ -1,4 +1,5 @@
 import { Shield } from 'lucide-react';
+import Seo from '@/components/Seo';
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="mb-10">
@@ -9,6 +10,7 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 
 const PrivacyPolicy = () => (
   <div className="min-h-screen bg-background">
+    <Seo title="Privacy Policy" description="How KV Silver Zone collects, uses and protects your personal information." />
     {/* Header */}
     <div className="border-b border-border">
       <div className="container mx-auto px-4 py-16 max-w-4xl">

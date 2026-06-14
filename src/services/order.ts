@@ -58,4 +58,8 @@ export const orderService = {
     const orders = await api.get<Order[]>('/orders/me');
     return orders.map(normalizeOrder);
   },
+
+  resendConfirmation: async (orderId: string): Promise<{ success: boolean; message?: string }> => {
+    return api.post<{ success: boolean; message?: string }>(`/orders/${orderId}/resend-confirmation`, {});
+  },
 };

@@ -450,6 +450,744 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-05T08:09:43.994Z"
+    },
+    {
+      "id": "bug-029",
+      "timestamp": "2026-06-14T00:00:00.000Z",
+      "error_message": "ReferenceError: setSelectedPriceRanges is not defined — typing in the Shop search box crashed the page",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "handleSearchChange called setSelectedPriceRanges([]) (plural), but the state setter is setSelectedPriceRange (singular, a string). The plural identifier never existed, so any keystroke in search threw and broke the Shop page.",
+      "fix": "Changed setSelectedPriceRanges([]) to setSelectedPriceRange('') in handleSearchChange.",
+      "tags": [
+        "blocker",
+        "search",
+        "shop",
+        "runtime-error",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "id": "bug-030",
+      "timestamp": "2026-06-14T06:33:42.289Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/ProductDetail.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: // Price breakdown reconciled to the displayed total. Metal ; // silver rate × weight when available; otherwise it falls b | Also: <span className=\"text-muted-foreground\">; Metal Value",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-06-14T06:34:19.111Z"
+    },
+    {
+      "id": "bug-031",
+      "timestamp": "2026-06-14T06:33:53.667Z",
+      "error_message": "CSS fix: data, queryKey, queryFn",
+      "file": "src/pages/ProductDetail.tsx",
+      "root_cause": "data: wishlistProducts = [] → silverRates = []; queryKey: ['wishlist-items'], → ['silver-rate-today'],; queryFn: wishlistService.getWishlistProducts, → silverRateService.getTodayRate,",
+      "fix": "Changed data: wishlistProducts = [] → silverRates = []; queryKey: ['wishlist-items'], → ['silver-rate-today'],; queryFn: wishlistService.getWishlistProducts, → silverRateService.getTodayRate,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T06:33:53.667Z"
+    },
+    {
+      "id": "bug-032",
+      "timestamp": "2026-06-14T06:34:50.935Z",
+      "error_message": "Significant refactor of ",
+      "file": "API_CHANGES_AND_FIXES.md",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 5→7 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T06:34:50.935Z"
+    },
+    {
+      "id": "bug-033",
+      "timestamp": "2026-06-14T06:36:11.744Z",
+      "error_message": "Wrong operator: !== should be >>",
+      "file": "src/pages/Signup.tsx",
+      "root_cause": "Used \"!==\" instead of \">>\"",
+      "fix": "Changed operator !== → >>",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T06:36:11.744Z"
+    },
+    {
+      "id": "bug-034",
+      "timestamp": "2026-06-14T06:37:20.876Z",
+      "error_message": "CSS fix: description",
+      "file": "src/pages/Payment.tsx",
+      "root_cause": "description: 'Please fill in all required shipping details.', → 'Please correct the highlighted shipping details.',",
+      "fix": "Changed description: 'Please fill in all required shipping details.', → 'Please correct the highlighted shipping details.',",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T06:37:20.876Z"
+    },
+    {
+      "id": "bug-035",
+      "timestamp": "2026-06-14T06:37:48.108Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/pages/Payment.tsx",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 30→37 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T06:37:48.108Z"
+    },
+    {
+      "id": "bug-036",
+      "timestamp": "2026-06-14T06:38:52.359Z",
+      "error_message": "Type error",
+      "file": "src/pages/Profile.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T06:38:52.359Z"
+    },
+    {
+      "id": "bug-037",
+      "timestamp": "2026-06-14T06:40:32.946Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/App.tsx",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 6→7 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T06:40:32.946Z"
+    },
+    {
+      "id": "bug-038",
+      "timestamp": "2026-06-14T06:40:40.645Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/App.tsx",
+      "root_cause": "Had \"/dashboard\"",
+      "fix": "Changed to \"/gift-vouchers\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T06:40:40.645Z"
+    },
+    {
+      "id": "bug-039",
+      "timestamp": "2026-06-14T06:40:57.704Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/Login.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T06:40:57.704Z"
+    },
+    {
+      "id": "bug-040",
+      "timestamp": "2026-06-14T06:41:30.466Z",
+      "error_message": "Wrong reference: Routes should be ErrorBoundary",
+      "file": "src/App.tsx",
+      "root_cause": "Used \"Routes\" instead of \"ErrorBoundary\"",
+      "fix": "Changed Routes → ErrorBoundary",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T06:41:30.466Z"
+    },
+    {
+      "id": "bug-041",
+      "timestamp": "2026-06-14T06:43:16.742Z",
+      "error_message": "Significant refactor of ",
+      "file": "API_CHANGES_AND_FIXES.md",
+      "root_cause": "14 lines replaced/restructured",
+      "fix": "Rewrote 18→22 lines (14 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T06:43:16.742Z"
+    },
+    {
+      "id": "bug-042",
+      "timestamp": "2026-06-14T08:26:35.247Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/services/payment.ts",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 13→24 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T08:26:35.247Z"
+    },
+    {
+      "id": "bug-043",
+      "timestamp": "2026-06-14T08:26:47.963Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/pages/Payment.tsx",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 6→8 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T08:26:47.963Z"
+    },
+    {
+      "id": "bug-044",
+      "timestamp": "2026-06-14T08:27:41.276Z",
+      "error_message": "CSS fix: voucher, isGiftVoucher",
+      "file": "src/pages/GiftVouchers.tsx",
+      "root_cause": "voucher: GiftVoucherProduct) => { → GiftVoucher) => {; isGiftVoucher: voucher.isGiftVoucher, → true,",
+      "fix": "Changed voucher: GiftVoucherProduct) => { → GiftVoucher) => {; isGiftVoucher: voucher.isGiftVoucher, → true,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T08:27:41.276Z"
+    },
+    {
+      "id": "bug-045",
+      "timestamp": "2026-06-14T08:28:20.977Z",
+      "error_message": "CSS fix: items",
+      "file": "src/pages/Payment.tsx",
+      "root_cause": "items: items.map((item) => ({ product: item.id, quantity: item.quantity → items.map((item) => ({",
+      "fix": "Changed items: items.map((item) => ({ product: item.id, quantity: item.quantity → items.map((item) => ({",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T08:28:20.977Z"
+    },
+    {
+      "id": "bug-046",
+      "timestamp": "2026-06-14T08:29:20.074Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/services/product.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T08:29:20.074Z"
+    },
+    {
+      "id": "bug-047",
+      "timestamp": "2026-06-14T08:30:56.848Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/ProductDetail.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T08:30:56.848Z"
+    },
+    {
+      "id": "bug-048",
+      "timestamp": "2026-06-14T08:31:38.884Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/context/CartContext.tsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 9→16 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T08:31:38.884Z"
+    },
+    {
+      "id": "bug-049",
+      "timestamp": "2026-06-14T08:31:55.195Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/Payment.tsx",
+      "root_cause": "Had 'react-router-dom'",
+      "fix": "Changed to '@tanstack/react-query'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T08:31:55.195Z"
+    },
+    {
+      "id": "bug-050",
+      "timestamp": "2026-06-14T08:32:17.994Z",
+      "error_message": "Type error",
+      "file": "src/pages/Payment.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T08:32:17.994Z"
+    },
+    {
+      "id": "bug-051",
+      "timestamp": "2026-06-14T08:33:34.706Z",
+      "error_message": "Significant refactor of ",
+      "file": "API_CHANGES_AND_FIXES.md",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 6→10 lines (2 removed) | Also: ### I5 — JWT stored in localStorage (XSS token the; - **Preferred:** issue the JWT in an `httpOnly`, ` | Also: ### I9 — No stock enforcement at checkout ⬜; - **Backend change (MANDATORY):** validate stock a",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-06-14T08:34:29.578Z"
+    },
+    {
+      "id": "bug-052",
+      "timestamp": "2026-06-14T10:54:45.997Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "src/pages/Payment.tsx",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block | Also: const savedAddress = loadSavedAddress();; const [address, setAddress] = useState<ShippingAddress>(save",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-14T10:54:54.241Z"
+    },
+    {
+      "id": "bug-053",
+      "timestamp": "2026-06-14T10:56:29.041Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/App.tsx",
+      "root_cause": "Had \"@/components/ui/toaster\"",
+      "fix": "Changed to \"react-helmet-async\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T10:56:29.041Z"
+    },
+    {
+      "id": "bug-054",
+      "timestamp": "2026-06-14T10:57:08.594Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/ProductDetail.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T10:57:08.594Z"
+    },
+    {
+      "id": "bug-055",
+      "timestamp": "2026-06-14T10:59:11.519Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/Index.tsx",
+      "root_cause": "Had '@/services/product'",
+      "fix": "Changed to '@/components/Seo'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T10:59:11.519Z"
+    },
+    {
+      "id": "bug-056",
+      "timestamp": "2026-06-14T10:59:18.614Z",
+      "error_message": "Type error",
+      "file": "src/pages/Index.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T10:59:18.614Z"
+    },
+    {
+      "id": "bug-057",
+      "timestamp": "2026-06-14T10:59:29.092Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Had '@/services/product'",
+      "fix": "Changed to '@/components/Seo'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T10:59:29.092Z"
+    },
+    {
+      "id": "bug-058",
+      "timestamp": "2026-06-14T11:02:02.230Z",
+      "error_message": "Significant refactor of ",
+      "file": "API_CHANGES_AND_FIXES.md",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 7→24 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T11:02:02.230Z"
+    },
+    {
+      "id": "bug-059",
+      "timestamp": "2026-06-14T11:07:43.730Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/OrderTracking.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T11:07:43.730Z"
+    },
+    {
+      "id": "bug-060",
+      "timestamp": "2026-06-14T11:10:45.033Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/services/giftVoucher.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T11:10:45.033Z"
+    },
+    {
+      "id": "bug-061",
+      "timestamp": "2026-06-14T11:10:57.185Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/services/pricingConfig.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T11:10:57.185Z"
+    },
+    {
+      "id": "bug-062",
+      "timestamp": "2026-06-14T11:11:17.122Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/services/payment.ts",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 7→8 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T11:11:17.122Z"
+    },
+    {
+      "id": "bug-063",
+      "timestamp": "2026-06-14T11:11:57.370Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/api/pricing-config.md",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 8→9 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T11:11:57.370Z"
+    },
+    {
+      "id": "bug-064",
+      "timestamp": "2026-06-14T11:14:44.798Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/Payment.tsx",
+      "root_cause": "Had \"h-4 w-4\"",
+      "fix": "Changed to \"Remove coupon\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T11:14:44.798Z"
+    },
+    {
+      "id": "bug-065",
+      "timestamp": "2026-06-14T11:15:42.375Z",
+      "error_message": "CSS fix: sm, hover",
+      "file": "src/components/Navbar.tsx",
+      "root_cause": "sm: flex text-muted-foreground hover:text-primary transition-colors\"> → flex text-muted-foreground hover:text-primary transition-colors\" aria-label=\"Wishlist\">; hover: text-primary transition-colors\"> → text-primary transition-colors\" aria-label={`Cart, ${totalItems",
+      "fix": "Changed sm: flex text-muted-foreground hover:text-primary transition-colors\"> → flex text-muted-foreground hover:text-primary transition-colors\" aria-label=\"Wishlist\">; hover: text-primary transition-colors\"> → text-primary transition-colors\" aria-label={`Cart, ${totalItems",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T11:15:42.375Z"
+    },
+    {
+      "id": "bug-066",
+      "timestamp": "2026-06-14T11:17:36.956Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/api/products-pricing-stock.md",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 8→13 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T11:17:36.956Z"
+    },
+    {
+      "id": "bug-067",
+      "timestamp": "2026-06-14T11:18:04.223Z",
+      "error_message": "Significant refactor of ",
+      "file": "CLAUDE.md",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 7→14 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T11:18:04.223Z"
+    },
+    {
+      "id": "bug-068",
+      "timestamp": "2026-06-14T11:55:25.466Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/api/payments-create-order.md",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 20→28 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T11:55:25.466Z"
+    },
+    {
+      "id": "bug-069",
+      "timestamp": "2026-06-14T12:04:19.293Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/pages/OrderConfirmation.tsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 12→20 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T12:04:19.293Z"
+    },
+    {
+      "id": "bug-070",
+      "timestamp": "2026-06-14T12:04:39.323Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/OrderConfirmation.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T12:04:39.323Z"
+    },
+    {
+      "id": "bug-071",
+      "timestamp": "2026-06-14T12:07:25.124Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/SavingsScheme.tsx",
+      "root_cause": "Had '@/components/ui/button'",
+      "fix": "Changed to '@/components/Seo'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T12:07:25.125Z"
+    },
+    {
+      "id": "bug-072",
+      "timestamp": "2026-06-14T12:26:40.634Z",
+      "error_message": "Missing guard clause",
+      "file": "src/pages/Payment.tsx",
+      "root_cause": "No early return/throw for edge case: addressTouched || savedAddresses.length === 0",
+      "fix": "Added guard clause: if (addressTouched || savedAddresses.length )",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T12:26:40.634Z"
+    },
+    {
+      "id": "bug-073",
+      "timestamp": "2026-06-14T12:27:28.876Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "src/pages/OrderConfirmation.tsx",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T12:27:28.876Z"
+    },
+    {
+      "id": "bug-074",
+      "timestamp": "2026-06-14T12:41:58.763Z",
+      "error_message": "Missing import: @sentry/react",
+      "file": "src/lib/analytics.ts",
+      "root_cause": "Module(s) not imported: @sentry/react",
+      "fix": "Added import(s) for @sentry/react",
+      "tags": [
+        "auto-detected",
+        "missing-import",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T12:41:58.763Z"
     }
   ]
 }

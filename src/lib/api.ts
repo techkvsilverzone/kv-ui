@@ -9,19 +9,17 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('kv-silver-token');
-  
   const headers = new Headers(options.headers);
   if (options.body !== undefined) {
     headers.set('Content-Type', 'application/json');
   }
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
 
+  // Auth is carried by an httpOnly cookie set by the server; `credentials: 'include'`
+  // ensures the cookie is sent on every request (including cross-origin).
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers,
+    credentials: 'include',
   });
 
   if (!response.ok) {

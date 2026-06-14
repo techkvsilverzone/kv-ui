@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import heroImage from '@/assets/hero-silver.jpg';
 import savingsImage from '@/assets/savings-scheme.jpg';
 import ProductCard from '@/components/ProductCard';
+import Seo from '@/components/Seo';
 import { productService } from '@/services/product';
 
 const Index = () => {
@@ -44,6 +45,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Premium Silver Jewellery & Coins"
+        description="Shop BIS-hallmarked silver jewellery, coins and gifts at KV Silver Zone. Live silver rates, monthly savings schemes and insured delivery across India."
+        image={heroImage.startsWith('http') ? heroImage : undefined}
+      />
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">

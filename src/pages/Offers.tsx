@@ -3,6 +3,7 @@ import { Tag, ArrowRight, Clock, Sparkles, Gift, Percent } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ProductCard';
+import Seo from '@/components/Seo';
 import { productService } from '@/services/product';
 
 interface Campaign {
@@ -63,6 +64,10 @@ const Offers = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Offers & Deals"
+        description="Discover the latest offers and discounted silver pieces at KV Silver Zone. Limited-time deals on jewellery, coins and gifts."
+      />
       {/* Hero */}
       <div className="relative border-b border-border overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/8 via-transparent to-transparent" />

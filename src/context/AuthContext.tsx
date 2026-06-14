@@ -54,13 +54,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const silentLogout = () => {
       setUser(null);
-      localStorage.removeItem('kv-silver-token');
       localStorage.removeItem('kv-silver-user');
     };
 
     const initAuth = async () => {
-      const token = localStorage.getItem('kv-silver-token');
-      if (token) {
+      // Auth lives in an httpOnly cookie. If we have a previously-stored user, the
+      // session likely exists — validate it via the cookie-authenticated /users/me.
+      const savedUser = localStorage.getItem('kv-silver-user');
+      if (savedUser) {
         try {
           const userData = await authService.getMe();
           const normalizedUser = normalizeUser(userData);
@@ -85,10 +86,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const { user, token } = await authService.login(email, password);
+      // Server sets the httpOnly auth cookie; the `token` field is ignored here.
+      const { user } = await authService.login(email, password);
       const normalizedUser = normalizeUser(user);
       setUser(normalizedUser);
-      localStorage.setItem('kv-silver-token', token);
       localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));
       return true;
     } catch (error) {
@@ -99,10 +100,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = async (email: string, password: string, name: string): Promise<boolean> => {
     try {
-      const { user, token } = await authService.signup(name, email, password);
+      const { user } = await authService.signup(name, email, password);
       const normalizedUser = normalizeUser(user);
       setUser(normalizedUser);
-      localStorage.setItem('kv-silver-token', token);
       localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));
       return true;
     } catch (error) {
@@ -112,8 +112,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    // Ask the server to clear the httpOnly cookie, then drop local state regardless.
+    void authService.logout().catch((error) => {
+      console.error('Logout request failed', error);
+    });
     setUser(null);
-    localStorage.removeItem('kv-silver-token');
     localStorage.removeItem('kv-silver-user');
   };
 

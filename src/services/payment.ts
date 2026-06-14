@@ -1,9 +1,24 @@
 import { api } from '../lib/api';
 
 export interface RazorpayOrderPayload {
-  amount: number;
-  currency?: string;
-  receipt?: string;
+  /** Server prices the order from these line items; no client amount is trusted. */
+  items: Array<{
+    product: string;
+    quantity: number;
+    isGiftVoucher?: boolean;
+    giftVoucherId?: string;
+  }>;
+  couponCode?: string;
+  pincode?: string;
+}
+
+export interface RazorpayOrderBreakdown {
+  subtotal?: number;
+  taxAmount?: number;
+  discount?: number;
+  couponCode?: string | null;
+  deliveryFee?: number;
+  grandTotal?: number;
 }
 
 export interface RazorpayOrder {
@@ -12,6 +27,8 @@ export interface RazorpayOrder {
   currency: string;
   receipt: string;
   status: string;
+  /** Server-computed amounts for display only. */
+  breakdown?: RazorpayOrderBreakdown;
 }
 
 export interface PaymentVerificationPayload {
@@ -25,6 +42,8 @@ export interface PaymentVerificationPayload {
       price: number;
       quantity: number;
       image: string;
+      isGiftVoucher?: boolean;
+      giftVoucherId?: string;
     }>;
     shippingAddress: {
       firstName: string;

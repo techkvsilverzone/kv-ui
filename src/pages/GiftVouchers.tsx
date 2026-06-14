@@ -1,58 +1,20 @@
 import { useState } from 'react';
-import { Gift, Star, Truck, ShieldCheck } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Gift, Star, Truck, ShieldCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/hooks/use-toast';
+import { giftVoucherService, type GiftVoucher } from '@/services/giftVoucher';
+import Seo from '@/components/Seo';
 
-interface GiftVoucherProduct {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  tag?: string;
-  color: string;
-  /** Gift vouchers are GST-exempt — tax is already inclusive */
-  isGiftVoucher: true;
-}
-
-const voucherCatalogue: GiftVoucherProduct[] = [
-  {
-    id: 'gv-500',
-    name: '₹500 Gift Voucher',
-    price: 500,
-    description: 'Perfect for small silver gifting occasions. Valid for 1 year.',
-    tag: 'Popular',
-    color: 'from-amber-400 to-yellow-300',
-    isGiftVoucher: true,
-  },
-  {
-    id: 'gv-1000',
-    name: '₹1,000 Gift Voucher',
-    price: 1000,
-    description: 'Great for festivals and celebrations. Redeemable on any silver product.',
-    tag: 'Best Value',
-    color: 'from-primary/80 to-primary/40',
-    isGiftVoucher: true,
-  },
-  {
-    id: 'gv-2500',
-    name: '₹2,500 Gift Voucher',
-    price: 2500,
-    description: 'Premium gifting experience. Ideal for weddings and milestones.',
-    color: 'from-rose-400 to-pink-300',
-    isGiftVoucher: true,
-  },
-  {
-    id: 'gv-5000',
-    name: '₹5,000 Gift Voucher',
-    price: 5000,
-    description: 'Luxury silver gifting. Valid store-wide including exclusive collections.',
-    tag: 'Premium',
-    color: 'from-violet-500 to-purple-400',
-    isGiftVoucher: true,
-  },
+// Rotating gradient palette so API-driven vouchers still look distinct.
+const voucherColors = [
+  'from-amber-400 to-yellow-300',
+  'from-primary/80 to-primary/40',
+  'from-rose-400 to-pink-300',
+  'from-violet-500 to-purple-400',
 ];
 
 const formatPrice = (price: number) =>
@@ -63,7 +25,12 @@ const GiftVouchers = () => {
   const { toast } = useToast();
   const [added, setAdded] = useState<string | null>(null);
 
-  const handleAddToCart = (voucher: GiftVoucherProduct) => {
+  const { data: vouchers = [], isLoading } = useQuery({
+    queryKey: ['gift-vouchers'],
+    queryFn: giftVoucherService.getGiftVouchers,
+  });
+
+  const handleAddToCart = (voucher: GiftVoucher) => {
     addToCart({
       id: voucher.id,
       name: voucher.name,
@@ -74,7 +41,8 @@ const GiftVouchers = () => {
       purity: '—',
       description: voucher.description,
       inStock: true,
-      isGiftVoucher: voucher.isGiftVoucher,
+      isGiftVoucher: true,
+      giftVoucherId: voucher.id,
     });
     setAdded(voucher.id);
     setTimeout(() => setAdded(null), 1800);
@@ -90,6 +58,10 @@ const GiftVouchers = () => {
 
   return (
     <div className="min-h-screen pt-24 pb-16">
+      <Seo
+        title="Gift Vouchers"
+        description="Give the gift of choice with KV Silver Zone gift vouchers — redeemable on our entire silver collection, online or in-store."
+      />
       {/* Hero */}
       <section className="bg-primary text-primary-foreground py-16">
         <div className="container mx-auto px-4 text-center">
@@ -129,41 +101,51 @@ const GiftVouchers = () => {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <h2 className="font-serif text-3xl font-bold text-center mb-10">Choose a Voucher</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {voucherCatalogue.map((voucher) => (
-              <Card key={voucher.id} className="overflow-hidden card-hover">
-                {/* Voucher Visual */}
-                <div className={`bg-gradient-to-br ${voucher.color} h-36 flex items-center justify-center relative`}>
-                  <Gift className="h-14 w-14 text-white/70" />
-                  {voucher.tag && (
-                    <Badge className="absolute top-3 right-3 bg-white text-gray-800 text-xs">
-                      {voucher.tag}
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="p-5">
-                  <h3 className="font-serif text-xl font-bold mb-1">{voucher.name}</h3>
-                  <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{voucher.description}</p>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-2xl font-bold text-primary">{formatPrice(voucher.price)}</p>
-                      <p className="text-xs text-muted-foreground">GST incl.</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => handleAddToCart(voucher)}
-                      disabled={added === voucher.id}
-                      className="btn-shine"
-                    >
-                      {added === voucher.id ? 'Added!' : 'Add to Cart'}
-                    </Button>
+          {isLoading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : vouchers.length === 0 ? (
+            <p className="text-center text-muted-foreground py-16">
+              Gift vouchers are currently unavailable. Please check back soon.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {vouchers.map((voucher, index) => (
+                <Card key={voucher.id} className="overflow-hidden card-hover">
+                  {/* Voucher Visual */}
+                  <div className={`bg-gradient-to-br ${voucherColors[index % voucherColors.length]} h-36 flex items-center justify-center relative`}>
+                    <Gift className="h-14 w-14 text-white/70" />
+                    {voucher.tag && (
+                      <Badge className="absolute top-3 right-3 bg-white text-gray-800 text-xs">
+                        {voucher.tag}
+                      </Badge>
+                    )}
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+
+                  <div className="p-5">
+                    <h3 className="font-serif text-xl font-bold mb-1">{voucher.name}</h3>
+                    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{voucher.description}</p>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-2xl font-bold text-primary">{formatPrice(voucher.price)}</p>
+                        <p className="text-xs text-muted-foreground">GST incl.</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleAddToCart(voucher)}
+                        disabled={added === voucher.id}
+                        className="btn-shine"
+                      >
+                        {added === voucher.id ? 'Added!' : 'Add to Cart'}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

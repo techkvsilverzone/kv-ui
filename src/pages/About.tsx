@@ -1,5 +1,6 @@
 import { Award, Users, History, Target } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import Seo from '@/components/Seo';
 import aboutBanner from '@/assets/about_banner.png';
 
 const About = () => {
@@ -35,6 +36,10 @@ const About = () => {
 
   return (
     <div className="min-h-screen pt-24">
+      <Seo
+        title="About Us"
+        description="The KV Silver Zone story — Chennai's trusted destination for BIS-hallmarked silver jewellery, coins and gifts, crafted with purity and care."
+      />
       {/* Hero */}
       <section className="bg-primary text-primary-foreground py-20">
         <div className="container mx-auto px-4 text-center">

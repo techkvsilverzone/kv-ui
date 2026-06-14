@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Wallet, Building, Shield, CheckCircle, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,11 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { paymentService } from '@/services/payment';
 import { couponService } from '@/services/coupon';
+import { pricingConfigService, DEFAULT_PRICING_CONFIG } from '@/services/pricingConfig';
+import { addressService, type Address } from '@/services/address';
+import { validateForm, shippingAddressSchema } from '@/lib/validation';
+import Seo from '@/components/Seo';
 
 declare global {
   interface Window {
@@ -18,10 +24,36 @@ declare global {
   }
 }
 
+const SAVED_ADDRESS_KEY = 'kv-silver-address';
+
+const emptyAddress = {
+  firstName: '',
+  lastName: '',
+  address: '',
+  city: '',
+  state: '',
+  pincode: '',
+  phone: '',
+};
+
+type ShippingAddress = typeof emptyAddress;
+
+const loadSavedAddress = (): ShippingAddress | null => {
+  try {
+    const raw = localStorage.getItem(SAVED_ADDRESS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return { ...emptyAddress, ...parsed };
+  } catch {
+    return null;
+  }
+};
+
 const Payment = () => {
   const navigate = useNavigate();
-  const { totalPrice, clearCart, items } = useCart();
-  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { totalPrice, taxAmount, clearCart, items } = useCart();
+  const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -29,18 +61,73 @@ const Payment = () => {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [appliedCoupon, setAppliedCoupon] = useState('');
   const [isCouponLoading, setIsCouponLoading] = useState(false);
-  const [address, setAddress] = useState({
-    firstName: '',
-    lastName: '',
-    address: '',
-    city: '',
-    state: '',
-    pincode: '',
-    phone: '',
+  const savedAddress = loadSavedAddress();
+  const [address, setAddress] = useState<ShippingAddress>(savedAddress ?? emptyAddress);
+  const [saveAddress, setSaveAddress] = useState(true);
+  const [addressTouched, setAddressTouched] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Account-bound address book (server). Falls back to the localStorage prefill for guests.
+  const { data: savedAddresses = [] } = useQuery({
+    queryKey: ['my-addresses'],
+    queryFn: addressService.getAddresses,
+    enabled: isAuthenticated,
   });
+
+  const toShipping = (a: Address): ShippingAddress => ({
+    firstName: a.firstName ?? '',
+    lastName: a.lastName ?? '',
+    address: a.address ?? '',
+    city: a.city ?? '',
+    state: a.state ?? '',
+    pincode: a.pincode ?? '',
+    phone: a.phone ?? '',
+  });
+
+  // Prefill from the default (or first) saved address, unless the user has edited the form.
+  useEffect(() => {
+    if (addressTouched || savedAddresses.length === 0) return;
+    const def = savedAddresses.find((a) => a.isDefault) ?? savedAddresses[0];
+    if (def) setAddress(toShipping(def));
+  }, [savedAddresses, addressTouched]);
+
+  const selectSavedAddress = (a: Address) => {
+    setAddress(toShipping(a));
+    setAddressTouched(true);
+    setErrors({});
+  };
+
+  const persistAddress = async () => {
+    try {
+      if (saveAddress) {
+        localStorage.setItem(SAVED_ADDRESS_KEY, JSON.stringify(address));
+      } else {
+        localStorage.removeItem(SAVED_ADDRESS_KEY);
+      }
+    } catch {
+      /* ignore storage failures */
+    }
+
+    // Authenticated users get an account-bound copy too (skip exact duplicates).
+    if (isAuthenticated && saveAddress) {
+      const isDuplicate = savedAddresses.some(
+        (a) => a.address === address.address && a.pincode === address.pincode && a.phone === address.phone,
+      );
+      if (!isDuplicate) {
+        try {
+          await addressService.createAddress({ ...address });
+          queryClient.invalidateQueries({ queryKey: ['my-addresses'] });
+        } catch {
+          /* non-blocking — the order is already placed */
+        }
+      }
+    }
+  };
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAddress({ ...address, [e.target.id]: e.target.value });
+    setAddressTouched(true);
+    if (errors[e.target.id]) setErrors((prev) => ({ ...prev, [e.target.id]: '' }));
   };
 
   const formatPrice = (price: number) => {
@@ -51,8 +138,15 @@ const Payment = () => {
     }).format(price);
   };
 
+  const { data: pricingConfig = DEFAULT_PRICING_CONFIG } = useQuery({
+    queryKey: ['pricing-config'],
+    queryFn: pricingConfigService.getPricingConfig,
+    staleTime: 10 * 60_000,
+  });
+
+  // Display only — the server computes the authoritative total at /payments/create-order.
   const subtotal = totalPrice;
-  const tax = subtotal * 0.05;
+  const tax = taxAmount;
   const totalWithTax = subtotal + tax - couponDiscount;
 
   const handleApplyCoupon = async () => {
@@ -105,10 +199,16 @@ const Payment = () => {
     }
 
     try {
-      // Create order on backend
+      // Create order on backend. The server prices it from the line items + coupon;
+      // no client-computed amount is sent or trusted.
       const razorpayOrder = await paymentService.createRazorpayOrder({
-        amount: Math.round(totalWithTax * 100), // amount in paise
-        currency: 'INR',
+        items: items.map((item) => ({
+          product: item.id,
+          quantity: item.quantity,
+          ...(item.isGiftVoucher ? { isGiftVoucher: true, giftVoucherId: item.giftVoucherId || item.id } : {}),
+        })),
+        couponCode: appliedCoupon || undefined,
+        pincode: address.pincode || undefined,
       });
 
       const options = {
@@ -139,6 +239,7 @@ const Payment = () => {
                   price: item.price,
                   quantity: item.quantity,
                   image: item.image,
+                  ...(item.isGiftVoucher ? { isGiftVoucher: true, giftVoucherId: item.giftVoucherId || item.id } : {}),
                 })),
                 shippingAddress: address,
                 paymentMethod: 'razorpay',
@@ -148,6 +249,7 @@ const Payment = () => {
             });
 
             if (verifyResult.success) {
+              persistAddress();
               toast({ title: 'Payment Successful!', description: 'Your order has been placed.' });
               clearCart();
               navigate(`/order/${verifyResult.orderId}`);
@@ -172,14 +274,17 @@ const Payment = () => {
   };
 
   const handlePayment = async () => {
-    if (!address.firstName || !address.address || !address.phone) {
+    const result = validateForm(shippingAddressSchema, address);
+    if (!result.success) {
+      setErrors(result.errors);
       toast({
         title: 'Missing Information',
-        description: 'Please fill in all required shipping details.',
+        description: 'Please correct the highlighted shipping details.',
         variant: 'destructive',
       });
       return;
     }
+    setErrors({});
 
     setIsProcessing(true);
 
@@ -207,6 +312,7 @@ const Payment = () => {
           },
         });
 
+        persistAddress();
         toast({ title: 'Order Placed!', description: 'Your COD order has been placed successfully.' });
         clearCart();
         navigate(`/order/${result.orderId}`);
@@ -225,6 +331,7 @@ const Payment = () => {
 
   return (
     <div className="min-h-screen pt-24 pb-16">
+      <Seo title="Checkout" noindex />
       <div className="container mx-auto px-4">
         <h1 className="font-serif text-4xl font-bold text-foreground mb-8">
           Checkout
@@ -235,37 +342,79 @@ const Payment = () => {
           <div className="lg:col-span-2 space-y-6">
             {/* Shipping Address */}
             <Card className="p-6">
-              <h2 className="font-serif text-xl font-semibold mb-4">Shipping Address</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-serif text-xl font-semibold">Shipping Address</h2>
+                {savedAddresses.length === 0 && savedAddress && (
+                  <span className="text-xs text-muted-foreground">Prefilled from your last order</span>
+                )}
+              </div>
+
+              {savedAddresses.length > 0 && (
+                <div className="mb-5">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Saved addresses</p>
+                  <div className="flex flex-wrap gap-2">
+                    {savedAddresses.map((a) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => selectSavedAddress(a)}
+                        className="text-left text-xs border border-border rounded-md px-3 py-2 hover:border-primary transition-colors"
+                      >
+                        <span className="font-medium block">
+                          {a.label || `${a.firstName} ${a.lastName}`.trim() || 'Address'}
+                          {a.isDefault && <span className="ml-1 text-[10px] text-primary">• Default</span>}
+                        </span>
+                        <span className="block text-muted-foreground">{a.city}, {a.pincode}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" className="mt-1" placeholder="John" value={address.firstName} onChange={handleAddressChange} />
+                  <Input id="firstName" className="mt-1" placeholder="John" value={address.firstName} onChange={handleAddressChange} aria-invalid={!!errors.firstName} />
+                  {errors.firstName && <p className="text-xs text-destructive mt-1">{errors.firstName}</p>}
                 </div>
                 <div>
                   <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" className="mt-1" placeholder="Doe" value={address.lastName} onChange={handleAddressChange} />
+                  <Input id="lastName" className="mt-1" placeholder="Doe" value={address.lastName} onChange={handleAddressChange} aria-invalid={!!errors.lastName} />
+                  {errors.lastName && <p className="text-xs text-destructive mt-1">{errors.lastName}</p>}
                 </div>
                 <div className="md:col-span-2">
                   <Label htmlFor="address">Address</Label>
-                  <Input id="address" className="mt-1" placeholder="123 Main Street" value={address.address} onChange={handleAddressChange} />
+                  <Input id="address" className="mt-1" placeholder="123 Main Street" value={address.address} onChange={handleAddressChange} aria-invalid={!!errors.address} />
+                  {errors.address && <p className="text-xs text-destructive mt-1">{errors.address}</p>}
                 </div>
                 <div>
                   <Label htmlFor="city">City</Label>
-                  <Input id="city" className="mt-1" placeholder="Chennai" value={address.city} onChange={handleAddressChange} />
+                  <Input id="city" className="mt-1" placeholder="Chennai" value={address.city} onChange={handleAddressChange} aria-invalid={!!errors.city} />
+                  {errors.city && <p className="text-xs text-destructive mt-1">{errors.city}</p>}
                 </div>
                 <div>
                   <Label htmlFor="state">State</Label>
-                  <Input id="state" className="mt-1" placeholder="Tamil Nadu" value={address.state} onChange={handleAddressChange} />
+                  <Input id="state" className="mt-1" placeholder="Tamil Nadu" value={address.state} onChange={handleAddressChange} aria-invalid={!!errors.state} />
+                  {errors.state && <p className="text-xs text-destructive mt-1">{errors.state}</p>}
                 </div>
                 <div>
                   <Label htmlFor="pincode">PIN Code</Label>
-                  <Input id="pincode" className="mt-1" placeholder="600001" value={address.pincode} onChange={handleAddressChange} />
+                  <Input id="pincode" className="mt-1" placeholder="600001" value={address.pincode} onChange={handleAddressChange} aria-invalid={!!errors.pincode} />
+                  {errors.pincode && <p className="text-xs text-destructive mt-1">{errors.pincode}</p>}
                 </div>
                 <div>
                   <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" className="mt-1" placeholder="+91 98765 43210" value={address.phone} onChange={handleAddressChange} />
+                  <Input id="phone" className="mt-1" placeholder="+91 98765 43210" value={address.phone} onChange={handleAddressChange} aria-invalid={!!errors.phone} />
+                  {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}
                 </div>
               </div>
+              <label className="flex items-center gap-2 mt-4 cursor-pointer text-sm text-muted-foreground">
+                <Checkbox
+                  checked={saveAddress}
+                  onCheckedChange={(checked) => setSaveAddress(checked === true)}
+                />
+                Save this address for next time
+              </label>
             </Card>
 
             {/* Payment Method */}
@@ -326,7 +475,7 @@ const Payment = () => {
                       <Tag className="h-4 w-4 text-green-600" />
                       <span className="text-sm font-medium text-green-700">{appliedCoupon}</span>
                     </div>
-                    <button onClick={removeCoupon} className="text-muted-foreground hover:text-foreground">
+                    <button onClick={removeCoupon} className="text-muted-foreground hover:text-foreground" aria-label="Remove coupon">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
@@ -355,7 +504,7 @@ const Payment = () => {
                   <span className="text-green-600">Free</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax (GST 5%)</span>
+                  <span className="text-muted-foreground">Tax (GST {pricingConfig.gstPercent}%)</span>
                   <span>{formatPrice(tax)}</span>
                 </div>
                 {couponDiscount > 0 && (

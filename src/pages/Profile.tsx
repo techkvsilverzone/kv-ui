@@ -12,6 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { orderService } from '@/services/order';
 import { savingsService } from '@/services/savings';
 import { returnsService } from '@/services/returns';
+import { validateForm, profileSchema } from '@/lib/validation';
+import Seo from '@/components/Seo';
 
 const Profile = () => {
   const { user, isAuthenticated, updateProfile, logout } = useAuth();
@@ -22,6 +24,7 @@ const Profile = () => {
     phone: user?.phone || '',
     address: user?.address || '',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['my-orders'],
@@ -46,6 +49,16 @@ const Profile = () => {
   }
 
   const handleUpdateProfile = async () => {
+    const result = validateForm(profileSchema, {
+      name: profileData.name,
+      email: profileData.email,
+      phone: profileData.phone,
+    });
+    if (!result.success) {
+      setErrors(result.errors);
+      return;
+    }
+    setErrors({});
     const success = await updateProfile(profileData);
     if (success) {
       toast({
@@ -71,6 +84,7 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen pt-24 pb-16">
+      <Seo title="My Account" noindex />
       <div className="container mx-auto px-4">
         <h1 className="font-serif text-4xl font-bold text-foreground mb-8">
           My Account
@@ -111,7 +125,9 @@ const Profile = () => {
                     value={profileData.name}
                     onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                     className="mt-1"
+                    aria-invalid={!!errors.name}
                   />
+                  {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
                 </div>
                 <div>
                   <Label htmlFor="email">Email Address</Label>
@@ -121,7 +137,9 @@ const Profile = () => {
                     value={profileData.email}
                     onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
                     className="mt-1"
+                    aria-invalid={!!errors.email}
                   />
+                  {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
                 </div>
                 <div>
                   <Label htmlFor="phone">Phone Number</Label>
@@ -131,7 +149,9 @@ const Profile = () => {
                     onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                     className="mt-1"
                     placeholder="+91 98765 43210"
+                    aria-invalid={!!errors.phone}
                   />
+                  {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}
                 </div>
                 <div className="md:col-span-2">
                   <Label htmlFor="address">Address</Label>

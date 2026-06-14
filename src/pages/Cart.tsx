@@ -13,6 +13,8 @@ const Cart = () => {
   const [giftWrap, setGiftWrap] = useState(false);
   const [giftMessage, setGiftMessage] = useState('');
 
+  const hasOutOfStock = items.some((item) => !item.inStock);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -85,6 +87,11 @@ const Cart = () => {
                           <p className="text-sm text-muted-foreground">
                             {item.weight} • {item.purity}
                           </p>
+                          {!item.inStock && (
+                            <p className="text-xs font-medium text-destructive mt-1">
+                              Out of stock — remove to continue
+                            </p>
+                          )}
                         </div>
                         <Button
                           variant="ghost"
@@ -92,6 +99,7 @@ const Cart = () => {
                           onClick={() => removeFromCart(item.id)}
                           className="text-destructive hover:text-destructive"
                           disabled={isUpdating}
+                          aria-label={`Remove ${item.name} from cart`}
                         >
                           {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         </Button>
@@ -105,16 +113,18 @@ const Cart = () => {
                             className="h-8 w-8"
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
                             disabled={isUpdating}
+                            aria-label={`Decrease quantity of ${item.name}`}
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
-                          <span className="w-8 text-center font-medium">{item.quantity}</span>
+                          <span className="w-8 text-center font-medium" aria-live="polite">{item.quantity}</span>
                           <Button
                             variant="outline"
                             size="icon"
                             className="h-8 w-8"
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             disabled={isUpdating}
+                            aria-label={`Increase quantity of ${item.name}`}
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -212,12 +222,24 @@ const Cart = () => {
                 </div>
               </div>
 
-              <Link to="/payment">
-                <Button className="w-full btn-shine" size="lg" disabled={isCartSyncing || items.some((item) => isItemUpdating(item.id))}>
-                  Proceed to Checkout
-                  <ArrowRight className="ml-2 h-5 w-5" />
+              {hasOutOfStock ? (
+                <Button className="w-full" size="lg" disabled>
+                  Remove out-of-stock items
                 </Button>
-              </Link>
+              ) : (
+                <Link to="/payment">
+                  <Button className="w-full btn-shine" size="lg" disabled={isCartSyncing || items.some((item) => isItemUpdating(item.id))}>
+                    Proceed to Checkout
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+              )}
+
+              {hasOutOfStock && (
+                <p className="text-xs text-center text-destructive mt-3">
+                  One or more items are out of stock. Please remove them to proceed.
+                </p>
+              )}
 
               <p className="text-xs text-center text-muted-foreground mt-4">
                 Free insured shipping · GST included in prices

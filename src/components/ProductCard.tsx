@@ -57,6 +57,14 @@ const ProductCard = ({ product, onQuickView }: ProductCardProps) => {
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigation if wrapped in Link
+    if (!product.inStock) {
+      toast({
+        title: 'Out of Stock',
+        description: `${product.name} is currently unavailable.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     addToCart(product);
     toast({
       title: 'Added to Cart',
@@ -115,6 +123,11 @@ const ProductCard = ({ product, onQuickView }: ProductCardProps) => {
               Sale
             </span>
           )}
+          {!product.inStock && (
+            <span className="bg-muted text-muted-foreground text-[10px] uppercase tracking-widest px-2 py-1 font-medium">
+              Out of Stock
+            </span>
+          )}
         </div>
 
         {/* Quick Actions - Appearing on bottom */}
@@ -123,6 +136,8 @@ const ProductCard = ({ product, onQuickView }: ProductCardProps) => {
             size="icon"
             className="bg-white text-black hover:bg-primary hover:text-white rounded-none w-10 h-10 transition-colors shadow-sm"
             onClick={handleAddToCart}
+            disabled={!product.inStock}
+            aria-label={`Add ${product.name} to cart`}
           >
             <ShoppingCart className="h-4 w-4" strokeWidth={1.5} />
           </Button>
@@ -131,6 +146,8 @@ const ProductCard = ({ product, onQuickView }: ProductCardProps) => {
             className="bg-white text-black hover:bg-primary hover:text-white rounded-none w-10 h-10 transition-colors shadow-sm"
             onClick={handleWishlist}
             disabled={isWishlistUpdating}
+            aria-label={isWishlisted ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+            aria-pressed={isWishlisted}
           >
             <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current text-destructive' : ''}`} strokeWidth={1.5} />
           </Button>
@@ -142,6 +159,7 @@ const ProductCard = ({ product, onQuickView }: ProductCardProps) => {
                 e.preventDefault();
                 onQuickView(product);
               }}
+              aria-label={`Quick view ${product.name}`}
             >
               <Eye className="h-4 w-4" strokeWidth={1.5} />
             </Button>

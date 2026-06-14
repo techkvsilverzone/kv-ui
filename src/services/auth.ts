@@ -15,6 +15,11 @@ export const authService = {
     return api.post<AuthResponse>('/auth/signup', { name, email, password, phone });
   },
 
+  logout: async (): Promise<void> => {
+    // Server clears the httpOnly auth cookie; JS cannot do this itself.
+    return api.post<void>('/auth/logout', {});
+  },
+
   getMe: async (): Promise<User> => {
     return api.get<User>('/users/me');
   },

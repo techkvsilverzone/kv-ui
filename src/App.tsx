@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -38,6 +39,9 @@ import CustomerDashboard from "./pages/CustomerDashboard";
 import GiftVouchers from "./pages/GiftVouchers";
 import { storeConfigService } from "@/services/storeConfig";
 import ScrollToTop from "@/components/ScrollToTop";
+import RequireAuth from "@/components/RequireAuth";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { trackPageview } from "@/lib/analytics";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,6 +78,10 @@ const AppContent = () => {
   const location = useLocation();
   const isAdminPath = location.pathname.startsWith('/admin');
 
+  useEffect(() => {
+    trackPageview(location.pathname + location.search);
+  }, [location.pathname, location.search]);
+
   return (
     <div className="flex flex-col min-h-screen">
       <header className="fixed top-0 left-0 right-0 z-50">
@@ -81,6 +89,7 @@ const AppContent = () => {
         <Navbar />
       </header>
       <main className={cn("flex-1", isAdminPath ? "pt-[72px]" : "pt-[112px]")}>
+        <ErrorBoundary>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/shop" element={<Shop />} />
@@ -91,10 +100,11 @@ const AppContent = () => {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/cart" element={<Cart />} />
-          <Route path="/payment" element={<Payment />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/change-password" element={<ChangePassword />} />
-          <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/payment" element={<RequireAuth><Payment /></RequireAuth>} />
+          <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+          <Route path="/change-password" element={<RequireAuth><ChangePassword /></RequireAuth>} />
+          <Route path="/wishlist" element={<RequireAuth><Wishlist /></RequireAuth>} />
+          <Route path="/dashboard" element={<RequireAuth><CustomerDashboard /></RequireAuth>} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/order/:id" element={<OrderTracking />} />
@@ -105,10 +115,10 @@ const AppContent = () => {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsConditions />} />
           <Route path="/faq" element={<FAQ />} />
-          <Route path="/dashboard" element={<CustomerDashboard />} />
           <Route path="/gift-vouchers" element={<GiftVouchers />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </ErrorBoundary>
       </main>
       <Footer />
     </div>
@@ -138,20 +148,22 @@ const App = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <CartProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <ScrollToTop />
-              <AppContent />
-            </BrowserRouter>
-          </TooltipProvider>
-        </CartProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <CartProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <ScrollToTop />
+                <AppContent />
+              </BrowserRouter>
+            </TooltipProvider>
+          </CartProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 };
 

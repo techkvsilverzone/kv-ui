@@ -14,6 +14,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { contactService } from '@/services/contact';
+import { validateForm, contactSchema } from '@/lib/validation';
+import Seo from '@/components/Seo';
 
 const Contact = () => {
   const { toast } = useToast();
@@ -24,10 +26,23 @@ const Contact = () => {
     subject: '',
     message: '',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const result = validateForm(contactSchema, {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      message: formData.message,
+    });
+    if (!result.success) {
+      setErrors(result.errors);
+      return;
+    }
+    setErrors({});
 
     setIsSubmitting(true);
     try {
@@ -78,6 +93,10 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen pt-24">
+      <Seo
+        title="Contact Us"
+        description="Get in touch with KV Silver Zone — visit our Chennai store, call us, or send a message. We respond within 24 hours."
+      />
       {/* Hero */}
       <section className="bg-primary text-primary-foreground py-20">
         <div className="container mx-auto px-4 text-center">
@@ -129,9 +148,10 @@ const Contact = () => {
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="Your name"
-                        required
                         className="mt-1"
+                        aria-invalid={!!errors.name}
                       />
+                      {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
                     </div>
                     <div>
                       <Label htmlFor="email">Email Address</Label>
@@ -141,9 +161,10 @@ const Contact = () => {
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         placeholder="your@email.com"
-                        required
                         className="mt-1"
+                        aria-invalid={!!errors.email}
                       />
+                      {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -155,7 +176,9 @@ const Contact = () => {
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         placeholder="+91 98765 43210"
                         className="mt-1"
+                        aria-invalid={!!errors.phone}
                       />
+                      {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}
                     </div>
                     <div>
                       <Label htmlFor="subject">Subject</Label>
@@ -184,9 +207,10 @@ const Contact = () => {
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       placeholder="Tell us how we can help..."
                       rows={5}
-                      required
                       className="mt-1"
+                      aria-invalid={!!errors.message}
                     />
+                    {errors.message && <p className="text-xs text-destructive mt-1">{errors.message}</p>}
                   </div>
                   <Button type="submit" size="lg" className="btn-shine" disabled={isSubmitting}>
                     {isSubmitting ? 'Sending...' : 'Send Message'}

@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from './AuthContext';
 import type { ApiCartItem } from '@/services/cart';
 import { cartService } from '@/services/cart';
+import { pricingConfigService, DEFAULT_PRICING_CONFIG } from '@/services/pricingConfig';
 import { normalizeImageSrc } from '@/lib/image';
 
 export interface Product {
@@ -18,6 +20,19 @@ export interface Product {
   isNew?: boolean;
   isSale?: boolean;
   isGiftVoucher?: boolean;
+  /** Set for gift-voucher line items so the server can price them authoritatively. */
+  giftVoucherId?: string;
+  /** Remaining units (server-provided). */
+  stockAvailable?: number;
+  /** Numeric weight in grams (server-provided), used for the live price breakdown. */
+  weightInGrams?: number;
+  /** Server-computed price breakdown for display. */
+  pricing?: {
+    metalValue?: number;
+    makingCharge?: number;
+    ratePerGram?: number;
+    basis?: string;
+  };
 }
 
 export interface CartItem extends Product {
@@ -248,14 +263,21 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isItemUpdating = (productId: string) => pendingProductIds.includes(productId);
 
+  const { data: pricingConfig = DEFAULT_PRICING_CONFIG } = useQuery({
+    queryKey: ['pricing-config'],
+    queryFn: pricingConfigService.getPricingConfig,
+    staleTime: 10 * 60_000,
+  });
+
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  // 3% GST on non-gift-voucher items (gift vouchers have tax inclusive pricing)
+  // GST (from pricing-config) on non-gift-voucher items; gift vouchers are tax-inclusive.
+  // Display only — the server computes the authoritative total at checkout.
   const taxableTotal = items.reduce(
     (sum, item) => (item.isGiftVoucher ? sum : sum + item.price * item.quantity),
     0,
   );
-  const taxAmount = taxableTotal * 0.03;
+  const taxAmount = taxableTotal * (pricingConfig.gstPercent / 100);
   const totalWithTax = totalPrice + taxAmount;
 
   return (

@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useReactToPrint } from 'react-to-print';
 import {
   Package,
   Truck,
@@ -11,11 +13,14 @@ import {
   MapPin,
   CreditCard,
   FileText,
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { orderService } from '@/services/order';
+import InvoiceView from '@/components/InvoiceView';
+import Seo from '@/components/Seo';
 
 const statusSteps = [
   { key: 'Pending', label: 'Order Placed', icon: Clock },
@@ -26,7 +31,12 @@ const statusSteps = [
 
 const OrderTracking = () => {
   const { id } = useParams<{ id: string }>();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const invoiceRef = useRef<HTMLDivElement>(null);
+  const handlePrintInvoice = useReactToPrint({
+    contentRef: invoiceRef,
+    documentTitle: 'KV-Silver-Zone-Invoice',
+  });
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['my-orders'],
@@ -75,6 +85,7 @@ const OrderTracking = () => {
 
   return (
     <div className="min-h-screen pt-24 pb-16">
+      <Seo title={`Order #${order.id.slice(-6)}`} noindex />
       <div className="container mx-auto px-4">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
@@ -218,6 +229,10 @@ const OrderTracking = () => {
                 <h3 className="font-serif text-lg font-semibold">Actions</h3>
               </div>
               <div className="space-y-2">
+                <Button className="w-full btn-shine" onClick={handlePrintInvoice}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Invoice
+                </Button>
                 <Button variant="outline" className="w-full" asChild>
                   <Link to="/contact">Need Help?</Link>
                 </Button>
@@ -227,6 +242,16 @@ const OrderTracking = () => {
               </div>
             </Card>
           </div>
+        </div>
+
+        {/* Off-screen printable invoice */}
+        <div className="absolute -left-[9999px] top-0" aria-hidden="true">
+          <InvoiceView
+            ref={invoiceRef}
+            order={order}
+            customerName={user?.name}
+            customerEmail={user?.email}
+          />
         </div>
       </div>
     </div>

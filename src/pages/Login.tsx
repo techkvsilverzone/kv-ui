@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,9 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { validateForm, loginSchema } from '@/lib/validation';
+import Seo from '@/components/Seo';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = (location.state as { from?: string } | null)?.from || '/';
   const { login } = useAuth();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
@@ -17,10 +21,18 @@ const Login = () => {
     email: '',
     password: '',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const result = validateForm(loginSchema, formData);
+    if (!result.success) {
+      setErrors(result.errors);
+      return;
+    }
+    setErrors({});
     setIsLoading(true);
 
     try {
@@ -30,7 +42,7 @@ const Login = () => {
           title: 'Welcome back!',
           description: 'You have successfully logged in.',
         });
-        navigate('/');
+        navigate(redirectTo, { replace: true });
       } else {
         toast({
           title: 'Login failed',
@@ -51,6 +63,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen pt-24 pb-16 flex items-center justify-center bg-muted/30">
+      <Seo title="Sign In" noindex />
       <div className="container mx-auto px-4">
         <div className="max-w-md mx-auto">
           <Card className="p-8">
@@ -76,9 +89,10 @@ const Login = () => {
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="your@email.com"
                     className="pl-10"
-                    required
+                    aria-invalid={!!errors.email}
                   />
                 </div>
+                {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
               </div>
 
               <div>
@@ -100,7 +114,7 @@ const Login = () => {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="••••••••"
                     className="pl-10 pr-10"
-                    required
+                    aria-invalid={!!errors.password}
                   />
                   <button
                     type="button"
@@ -110,6 +124,7 @@ const Login = () => {
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+                {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
               </div>
 
               <Button type="submit" className="w-full btn-shine" disabled={isLoading}>

@@ -17,6 +17,14 @@ interface ApiProduct extends Partial<Omit<Product, 'id'>> {
   isNewItem?: boolean;
   material?: string;
   isActive?: boolean;
+  stockAvailable?: number;
+  weightInGrams?: number;
+  pricing?: {
+    metalValue?: number;
+    makingCharge?: number;
+    ratePerGram?: number;
+    basis?: string;
+  };
 }
 
 interface CategoriesResponse {
@@ -62,7 +70,13 @@ const normalizeProduct = (product: ApiProduct): Product => ({
   weight: product.weight !== undefined && product.weight !== null ? String(product.weight) : '',
   purity: product.purity ? String(product.purity) : '',
   description: product.description || '',
-  inStock: product.inStock ?? product.isActive ?? true,
+  inStock:
+    product.stockAvailable !== undefined && product.stockAvailable !== null
+      ? product.stockAvailable > 0
+      : product.inStock ?? product.isActive ?? true,
+  stockAvailable: product.stockAvailable,
+  weightInGrams: product.weightInGrams,
+  pricing: product.pricing,
   isNew: product.isNewItem ?? product.isNew,
   isSale: product.isSale,
   isGiftVoucher: product.isGiftVoucher,

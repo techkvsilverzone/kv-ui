@@ -21,6 +21,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import ProductCard from '@/components/ProductCard';
+import Seo from '@/components/Seo';
 import { productService } from '@/services/product';
 
 const Shop = () => {
@@ -125,7 +126,7 @@ const Shop = () => {
   const handleSearchChange = (value: string) => {
     // clear all filters when typing a search
     setSelectedCategories([]);
-    setSelectedPriceRanges([]);
+    setSelectedPriceRange('');
     setSelectedMetals([]);
     setSearchQuery(value);
   };
@@ -222,6 +223,10 @@ const Shop = () => {
 
   return (
     <div className="min-h-screen pt-24 pb-16">
+      <Seo
+        title="Shop Silver"
+        description="Browse our full silver collection — necklaces, rings, coins and more. Filter by category, metal and price at KV Silver Zone."
+      />
       {/* Header */}
       <div className="bg-muted/50 py-12">
         <div className="container mx-auto px-4">

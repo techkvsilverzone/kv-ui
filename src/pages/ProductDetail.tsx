@@ -28,8 +28,26 @@ import { useToast } from '@/hooks/use-toast';
 import { productService } from '@/services/product';
 import { wishlistService } from '@/services/wishlist';
 import { reviewService, type Review } from '@/services/review';
+import { silverRateService, type SilverRate } from '@/services/silverRate';
+import { pricingConfigService, DEFAULT_PRICING_CONFIG } from '@/services/pricingConfig';
 import ProductCard from '@/components/ProductCard';
+import Seo from '@/components/Seo';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+
+/** Extracts the numeric gram value from a free-text weight string (e.g. "10.5 g" -> 10.5). */
+const parseGrams = (weight?: string): number | null => {
+  const match = weight?.match(/[\d.]+/);
+  const grams = match ? parseFloat(match[0]) : NaN;
+  return Number.isFinite(grams) && grams > 0 ? grams : null;
+};
+
+/** Converts a purity label to a 0-1 fraction. Handles per-1000 (925, 999) and percent (92.5%) forms. */
+const parsePurityFraction = (purity?: string): number | null => {
+  const match = purity?.match(/[\d.]+/);
+  const n = match ? parseFloat(match[0]) : NaN;
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n > 100 ? n / 1000 : n / 100;
+};
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -67,6 +85,18 @@ const ProductDetail = () => {
     queryKey: ['wishlist-items'],
     queryFn: wishlistService.getWishlistProducts,
     enabled: isAuthenticated,
+  });
+
+  const { data: silverRates = [] } = useQuery({
+    queryKey: ['silver-rate-today'],
+    queryFn: silverRateService.getTodayRate,
+    staleTime: 5 * 60_000,
+  });
+
+  const { data: pricingConfig = DEFAULT_PRICING_CONFIG } = useQuery({
+    queryKey: ['pricing-config'],
+    queryFn: pricingConfigService.getPricingConfig,
+    staleTime: 10 * 60_000,
   });
 
   useEffect(() => {
@@ -167,8 +197,62 @@ const ProductDetail = () => {
 
   const filteredRelated = relatedProducts.filter((p) => p.id !== product.id).slice(0, 4);
 
+  // Price breakdown reconciled to the displayed total. Prefers the server-computed breakdown
+  // (`product.pricing`); falls back to a live silver-rate × weight estimate, then a 75/25 split.
+  // NOTE: display only — the server remains the source of truth for the charged amount.
+  const gstFraction = pricingConfig.gstPercent / 100;
+  const preTax = product.price / (1 + gstFraction);
+  const grams = product.weightInGrams ?? parseGrams(product.weight) ?? undefined;
+  const productPurityFrac = parsePurityFraction(product.purity);
+  const matchedRate: SilverRate | undefined =
+    silverRates.find((r) => {
+      const rf = parsePurityFraction(r.purity);
+      return productPurityFrac && rf && Math.abs(rf - productPurityFrac) < 0.01;
+    }) ?? silverRates[0];
+
+  const serverPricing = product.pricing;
+  const hasServerPricing =
+    serverPricing?.metalValue != null && serverPricing?.makingCharge != null;
+
+  let metalValue: number;
+  let makingCharges: number;
+  let gst: number;
+  let ratePerGramShown: number | undefined;
+
+  if (hasServerPricing) {
+    metalValue = serverPricing!.metalValue!;
+    makingCharges = serverPricing!.makingCharge!;
+    gst = Math.max(product.price - metalValue - makingCharges, 0);
+    ratePerGramShown = serverPricing!.ratePerGram;
+  } else if (grams && matchedRate?.ratePerGram) {
+    metalValue = Math.min(grams * matchedRate.ratePerGram, preTax);
+    makingCharges = Math.max(preTax - metalValue, 0);
+    gst = product.price - preTax;
+    ratePerGramShown = matchedRate.ratePerGram;
+  } else {
+    metalValue = preTax * 0.75;
+    makingCharges = preTax - metalValue;
+    gst = product.price - preTax;
+  }
+
+  const showRateBasis = !!(grams && ratePerGramShown);
+  // Server `basis` is 'live' | 'static'. Only show a rate note when the value is live.
+  const basisNote = hasServerPricing
+    ? serverPricing!.basis === 'live'
+      ? 'a live silver rate'
+      : undefined
+    : matchedRate?.date
+      ? `the silver rate as of ${new Date(matchedRate.date).toLocaleDateString()}`
+      : undefined;
+
   return (
     <div className="min-h-screen pt-24 pb-16">
+      <Seo
+        title={product.name}
+        description={(product.description || `${product.name} — BIS-hallmarked silver from KV Silver Zone.`).slice(0, 160)}
+        image={product.image?.startsWith('http') ? product.image : undefined}
+        type="product"
+      />
       <div className="container mx-auto px-4">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
@@ -250,22 +334,34 @@ const ProductDetail = () => {
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3">Price Breakdown</p>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Metal Value</span>
-                  <span>{formatPrice(Math.round((product.price / 1.03) * 0.75))}</span>
+                  <span className="text-muted-foreground">
+                    Metal Value
+                    {showRateBasis && (
+                      <span className="block text-[11px] text-muted-foreground/70">
+                        {grams} g × {formatPrice(ratePerGramShown!)}/g
+                      </span>
+                    )}
+                  </span>
+                  <span>{formatPrice(Math.round(metalValue))}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Making Charges</span>
-                  <span>{formatPrice(Math.round((product.price / 1.03) * 0.25))}</span>
+                  <span>{formatPrice(Math.round(makingCharges))}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground/70">
-                  <span>GST (3%)</span>
-                  <span>{formatPrice(Math.round(product.price - product.price / 1.03))}</span>
+                  <span>GST ({pricingConfig.gstPercent}%)</span>
+                  <span>{formatPrice(Math.round(gst))}</span>
                 </div>
                 <div className="border-t border-border pt-2 flex justify-between font-medium">
                   <span>Total</span>
                   <span>{formatPrice(product.price)}</span>
                 </div>
               </div>
+              {basisNote && (
+                <p className="text-[10px] text-muted-foreground/60 mt-3">
+                  Metal value is indicative, based on {basisNote}.
+                </p>
+              )}
             </div>
 
             <p className="text-muted-foreground leading-relaxed mb-6">
@@ -340,15 +436,17 @@ const ProductDetail = () => {
                   size="icon"
                   className="h-10 w-10 rounded-none"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  aria-label="Decrease quantity"
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
-                <span className="w-12 text-center text-sm font-medium">{quantity}</span>
+                <span className="w-12 text-center text-sm font-medium" aria-live="polite">{quantity}</span>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-10 w-10 rounded-none"
                   onClick={() => setQuantity(quantity + 1)}
+                  aria-label="Increase quantity"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -369,6 +467,8 @@ const ProductDetail = () => {
                 className="h-12 w-12"
                 onClick={handleWishlist}
                 disabled={isWishlistUpdating}
+                aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                aria-pressed={isWishlisted}
               >
                 <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-current text-destructive' : ''}`} />
               </Button>
