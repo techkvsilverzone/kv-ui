@@ -1,5 +1,5 @@
 import { api } from '../lib/api';
-import type { Product } from '../context/CartContext';
+import type { Product, ProductVariant, ProductCharge } from '../context/CartContext';
 import { normalizeImageSrc } from '../lib/image';
 
 interface ProductImage {
@@ -8,7 +8,7 @@ interface ProductImage {
   sortOrder?: number;
 }
 
-interface ApiProduct extends Partial<Omit<Product, 'id'>> {
+interface ApiProduct extends Partial<Omit<Product, 'id' | 'images'>> {
   _id?: string;
   id?: string;
   imageId?: number;
@@ -19,6 +19,10 @@ interface ApiProduct extends Partial<Omit<Product, 'id'>> {
   isActive?: boolean;
   stockAvailable?: number;
   weightInGrams?: number;
+  variants?: ProductVariant[];
+  isFixedPrice?: boolean;
+  makingCharge?: ProductCharge;
+  wastage?: ProductCharge;
   pricing?: {
     metalValue?: number;
     makingCharge?: number;
@@ -26,6 +30,34 @@ interface ApiProduct extends Partial<Omit<Product, 'id'>> {
     basis?: string;
   };
 }
+
+/**
+ * Normalizes the raw variants array from the API into clean ProductVariant objects,
+ * dropping any entry without a label or weight. Returns undefined when there are none.
+ */
+const normalizeVariants = (variants?: ProductVariant[]): ProductVariant[] | undefined => {
+  if (!Array.isArray(variants)) return undefined;
+  const cleaned = variants
+    .filter((v) => v && (v.label || v.weight))
+    .map((v) => ({
+      label: String(v.label ?? '').trim(),
+      weight: String(v.weight ?? '').trim(),
+      height: v.height ? String(v.height).trim() : undefined,
+      breadth: v.breadth ? String(v.breadth).trim() : undefined,
+    }));
+  return cleaned.length ? cleaned : undefined;
+};
+
+/**
+ * Normalizes a raw charge (making charge / wastage) into a clean ProductCharge.
+ * Returns undefined when the value is missing or not a finite number.
+ */
+const normalizeCharge = (charge?: ProductCharge): ProductCharge | undefined => {
+  if (!charge || charge.value === undefined || charge.value === null) return undefined;
+  const value = Number(charge.value);
+  if (!Number.isFinite(value)) return undefined;
+  return { type: charge.type === 'amount' ? 'amount' : 'percentage', value };
+};
 
 interface CategoriesResponse {
   status: string;
@@ -41,6 +73,10 @@ export interface ProductFilters {
   onSale?: boolean | string;
   featured?: boolean | string;
   sortBy?: 'price_asc' | 'price_desc' | 'newest';
+  /** 1-indexed page for paginated/infinite-scroll fetches. */
+  page?: number;
+  /** Page size for paginated/infinite-scroll fetches. */
+  limit?: number;
 }
 
 /**
@@ -57,6 +93,27 @@ const extractImage = (product: ApiProduct): string | undefined => {
 };
 
 /**
+ * Extracts all product images (sorted) as normalized srcs, falling back to the flat image fields.
+ * Returns undefined when there are none, so the UI can fall back to the single `image`.
+ */
+const extractImages = (product: ApiProduct): string[] | undefined => {
+  const srcs: string[] = [];
+  if (product.images?.length) {
+    [...product.images]
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .forEach(i => {
+        if (i.imageBase64) srcs.push(i.imageBase64);
+      });
+  }
+  if (!srcs.length) {
+    const flat = product.imageBase64 || product.image;
+    if (flat) srcs.push(flat);
+  }
+  const normalized = srcs.map(s => normalizeImageSrc(s)).filter(Boolean);
+  return normalized.length ? normalized : undefined;
+};
+
+/**
  * Normalizes an API product response into a frontend Product object.
  * Handles field aliasing (material -> category, isActive -> inStock) and string conversions.
  */
@@ -66,6 +123,7 @@ const normalizeProduct = (product: ApiProduct): Product => ({
   price: typeof product.price === 'number' ? product.price : 0,
   originalPrice: product.originalPrice,
   image: normalizeImageSrc(extractImage(product)),
+  images: extractImages(product),
   category: product.category || product.material || '',
   weight: product.weight !== undefined && product.weight !== null ? String(product.weight) : '',
   purity: product.purity ? String(product.purity) : '',
@@ -76,6 +134,10 @@ const normalizeProduct = (product: ApiProduct): Product => ({
       : product.inStock ?? product.isActive ?? true,
   stockAvailable: product.stockAvailable,
   weightInGrams: product.weightInGrams,
+  variants: normalizeVariants(product.variants),
+  isFixedPrice: product.isFixedPrice ?? undefined,
+  makingCharge: normalizeCharge(product.makingCharge),
+  wastage: normalizeCharge(product.wastage),
   pricing: product.pricing,
   isNew: product.isNewItem ?? product.isNew,
   isSale: product.isSale,

@@ -9,7 +9,7 @@ import { useCart } from '@/context/CartContext';
 const GIFT_WRAP_FEE = 99;
 
 const Cart = () => {
-  const { items, updateQuantity, removeFromCart, totalPrice, clearCart, isCartSyncing, isItemUpdating } = useCart();
+  const { items, updateQuantity, removeFromCart, totalPrice, taxAmount, totalWithTax, clearCart, isCartSyncing, isItemUpdating } = useCart();
   const [giftWrap, setGiftWrap] = useState(false);
   const [giftMessage, setGiftMessage] = useState('');
 
@@ -202,12 +202,16 @@ const Cart = () => {
               
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal (incl. GST)</span>
+                  <span className="text-muted-foreground">Subtotal (before GST)</span>
                   <span>{formatPrice(totalPrice)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Shipping</span>
-                  <span className="text-green-600">Free</span>
+                  <span className="text-muted-foreground">GST</span>
+                  <span>{formatPrice(taxAmount)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Delivery</span>
+                  <span className="text-muted-foreground">Calculated at checkout</span>
                 </div>
                 {giftWrap && (
                   <div className="flex justify-between text-sm">
@@ -218,7 +222,7 @@ const Cart = () => {
                 <hr />
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total</span>
-                  <span className="text-primary">{formatPrice(totalPrice + (giftWrap ? GIFT_WRAP_FEE : 0))}</span>
+                  <span className="text-primary">{formatPrice(totalWithTax + (giftWrap ? GIFT_WRAP_FEE : 0))}</span>
                 </div>
               </div>
 
@@ -242,7 +246,7 @@ const Cart = () => {
               )}
 
               <p className="text-xs text-center text-muted-foreground mt-4">
-                Free insured shipping · GST included in prices
+                Insured shipping · GST &amp; delivery calculated at checkout
               </p>
             </Card>
           </div>

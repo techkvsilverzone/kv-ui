@@ -1,3 +1,5 @@
+import { isMobileApp, TOKEN_STORAGE_KEY } from './platform';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 const UNAUTHORIZED_EVENT = 'kv-auth-unauthorized';
 
@@ -12,6 +14,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   if (options.body !== undefined) {
     headers.set('Content-Type', 'application/json');
+  }
+
+  // On the mobile (Capacitor) build the WebView origin can't share the web's
+  // httpOnly auth cookie, so we authenticate with a Bearer token instead.
+  // The web build leaves this untouched and stays cookie-based.
+  if (isMobileApp()) {
+    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (token && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
   }
 
   // Auth is carried by an httpOnly cookie set by the server; `credentials: 'include'`

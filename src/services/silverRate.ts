@@ -12,13 +12,15 @@ export interface SilverRate {
 
 interface ApiSilverRate extends Partial<SilverRate> {
   _id?: string;
+  /** The server emits the rate date as `rateDate`; older/spec shapes use `date`. */
+  rateDate?: string;
 }
 
 const normalizeRate = (r: ApiSilverRate): SilverRate => ({
   ...r,
   id: r.id ?? r._id ?? '',
-  // use explicit date field if present, otherwise fall back to createdAt
-  date: r.date ?? r.createdAt ?? '',
+  // Prefer an explicit rate date (`date` or the server's `rateDate`), else fall back to createdAt.
+  date: r.date ?? r.rateDate ?? r.createdAt ?? '',
   ratePerGram: r.ratePerGram ?? 0,
   ratePerKg: r.ratePerKg ?? 0,
   purity: r.purity ?? '',

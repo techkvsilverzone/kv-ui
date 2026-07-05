@@ -219,3 +219,30 @@ All other shapes (create-order, verify, products stock/pricing) matched. Per-end
 - Contracts verified against `openapi.json`; see `docs/api/addresses.md`.
 
 _Last updated: 2026-06-14 (round 6). Update the status flags as each item lands._
+
+---
+
+## Push notifications (mobile app) — REQUIRED backend work
+
+Added with the Capacitor Android app. The mobile client registers FCM device
+tokens against the authenticated user. Backend work needed (see
+`docs/push-notifications.md` for the full contract):
+
+- `POST /users/me/push-tokens` — body `{ token, platform }` — store/refresh the device token for the current user (dedupe by token value; a token may move between users → last writer wins).
+- `DELETE /users/me/push-tokens` — body `{ token }` — remove a token.
+- Hold Firebase credentials (service account) to send via FCM. To deep-link on tap, include `data.route` (e.g. `/order/1234`) in the message payload.
+- Prune tokens FCM reports as unregistered when sending.
+
+Both endpoints are Bearer-authenticated on mobile (see the Bearer-token auth note for the Capacitor build).
+
+---
+
+## Delivery charges (zone-based) — REQUIRED backend work
+
+Added a zone-based delivery-charge config (Chennai ₹150 / Other District ₹200 / Other State ₹250)
+editable in the admin Shipping tab. Full contract in `docs/api/delivery-config.md`.
+
+Backend work needed:
+
+- `GET /delivery-config` (public) + `GET`/`PUT /admin/delivery-config` — persist `{ chennai, otherDistrict, otherState }` (non-negative numbers). Validate all three on PUT.
+- **Money path (deferred until backend lockstep):** `POST /payments/create-order` must add the resolved zone charge to the authoritative `amount` and surface it in `breakdown` (e.g. `breakdown.deliveryCharge`). It needs the destination `city`/`state` (or must derive the zone from `pincode`). `verify`/COD order creation must apply the same charge server-side. Only then will `Payment.tsx` replace the hardcoded "Shipping: Free" line with the real charge and include it in the displayed total.

@@ -7,6 +7,8 @@ export interface RazorpayOrderPayload {
     quantity: number;
     isGiftVoucher?: boolean;
     giftVoucherId?: string;
+    /** Selected size/weight variant (e.g. "200g") — overrides the product's base weight server-side. */
+    weight?: string;
   }>;
   couponCode?: string;
   pincode?: string;
@@ -44,6 +46,8 @@ export interface PaymentVerificationPayload {
       image: string;
       isGiftVoucher?: boolean;
       giftVoucherId?: string;
+      /** Selected size/weight variant (e.g. "200g") — overrides the product's base weight server-side. */
+      weight?: string;
     }>;
     shippingAddress: {
       firstName: string;

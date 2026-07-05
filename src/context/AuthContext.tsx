@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '@/services/auth';
 import { UNAUTHORIZED_EVENT } from '@/lib/api';
+import { TOKEN_STORAGE_KEY } from '@/lib/platform';
 
 export type UserRole = 'admin' | 'staff' | 'customer';
 
@@ -55,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const silentLogout = () => {
       setUser(null);
       localStorage.removeItem('kv-silver-user');
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
     };
 
     const initAuth = async () => {
@@ -86,11 +88,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Server sets the httpOnly auth cookie; the `token` field is ignored here.
-      const { user } = await authService.login(email, password);
+      // Web: server sets the httpOnly auth cookie and the token is unused.
+      // Mobile (Capacitor): the token is persisted and sent as a Bearer header
+      // by the API layer, since the WebView can't rely on the cookie.
+      const { user, token } = await authService.login(email, password);
       const normalizedUser = normalizeUser(user);
       setUser(normalizedUser);
       localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));
+      if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
       return true;
     } catch (error) {
       console.error('Login failed', error);
@@ -100,10 +105,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = async (email: string, password: string, name: string): Promise<boolean> => {
     try {
-      const { user } = await authService.signup(name, email, password);
+      const { user, token } = await authService.signup(name, email, password);
       const normalizedUser = normalizeUser(user);
       setUser(normalizedUser);
       localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));
+      if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
       return true;
     } catch (error) {
       console.error('Signup failed', error);
@@ -118,6 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     setUser(null);
     localStorage.removeItem('kv-silver-user');
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
   };
 
   const updateProfile = async (data: Partial<User>) => {

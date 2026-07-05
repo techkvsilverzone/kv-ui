@@ -1188,6 +1188,1247 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-06-14T12:41:58.763Z"
+    },
+    {
+      "id": "bug-075",
+      "timestamp": "2026-06-14T13:05:35.152Z",
+      "error_message": "Type error",
+      "file": "src/context/AuthContext.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T13:05:35.152Z"
+    },
+    {
+      "id": "bug-076",
+      "timestamp": "2026-06-14T13:06:06.211Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/App.tsx",
+      "root_cause": "Had \"./pages/Admin\"",
+      "fix": "Changed to \"./pages/ProductDetail\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T13:06:06.211Z"
+    },
+    {
+      "id": "bug-077",
+      "timestamp": "2026-06-14T13:08:56.902Z",
+      "error_message": "Type error",
+      "file": "src/App.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-14T13:08:56.902Z"
+    },
+    {
+      "id": "bug-078",
+      "timestamp": "2026-06-15T05:23:31.938Z",
+      "error_message": "Type error",
+      "file": "src/context/CartContext.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:23:31.938Z"
+    },
+    {
+      "id": "bug-079",
+      "timestamp": "2026-06-15T05:23:51.972Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/services/product.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:23:51.972Z"
+    },
+    {
+      "id": "bug-080",
+      "timestamp": "2026-06-15T05:24:41.507Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Had '@/lib/api'",
+      "fix": "Changed to '@/context/CartContext'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:24:41.507Z"
+    },
+    {
+      "id": "bug-081",
+      "timestamp": "2026-06-15T05:24:55.315Z",
+      "error_message": "Type error",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation | Also: weight: '', purity: '925', description: '', inStock: true, v",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-15T05:25:03.643Z"
+    },
+    {
+      "id": "bug-082",
+      "timestamp": "2026-06-15T05:25:36.324Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: /**; * Editor for a product's size/weight variants (S–XXL style).",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-15T05:26:14.835Z"
+    },
+    {
+      "id": "bug-083",
+      "timestamp": "2026-06-15T05:25:51.276Z",
+      "error_message": "CSS fix: name",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "name: '', price: '', originalPrice: '', image: '', category: 'Necklaces', weight: '', purity: '925', description: '', inStock: true → '', price: '', originalPrice: '', image: '', category: 'Necklaces', weight: '', purity: '925', description: '', inStock: true, variants: []",
+      "fix": "Changed name: '', price: '', originalPrice: '', image: '', category: 'Necklaces', weight: '', purity: '925', description: '', inStock: true → '', price: '', originalPrice: '', image: '', category: 'Necklaces', weight: '', purity: '925', description: '', inStock: true, variants: []",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:25:51.276Z"
+    },
+    {
+      "id": "bug-084",
+      "timestamp": "2026-06-15T05:27:08.941Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/ProductDetail.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: {/* Size / Weight selector */}; {variants.length > 0 && (",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-15T05:27:30.708Z"
+    },
+    {
+      "id": "bug-085",
+      "timestamp": "2026-06-15T05:27:50.665Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/components/ProductCard.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:27:50.665Z"
+    },
+    {
+      "id": "bug-086",
+      "timestamp": "2026-06-15T05:30:42.725Z",
+      "error_message": "Missing await",
+      "file": "src/services/product.test.ts",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:30:42.725Z"
+    },
+    {
+      "id": "bug-087",
+      "timestamp": "2026-06-15T05:42:44.543Z",
+      "error_message": "Type error",
+      "file": "src/context/CartContext.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:42:44.543Z"
+    },
+    {
+      "id": "bug-088",
+      "timestamp": "2026-06-15T05:43:11.680Z",
+      "error_message": "Missing guard clause",
+      "file": "src/services/product.ts",
+      "root_cause": "No early return/throw for edge case: !charge || charge.value === undefined || charge.value === nu",
+      "fix": "Added guard clause: if (!charge || charge.value === undefined ||)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:43:11.680Z"
+    },
+    {
+      "id": "bug-089",
+      "timestamp": "2026-06-15T05:43:17.421Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/services/product.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:43:17.421Z"
+    },
+    {
+      "id": "bug-090",
+      "timestamp": "2026-06-15T05:43:28.051Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Had '@/context/CartContext'",
+      "fix": "Changed to '@/components/ui/switch'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:43:28.051Z"
+    },
+    {
+      "id": "bug-091",
+      "timestamp": "2026-06-15T05:43:41.124Z",
+      "error_message": "Missing guard clause",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "No early return/throw for edge case: value.trim(",
+      "fix": "Added guard clause: if (value.trim()",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:43:41.124Z"
+    },
+    {
+      "id": "bug-092",
+      "timestamp": "2026-06-15T05:43:48.061Z",
+      "error_message": "CSS fix: name",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "name: '', price: '', originalPrice: '', image: '', category: '', weight: '', purity: '', description: '', inStock: true, variants: [] as ProductVariant[] → '', price: '', originalPrice: '', image: '', category: '', weight: '', purity: '', description: '', inStock: true, variants: [] as ProductVariant[], isFixedPrice: false, makingChargeType: 'percentage' as ChargeType, makingChargeValue: '', wastageType: 'percentage' as ChargeType, wastageValue: ''",
+      "fix": "Changed name: '', price: '', originalPrice: '', image: '', category: '', weight: '', purity: '', description: '', inStock: true, variants: [] as ProductVariant[] → '', price: '', originalPrice: '', image: '', category: '', weight: '', purity: '', description: '', inStock: true, variants: [] as ProductVariant[], isFixedPrice: false, makingChargeType: 'percentage' as ChargeType, makingChargeValue: '', wastageType: 'percentage' as ChargeType, wastageValue: ''",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-15T05:44:01.304Z"
+    },
+    {
+      "id": "bug-093",
+      "timestamp": "2026-06-15T05:44:23.000Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:44:23.000Z"
+    },
+    {
+      "id": "bug-094",
+      "timestamp": "2026-06-15T05:46:54.019Z",
+      "error_message": "Missing await",
+      "file": "src/services/product.test.ts",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T05:46:54.019Z"
+    },
+    {
+      "id": "bug-095",
+      "timestamp": "2026-06-15T06:50:01.965Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Had '@/components/ui/switch'",
+      "fix": "Changed to '@/services/deliveryConfig'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T06:50:01.965Z"
+    },
+    {
+      "id": "bug-096",
+      "timestamp": "2026-06-15T06:50:34.358Z",
+      "error_message": "CSS fix: mutationFn, title",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "mutationFn: adminService.updateStoreConfig, → deliveryConfigService.updateDeliveryConfig,; title: 'Save failed', description: 'Unable to save theme settings.', variant: 'destructive' → 'Save failed', description: 'Unable to save delivery charges.', variant: 'destructive'",
+      "fix": "Changed mutationFn: adminService.updateStoreConfig, → deliveryConfigService.updateDeliveryConfig,; title: 'Save failed', description: 'Unable to save theme settings.', variant: 'destructive' → 'Save failed', description: 'Unable to save delivery charges.', variant: 'destructive'",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T06:50:34.358Z"
+    },
+    {
+      "id": "bug-097",
+      "timestamp": "2026-06-15T06:50:50.370Z",
+      "error_message": "Missing guard clause",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "No early return/throw for edge case: !deliveryConfig",
+      "fix": "Added guard clause: if (!deliveryConfig)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-15T06:51:02.777Z"
+    },
+    {
+      "id": "bug-098",
+      "timestamp": "2026-06-15T06:51:16.535Z",
+      "error_message": "Type error",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T06:51:16.535Z"
+    },
+    {
+      "id": "bug-099",
+      "timestamp": "2026-06-15T07:19:15.909Z",
+      "error_message": "Type error",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation | Also: /** Two-handle price range slider (built on the Radix primit; const PriceRangeSlider = ({ | Also: const formatINR = (value: number) =>; new Intl.NumberFormat('en-IN', { style: 'currency', currency",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-06-15T07:20:48.887Z"
+    },
+    {
+      "id": "bug-100",
+      "timestamp": "2026-06-15T07:19:44.766Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T07:19:44.766Z"
+    },
+    {
+      "id": "bug-101",
+      "timestamp": "2026-06-15T07:19:51.333Z",
+      "error_message": "CSS fix: queryKey",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "queryKey: ['products', selectedCategories, selectedPriceRange, selectedMetals, searchQuery, sortBy], → ['products', selectedCategories, selectedPriceRange, priceSlider, selectedMetals, searchQuery, sortBy],",
+      "fix": "Changed queryKey: ['products', selectedCategories, selectedPriceRange, selectedMetals, searchQuery, sortBy], → ['products', selectedCategories, selectedPriceRange, priceSlider, selectedMetals, searchQuery, sortBy],",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-15T07:21:25.830Z"
+    },
+    {
+      "id": "bug-102",
+      "timestamp": "2026-06-15T07:22:17.116Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/test/setup.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T07:22:17.116Z"
+    },
+    {
+      "id": "bug-030",
+      "timestamp": "2026-06-15T12:52:00.000Z",
+      "error_message": "ReferenceError: ResizeObserver is not defined (Shop.test.tsx after adding Radix Slider price filter)",
+      "file": "src/test/setup.ts",
+      "root_cause": "jsdom has no ResizeObserver; Radix UI Slider (via @radix-ui/react-use-size) calls it on mount, crashing any test that renders a component using the slider.",
+      "fix": "Added a ResizeObserver stub class to src/test/setup.ts (alongside the matchMedia stub).",
+      "tags": [
+        "test",
+        "jsdom",
+        "radix",
+        "slider",
+        "ResizeObserver"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-15T12:52:00.000Z"
+    },
+    {
+      "id": "bug-104",
+      "timestamp": "2026-06-16T07:21:34.062Z",
+      "error_message": "Type error",
+      "file": "src/services/product.ts",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T07:21:34.062Z"
+    },
+    {
+      "id": "bug-105",
+      "timestamp": "2026-06-16T07:22:04.089Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: images: product.images?.length ? [...product.images] : (prod | Also: * Multi-image uploader for a product. Reads selected files t; * remove + \"make primary\" controls. The first image is the p",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-06-16T07:24:02.292Z"
+    },
+    {
+      "id": "bug-106",
+      "timestamp": "2026-06-16T07:22:12.930Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Had ', image: '",
+      "fix": "Changed to ', images: [] as string[], category: '",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-06-16T07:22:54.112Z"
+    },
+    {
+      "id": "bug-107",
+      "timestamp": "2026-06-16T07:23:01.179Z",
+      "error_message": "CSS fix: image",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "image: productForm.image, → productForm.images[0] || '',",
+      "fix": "Changed image: productForm.image, → productForm.images[0] || '',",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-16T07:23:07.934Z"
+    },
+    {
+      "id": "bug-108",
+      "timestamp": "2026-06-16T07:24:19.375Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "12 lines replaced/restructured",
+      "fix": "Rewrote 14→5 lines (12 removed) | Also: <div>; <Label>Product Image</Label>",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-16T07:24:42.155Z"
+    },
+    {
+      "id": "bug-109",
+      "timestamp": "2026-06-16T07:26:07.615Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/components/ProductCard.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T07:26:07.615Z"
+    },
+    {
+      "id": "bug-110",
+      "timestamp": "2026-06-16T07:26:33.300Z",
+      "error_message": "Type error",
+      "file": "src/pages/ProductDetail.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T07:26:33.300Z"
+    },
+    {
+      "id": "bug-111",
+      "timestamp": "2026-06-16T07:26:45.449Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/ProductDetail.tsx",
+      "root_cause": "Had '@/components/Seo'",
+      "fix": "Changed to '@/components/ProductImageCarousel'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T07:26:45.449Z"
+    },
+    {
+      "id": "bug-112",
+      "timestamp": "2026-06-16T07:28:17.319Z",
+      "error_message": "Missing await",
+      "file": "src/services/product.test.ts",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T07:28:17.319Z"
+    },
+    {
+      "id": "bug-113",
+      "timestamp": "2026-06-16T07:57:26.989Z",
+      "error_message": "CSS fix: sliderValue",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "sliderValue: [number, number] = priceSlider ?? [0, priceCeiling] → [number, number] = priceSlider ?? [PRICE_MIN, PRICE_MAX]",
+      "fix": "Changed sliderValue: [number, number] = priceSlider ?? [0, priceCeiling] → [number, number] = priceSlider ?? [PRICE_MIN, PRICE_MAX]",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-16T07:57:37.992Z"
+    },
+    {
+      "id": "bug-114",
+      "timestamp": "2026-06-16T08:05:18.002Z",
+      "error_message": "CSS fix: minPrice, maxPrice",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "minPrice: priceSlider[0] > PRICE_MIN ? priceSlider[0] : undefined, → appliedPriceSlider[0] > PRICE_MIN ? appliedPriceSlider[0] : undefined,; maxPrice: priceSlider[1] < PRICE_MAX ? priceSlider[1] : undefined, → appliedPriceSlider[1] < PRICE_MAX ? appliedPriceSlider[1] : undefined,",
+      "fix": "Changed minPrice: priceSlider[0] > PRICE_MIN ? priceSlider[0] : undefined, → appliedPriceSlider[0] > PRICE_MIN ? appliedPriceSlider[0] : undefined,; maxPrice: priceSlider[1] < PRICE_MAX ? priceSlider[1] : undefined, → appliedPriceSlider[1] < PRICE_MAX ? appliedPriceSlider[1] : undefined,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T08:05:18.002Z"
+    },
+    {
+      "id": "bug-115",
+      "timestamp": "2026-06-16T08:05:25.226Z",
+      "error_message": "Wrong reference: priceSlider should be appliedPriceSlider",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Used \"priceSlider\" instead of \"appliedPriceSlider\"",
+      "fix": "Changed priceSlider → appliedPriceSlider",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T08:05:25.226Z"
+    },
+    {
+      "id": "bug-116",
+      "timestamp": "2026-06-16T08:10:21.116Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T08:10:21.116Z"
+    },
+    {
+      "id": "bug-117",
+      "timestamp": "2026-06-16T08:10:31.527Z",
+      "error_message": "CSS fix: out",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "out: typeof productPages extends never ? never : NonNullable<typeof productPages>['pages'][number] = [] as never → Product[] = []",
+      "fix": "Changed out: typeof productPages extends never ? never : NonNullable<typeof productPages>['pages'][number] = [] as never → Product[] = []",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T08:10:31.527Z"
+    },
+    {
+      "id": "bug-118",
+      "timestamp": "2026-06-16T08:10:40.884Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→5 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T08:10:40.884Z"
+    },
+    {
+      "id": "bug-119",
+      "timestamp": "2026-06-16T08:11:15.970Z",
+      "error_message": "Missing guard clause",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "No early return/throw for edge case: !el || !hasNextPage",
+      "fix": "Added guard clause: if (!el || !hasNextPage)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T08:11:15.970Z"
+    },
+    {
+      "id": "bug-120",
+      "timestamp": "2026-06-16T08:16:20.876Z",
+      "error_message": "Wrong reference: 400 should be PRICE_DEBOUNCE_MS",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Used \"400\" instead of \"PRICE_DEBOUNCE_MS\"",
+      "fix": "Changed 400 → PRICE_DEBOUNCE_MS",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T08:16:20.876Z"
+    },
+    {
+      "id": "bug-121",
+      "timestamp": "2026-06-16T08:16:38.250Z",
+      "error_message": "Type error",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T08:16:38.250Z"
+    },
+    {
+      "id": "bug-122",
+      "timestamp": "2026-06-16T08:34:08.421Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "14 lines replaced/restructured",
+      "fix": "Rewrote 23→9 lines (14 removed) | Also: {/* Custom slider */}; <div className=\"mb-5\">",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-16T08:35:38.871Z"
+    },
+    {
+      "id": "bug-123",
+      "timestamp": "2026-06-16T08:34:18.002Z",
+      "error_message": "CSS fix: minPrice, maxPrice",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "minPrice: appliedPriceSlider[0] > PRICE_MIN ? appliedPriceSlider[0] : undefined, → priceFilter[0] > PRICE_MIN ? priceFilter[0] : undefined,; maxPrice: appliedPriceSlider[1] < PRICE_MAX ? appliedPriceSlider[1] : undefined, → priceFilter[1] < PRICE_MAX ? priceFilter[1] : undefined,",
+      "fix": "Changed minPrice: appliedPriceSlider[0] > PRICE_MIN ? appliedPriceSlider[0] : undefined, → priceFilter[0] > PRICE_MIN ? priceFilter[0] : undefined,; maxPrice: appliedPriceSlider[1] < PRICE_MAX ? appliedPriceSlider[1] : undefined, → priceFilter[1] < PRICE_MAX ? priceFilter[1] : undefined,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-16T08:34:42.333Z"
+    },
+    {
+      "id": "bug-124",
+      "timestamp": "2026-06-16T08:34:27.417Z",
+      "error_message": "Wrong reference: appliedPriceSlider should be priceFilter",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Used \"appliedPriceSlider\" instead of \"priceFilter\"",
+      "fix": "Changed appliedPriceSlider → priceFilter",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T08:34:27.417Z"
+    },
+    {
+      "id": "bug-125",
+      "timestamp": "2026-06-16T08:35:24.198Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T08:35:24.198Z"
+    },
+    {
+      "id": "bug-126",
+      "timestamp": "2026-06-16T09:03:38.407Z",
+      "error_message": "CSS fix: data, queryKey, queryFn",
+      "file": "src/components/ProductCard.tsx",
+      "root_cause": "data: wishlistProducts = [] → silverRates = []; queryKey: ['wishlist-items'], → ['silver-rate-today'],; queryFn: wishlistService.getWishlistProducts, → silverRateService.getTodayRate,",
+      "fix": "Changed data: wishlistProducts = [] → silverRates = []; queryKey: ['wishlist-items'], → ['silver-rate-today'],; queryFn: wishlistService.getWishlistProducts, → silverRateService.getTodayRate,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T09:03:38.407Z"
+    },
+    {
+      "id": "bug-127",
+      "timestamp": "2026-06-16T09:04:01.552Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/pages/ProductDetail.tsx",
+      "root_cause": "14 lines replaced/restructured",
+      "fix": "Rewrote 23→9 lines (14 removed) | Also: // Price breakdown reconciled to the displayed tot; // (`product.pricing`); falls back to a live silve",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-16T09:04:18.414Z"
+    },
+    {
+      "id": "bug-128",
+      "timestamp": "2026-06-16T09:05:56.781Z",
+      "error_message": "Wrong reference: taxAmount should be taxableTotal",
+      "file": "src/pages/Payment.tsx",
+      "root_cause": "Used \"taxAmount\" instead of \"taxableTotal\"",
+      "fix": "Changed taxAmount → taxableTotal",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T09:05:56.781Z"
+    },
+    {
+      "id": "bug-129",
+      "timestamp": "2026-06-16T09:06:06.420Z",
+      "error_message": "CSS fix: data, queryKey, queryFn",
+      "file": "src/pages/Payment.tsx",
+      "root_cause": "data: pricingConfig = DEFAULT_PRICING_CONFIG → deliveryConfig = DEFAULT_DELIVERY_CONFIG; queryKey: ['pricing-config'], → ['delivery-config'],; queryFn: pricingConfigService.getPricingConfig, → deliveryConfigService.getDeliveryConfig,",
+      "fix": "Changed data: pricingConfig = DEFAULT_PRICING_CONFIG → deliveryConfig = DEFAULT_DELIVERY_CONFIG; queryKey: ['pricing-config'], → ['delivery-config'],; queryFn: pricingConfigService.getPricingConfig, → deliveryConfigService.getDeliveryConfig,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T09:06:06.420Z"
+    },
+    {
+      "id": "bug-130",
+      "timestamp": "2026-06-16T09:08:35.310Z",
+      "error_message": "Missing await",
+      "file": "src/pages/Payment.test.tsx",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T09:08:35.310Z"
+    },
+    {
+      "id": "bug-131",
+      "timestamp": "2026-06-16T09:24:28.058Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/lib/pricing.test.ts",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 9→26 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T09:24:28.058Z"
+    },
+    {
+      "id": "bug-132",
+      "timestamp": "2026-06-16T11:18:52.938Z",
+      "error_message": "Type error",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T11:18:52.938Z"
+    },
+    {
+      "id": "bug-133",
+      "timestamp": "2026-06-16T11:19:00.579Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T11:19:00.579Z"
+    },
+    {
+      "id": "bug-134",
+      "timestamp": "2026-06-16T14:05:31.701Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 8→22 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T14:05:31.701Z"
+    },
+    {
+      "id": "bug-135",
+      "timestamp": "2026-06-16T14:06:31.922Z",
+      "error_message": "Wrong reference: Silver should be Metal",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "Used \"Silver\" instead of \"Metal\"",
+      "fix": "Changed Silver → Metal",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-06-16T14:06:44.312Z"
+    },
+    {
+      "id": "bug-136",
+      "timestamp": "2026-06-16T16:55:00.000Z",
+      "error_message": "Updating the rate with purity '22K Gold' only updated silver; gold was never saved",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "The 'Update Today's Rate' dialog offers a purity dropdown (Silver / 22K Gold), but updateRateMutation was hardwired to silverRateService.updateRate, which always POSTs to /admin/silver-rates regardless of the selected purity. Gold selections were written to the silver store and never reached /admin/gold-rates.",
+      "fix": "Made updateRateMutation purity-aware: routes to goldRateService.updateRate when purity matches /gold/i, else silverRateService.updateRate; invalidates the matching query key (admin-gold-rates vs admin-silver-rates) and shows a metal-specific success/error toast. Also merged gold rows into the rate-management table (renamed 'Metal Rate Management') so updates are visible.",
+      "tags": [
+        "gold-rate",
+        "silver-rate",
+        "admin",
+        "mutation-routing",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T16:55:00.000Z"
+    },
+    {
+      "id": "bug-137",
+      "timestamp": "2026-06-16T14:42:22.582Z",
+      "error_message": "Type error",
+      "file": "src/services/silverRate.ts",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T14:42:22.582Z"
+    },
+    {
+      "id": "bug-138",
+      "timestamp": "2026-06-16T14:42:37.899Z",
+      "error_message": "Type error",
+      "file": "src/services/goldRate.ts",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T14:42:37.899Z"
+    },
+    {
+      "id": "bug-139",
+      "timestamp": "2026-06-16T14:43:05.341Z",
+      "error_message": "Null/undefined access in ",
+      "file": "src/lib/rateFreshness.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T14:43:05.341Z"
+    },
+    {
+      "id": "bug-140",
+      "timestamp": "2026-06-16T14:43:28.934Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/pages/Admin.tsx",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 19→38 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T14:43:28.934Z"
+    },
+    {
+      "id": "bug-141",
+      "timestamp": "2026-06-16T14:43:39.986Z",
+      "error_message": "CSS fix: queryKey",
+      "file": "src/components/RateUpdateGate.tsx",
+      "root_cause": "queryKey: [meta.queryKey] → ['admin-rate-status']",
+      "fix": "Changed queryKey: [meta.queryKey] → ['admin-rate-status']",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T14:43:39.986Z"
+    },
+    {
+      "id": "bug-142",
+      "timestamp": "2026-06-16T14:45:08.625Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/25-price-update-guard-and-notification.md",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 3→3 lines (2 removed) | Also: - [ ] Gold-rate endpoints live; `Admin.tsx` enforc; - [ ] At 10:00 IST with no today-rate, admin/staff",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-16T14:45:33.799Z"
+    },
+    {
+      "id": "bug-143",
+      "timestamp": "2026-06-16T14:45:25.118Z",
+      "error_message": "Null/undefined access in ",
+      "file": "docs/25-price-update-guard-and-notification.md",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T14:45:25.119Z"
+    },
+    {
+      "id": "bug-144",
+      "timestamp": "2026-06-16T20:15:00.000Z",
+      "error_message": "Daily rate-block could mis-evaluate freshness: silver/gold rate records expose the date as `rateDate`, but the rate services only read `date`/`createdAt`.",
+      "file": "src/services/silverRate.ts, src/services/goldRate.ts",
+      "root_cause": "Backend emits the rate date as `rateDate` (silver) or both `date`+`rateDate` (gold); normalizeRate did not read `rateDate`, so `date` fell back to `createdAt` (a full timestamp), which could read as 'today' and skip a stale-rate block.",
+      "fix": "normalizeRate now resolves `date ?? rateDate ?? createdAt` in both services; added `rateDate?` to the Api interfaces.",
+      "tags": [
+        "rate-freshness",
+        "api-shape",
+        "normalization",
+        "gold-rate",
+        "silver-rate"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-16T20:15:00.000Z"
+    },
+    {
+      "id": "bug-145",
+      "timestamp": "2026-07-01T06:14:41.421Z",
+      "error_message": "Significant refactor of ",
+      "file": "tailwind.config.ts",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→5 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-01T06:14:41.421Z"
+    },
+    {
+      "id": "bug-146",
+      "timestamp": "2026-07-01T06:17:41.748Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/components/Footer.tsx",
+      "root_cause": "Had \"bg-secondary text-primary pt-24 pb-12\"",
+      "fix": "Changed to \"relative bg-secondary text-primary pt-24 pb-12\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-01T06:17:41.748Z"
+    },
+    {
+      "id": "bug-147",
+      "timestamp": "2026-07-01T06:18:58.657Z",
+      "error_message": "CSS fix: hover",
+      "file": "src/components/ProductCard.tsx",
+      "root_cause": "hover: bg-primary hover:text-white rounded-none w-10 h-10 transition-colors shadow-sm\" → bg-primary hover:text-primary-foreground rounded-full w-10 h-10 transition-colors shadow-elegant\"",
+      "fix": "Changed hover: bg-primary hover:text-white rounded-none w-10 h-10 transition-colors shadow-sm\" → bg-primary hover:text-primary-foreground rounded-full w-10 h-10 transition-colors shadow-elegant\"",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-01T06:18:58.657Z"
+    },
+    {
+      "id": "bug-148",
+      "timestamp": "2026-07-01T06:21:38.570Z",
+      "error_message": "Significant refactor of ",
+      "file": "src/pages/Shop.tsx",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 11→13 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-01T06:21:38.570Z"
+    },
+    {
+      "id": "bug-149",
+      "timestamp": "2026-07-01T06:23:12.703Z",
+      "error_message": "Incorrect value in code",
+      "file": "src/pages/Index.tsx",
+      "root_cause": "Had \"absolute inset-0 w-full h-full object-cover trans",
+      "fix": "Changed to \"absolute inset-0 w-full h-full object-cover trans",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-01T06:23:12.703Z"
+    },
+    {
+      "id": "bug-146",
+      "timestamp": "2026-07-05T00:00:00.000Z",
+      "error_message": "TS2430: Interface 'ApiProduct' incorrectly extends interface 'Partial<Omit<Product, \"id\">>'. Types of property 'images' are incompatible. Type 'ProductImage[]' is not assignable to type 'string[]'.",
+      "file": "src/services/product.ts",
+      "root_cause": "ApiProduct extends Partial<Omit<Product, 'id'>> and separately redeclares its own `images?: ProductImage[]` (the raw wire shape) — but Product.images is `string[]` (the normalized shape), so the redeclaration conflicts with the inherited property type.",
+      "fix": "Changed to `Partial<Omit<Product, 'id' | 'images'>>` so the raw `images` field isn't inherited from Product in the first place.",
+      "tags": [
+        "typescript",
+        "ts2430",
+        "product",
+        "images"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-05T00:00:00.000Z"
+    },
+    {
+      "id": "bug-147",
+      "timestamp": "2026-07-05T00:00:00.000Z",
+      "error_message": "Selecting a heavier/lighter size variant on ProductDetail showed the correct variant price in the cart, but checkout charged based on the product's base weight instead",
+      "file": "src/pages/Payment.tsx, src/services/payment.ts",
+      "root_cause": "ProductDetail.tsx's handleAddToCart already baked the selected variant's weight+price into the cart item, but Payment.tsx's three checkout item-mapping call sites (create-order, verify-razorpay, verify-COD) only sent {product, quantity} to the backend — never item.weight. The backend pricing.service.ts already supported a per-line weight/variantWeight override (computeCheckout -> parseWeight(raw.variantWeight ?? raw.weight)), so it silently fell back to the product's base weight, both when creating the Razorpay order and when verifying it (so the amount-match check never caught the discrepancy — both sides used the same wrong weight).",
+      "fix": "Added `weight: item.weight` to all three items.map(...) call sites in Payment.tsx and to RazorpayOrderPayload.items / PaymentVerificationPayload.orderData.items in payment.ts. Added kv-api/src/tests/pricing.service.test.ts 'computeCheckout — variant weight passthrough' to regression-test the full contract.",
+      "tags": [
+        "pricing",
+        "checkout",
+        "variants",
+        "payment",
+        "money-path"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-05T00:00:00.000Z"
     }
   ]
 }

@@ -11,11 +11,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { IS_MOBILE_BUILD } from '@/lib/platform';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { totalItems } = useCart();
   const { user, isAuthenticated, logout } = useAuth();
@@ -44,15 +44,14 @@ const Navbar = () => {
   const submitSearch = () => {
     const query = searchQuery.trim();
     navigate(query ? `/shop?search=${encodeURIComponent(query)}` : '/shop');
-    setIsSearchOpen(false);
     setIsMobileMenuOpen(false);
   };
 
   return (
     <nav
-      className={`transition-all duration-500 border-b ${isScrolled
-        ? 'bg-background/95 backdrop-blur-md border-border/40 shadow-sm py-2'
-        : 'bg-background/95 backdrop-blur-md border-border/40 py-4'
+      className={`glass transition-all duration-500 border-b ${isScrolled
+        ? 'shadow-elegant py-2'
+        : 'py-4'
         }`}
     >
       <div className="container mx-auto px-6">
@@ -75,13 +74,13 @@ const Navbar = () => {
               <img
                 src="/kvlogo.png"
                 alt="KV Silver Zone"
-                className="h-12 w-12 md:h-16 md:w-16 object-contain"
+                className="h-12 w-12 md:h-16 md:w-16 object-contain transition-transform duration-500 group-hover:scale-105"
               />
               <div className="hidden sm:flex flex-col justify-center leading-tight">
                 <span className="font-serif text-xl md:text-3xl font-bold text-primary tracking-wide group-hover:opacity-90 transition-opacity whitespace-nowrap">
                   KV SILVER ZONE
                 </span>
-                <span className="text-[10px] md:text-sm uppercase tracking-[0.22em] text-muted-foreground group-hover:text-primary transition-colors">
+                <span className="text-[10px] md:text-xs uppercase tracking-[0.28em] text-muted-foreground group-hover:text-primary transition-colors">
                   Pure Silver • Pure Trust
                 </span>
               </div>
@@ -91,8 +90,8 @@ const Navbar = () => {
           {/* Center Section: Always Expanded Search (Hidden in Admin) */}
           {!location.pathname.startsWith('/admin') ? (
             <div className="flex-1 min-w-0 flex items-center px-6 md:px-12 lg:px-24 xl:px-32 max-w-4xl">
-              <div className="relative w-full">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="relative w-full group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
                 <input
                   type="text"
                   placeholder="Search products..."
@@ -105,7 +104,7 @@ const Navbar = () => {
                       submitSearch();
                     }
                   }}
-                  className="w-full bg-secondary/50 border border-input rounded-full py-2.5 pl-11 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all font-light"
+                  className="w-full bg-secondary/60 border border-input rounded-full py-2.5 pl-11 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/40 focus:bg-card transition-all"
                 />
                 {searchQuery && (
                   <button
@@ -125,7 +124,7 @@ const Navbar = () => {
           )}
 
           {/* Actions (Right) */}
-          <div className="flex-shrink-0 flex items-center justify-end gap-3 md:gap-6">
+          <div className="flex-shrink-0 flex items-center justify-end gap-3 md:gap-5">
             {!location.pathname.startsWith('/admin') && (
               <>
                 <Link to="/wishlist" aria-label="Wishlist">
@@ -138,7 +137,7 @@ const Navbar = () => {
                   <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary transition-colors" aria-label={`Cart, ${totalItems} item${totalItems === 1 ? '' : 's'}`}>
                     <ShoppingCart className="h-6 w-6" strokeWidth={1.5} />
                     {totalItems > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
+                      <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] min-w-[1.15rem] h-[1.15rem] px-1 rounded-full flex items-center justify-center font-semibold shadow-sm ring-2 ring-background">
                         {totalItems}
                       </span>
                     )}
@@ -152,7 +151,7 @@ const Navbar = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="gap-2 px-2 text-muted-foreground hover:text-primary font-normal">
                     <User className="h-5 w-5" strokeWidth={1.5} />
-                    <span className="hidden md:inline text-sm uppercase tracking-wider">{user?.name}</span>
+                    <span className="hidden md:inline text-sm tracking-wider">{user?.name}</span>
                     <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -166,7 +165,7 @@ const Navbar = () => {
                   <DropdownMenuItem asChild className="text-foreground focus:bg-muted/50 focus:text-foreground cursor-pointer">
                     <Link to="/wishlist">My Wishlist</Link>
                   </DropdownMenuItem>
-                  {user?.isAdmin && (
+                  {user?.isAdmin && !IS_MOBILE_BUILD && (
                     <>
                       <DropdownMenuSeparator className="bg-border/50" />
                       <DropdownMenuItem asChild className="text-foreground focus:bg-muted/50 focus:text-foreground cursor-pointer">
@@ -198,7 +197,7 @@ const Navbar = () => {
                 key={link.path}
                 to={link.path}
                 className={`nav-link text-sm font-medium tracking-[0.15em] transition-colors ${isActive(link.path)
-                  ? 'text-primary'
+                  ? 'active text-primary'
                   : 'text-muted-foreground hover:text-primary'
                   }`}
               >
@@ -218,7 +217,7 @@ const Navbar = () => {
                   to={link.path}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={`px-4 py-3 text-sm uppercase tracking-wider transition-colors ${isActive(link.path)
-                    ? 'bg-accent/5 text-primary font-semibold border-l-2 border-accent'
+                    ? 'bg-primary/5 text-primary font-semibold border-l-2 border-primary'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
                     }`}
                 >

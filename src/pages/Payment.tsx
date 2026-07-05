@@ -14,7 +14,13 @@ import { useToast } from '@/hooks/use-toast';
 import { paymentService } from '@/services/payment';
 import { couponService } from '@/services/coupon';
 import { pricingConfigService, DEFAULT_PRICING_CONFIG } from '@/services/pricingConfig';
+import {
+  deliveryConfigService,
+  DEFAULT_DELIVERY_CONFIG,
+  getDeliveryCharge,
+} from '@/services/deliveryConfig';
 import { addressService, type Address } from '@/services/address';
+import { computeOrderSummary } from '@/lib/pricing';
 import { validateForm, shippingAddressSchema } from '@/lib/validation';
 import Seo from '@/components/Seo';
 
@@ -52,7 +58,7 @@ const loadSavedAddress = (): ShippingAddress | null => {
 const Payment = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { totalPrice, taxAmount, clearCart, items } = useCart();
+  const { totalPrice, taxableTotal, clearCart, items } = useCart();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
@@ -144,10 +150,27 @@ const Payment = () => {
     staleTime: 10 * 60_000,
   });
 
+  const { data: deliveryConfig = DEFAULT_DELIVERY_CONFIG } = useQuery({
+    queryKey: ['delivery-config'],
+    queryFn: deliveryConfigService.getDeliveryConfig,
+    staleTime: 10 * 60_000,
+  });
+
+  // Delivery is zone-based on the destination; only known once a city/state is entered.
+  const hasDestination = !!(address.city || address.state);
+  const deliveryCharge = hasDestination ? getDeliveryCharge(deliveryConfig, address) : 0;
+
   // Display only — the server computes the authoritative total at /payments/create-order.
-  const subtotal = totalPrice;
-  const tax = taxAmount;
-  const totalWithTax = subtotal + tax - couponDiscount;
+  // Order of operations: discount first → GST on the discounted (taxable) subtotal → delivery last.
+  const summary = computeOrderSummary({
+    subtotal: totalPrice,
+    taxableSubtotal: taxableTotal,
+    discount: couponDiscount,
+    gstPercent: pricingConfig.gstPercent,
+    deliveryCharge,
+  });
+  const subtotal = summary.subtotal;
+  const totalWithTax = summary.total;
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -205,6 +228,9 @@ const Payment = () => {
         items: items.map((item) => ({
           product: item.id,
           quantity: item.quantity,
+          // Selected size/weight variant — lets the server price this line at the same
+          // weight the customer was shown, instead of falling back to the base product weight.
+          weight: item.weight || undefined,
           ...(item.isGiftVoucher ? { isGiftVoucher: true, giftVoucherId: item.giftVoucherId || item.id } : {}),
         })),
         couponCode: appliedCoupon || undefined,
@@ -239,6 +265,7 @@ const Payment = () => {
                   price: item.price,
                   quantity: item.quantity,
                   image: item.image,
+                  weight: item.weight || undefined,
                   ...(item.isGiftVoucher ? { isGiftVoucher: true, giftVoucherId: item.giftVoucherId || item.id } : {}),
                 })),
                 shippingAddress: address,
@@ -304,6 +331,7 @@ const Payment = () => {
               price: item.price,
               quantity: item.quantity,
               image: item.image,
+              weight: item.weight || undefined,
             })),
             shippingAddress: address,
             paymentMethod: 'cod',
@@ -496,23 +524,27 @@ const Payment = () => {
               
               <div className="space-y-2 mb-6">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="text-muted-foreground">Subtotal (before GST)</span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Shipping</span>
-                  <span className="text-green-600">Free</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax (GST {pricingConfig.gstPercent}%)</span>
-                  <span>{formatPrice(tax)}</span>
-                </div>
-                {couponDiscount > 0 && (
+                {summary.discount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-green-600">Coupon Discount</span>
-                    <span className="text-green-600">-{formatPrice(couponDiscount)}</span>
+                    <span className="text-green-600">-{formatPrice(summary.discount)}</span>
                   </div>
                 )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">GST ({pricingConfig.gstPercent}%)</span>
+                  <span>{formatPrice(summary.gst)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Delivery</span>
+                  {hasDestination ? (
+                    <span>{formatPrice(summary.deliveryCharge)}</span>
+                  ) : (
+                    <span className="text-muted-foreground">Calculated at checkout</span>
+                  )}
+                </div>
                 <hr />
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total</span>

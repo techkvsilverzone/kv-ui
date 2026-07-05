@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -24,7 +24,6 @@ import Payment from "./pages/Payment";
 import Profile from "./pages/Profile";
 import ChangePassword from "./pages/ChangePassword";
 import Wishlist from "./pages/Wishlist";
-import Admin from "./pages/Admin";
 import ProductDetail from "./pages/ProductDetail";
 import OrderTracking from "./pages/OrderTracking";
 import SilverRatePage from "./pages/SilverRate";
@@ -40,8 +39,15 @@ import GiftVouchers from "./pages/GiftVouchers";
 import { storeConfigService } from "@/services/storeConfig";
 import ScrollToTop from "@/components/ScrollToTop";
 import RequireAuth from "@/components/RequireAuth";
+import PushNotifications from "@/components/PushNotifications";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { trackPageview } from "@/lib/analytics";
+import { IS_MOBILE_BUILD } from "@/lib/platform";
+
+// Admin is web-only and large. Gating the dynamic import behind the
+// compile-time IS_MOBILE_BUILD constant lets Rollup drop the Admin chunk
+// entirely from the mobile (customer) build rather than shipping it as dead code.
+const Admin = IS_MOBILE_BUILD ? null : lazy(() => import("./pages/Admin"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -84,6 +90,7 @@ const AppContent = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
+      <PushNotifications />
       <header className="fixed top-0 left-0 right-0 z-50">
         <Marquee />
         <Navbar />
@@ -105,7 +112,16 @@ const AppContent = () => {
           <Route path="/change-password" element={<RequireAuth><ChangePassword /></RequireAuth>} />
           <Route path="/wishlist" element={<RequireAuth><Wishlist /></RequireAuth>} />
           <Route path="/dashboard" element={<RequireAuth><CustomerDashboard /></RequireAuth>} />
-          <Route path="/admin" element={<Admin />} />
+          {!IS_MOBILE_BUILD && Admin && (
+            <Route
+              path="/admin"
+              element={
+                <Suspense fallback={null}>
+                  <Admin />
+                </Suspense>
+              }
+            />
+          )}
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/order/:id" element={<OrderTracking />} />
           <Route path="/silver-rate" element={<SilverRatePage />} />

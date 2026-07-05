@@ -3,7 +3,8 @@ import { Phone, Mail, MapPin, Facebook, Instagram, Twitter, Youtube } from 'luci
 
 const Footer = () => {
   return (
-    <footer className="bg-secondary text-primary pt-24 pb-12">
+    <footer className="relative bg-secondary text-primary pt-24 pb-12">
+      <div className="rule-metallic absolute top-0 inset-x-0" />
       <div className="container mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-24 mb-16">
           {/* Brand Column */}

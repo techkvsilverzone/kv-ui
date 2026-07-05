@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Filter, Grid, List, ChevronDown, Loader2 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
+import type { Product } from '@/context/CartContext';
+import * as SliderPrimitive from '@radix-ui/react-slider';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,6 +26,98 @@ import {
 import ProductCard from '@/components/ProductCard';
 import Seo from '@/components/Seo';
 import { productService } from '@/services/product';
+
+/** Products fetched per infinite-scroll batch. */
+const PAGE_SIZE = 12;
+
+// Price slider: fixed ₹100–₹5,000 range, debounced before it triggers a query.
+const PRICE_MIN = 100;
+const PRICE_MAX = 5000;
+const PRICE_STEP = 100;
+const PRICE_DEBOUNCE_MS = 700; // wait after the user stops dragging before querying
+
+const formatINR = (value: number) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
+
+/** Two-handle price range slider (built on the Radix primitive so it can render both thumbs). */
+const PriceRangeSlider = ({
+  value,
+  min,
+  max,
+  step,
+  onValueChange,
+}: {
+  value: [number, number];
+  min: number;
+  max: number;
+  step: number;
+  onValueChange: (value: [number, number]) => void;
+}) => (
+  <SliderPrimitive.Root
+    className="relative flex w-full touch-none select-none items-center"
+    value={value}
+    min={min}
+    max={max}
+    step={step}
+    minStepsBetweenThumbs={1}
+    onValueChange={(vals) => onValueChange([vals[0], vals[1]])}
+    aria-label="Price range"
+  >
+    <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary">
+      <SliderPrimitive.Range className="absolute h-full bg-primary" />
+    </SliderPrimitive.Track>
+    {value.map((_, i) => (
+      <SliderPrimitive.Thumb
+        key={i}
+        className={cn(
+          'block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        )}
+      />
+    ))}
+  </SliderPrimitive.Root>
+);
+
+/**
+ * Price filter that owns the live drag state locally, so dragging the slider re-renders ONLY this
+ * small component (not the whole Shop page / product grid). It commits the value upward debounced.
+ */
+const PriceRangeFilter = ({
+  value,
+  onChange,
+}: {
+  value: [number, number] | null;
+  onChange: (value: [number, number] | null) => void;
+}) => {
+  const [live, setLive] = useState<[number, number]>(value ?? [PRICE_MIN, PRICE_MAX]);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Re-sync when the committed value changes externally (preset chosen, "Clear all", etc.).
+  useEffect(() => {
+    setLive(value ?? [PRICE_MIN, PRICE_MAX]);
+  }, [value]);
+
+  // Clear any pending timer on unmount.
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  const handleChange = (next: [number, number]) => {
+    setLive(next); // instant, local-only re-render → smooth dragging
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onChange(next), PRICE_DEBOUNCE_MS);
+  };
+
+  return (
+    <div className="mb-5">
+      <PriceRangeSlider value={live} min={PRICE_MIN} max={PRICE_MAX} step={PRICE_STEP} onValueChange={handleChange} />
+      <div className="flex items-center justify-between mt-3 text-sm">
+        <span className="font-medium">{formatINR(live[0])}</span>
+        <span className="font-medium">
+          {formatINR(live[1])}{live[1] >= PRICE_MAX ? '+' : ''}
+        </span>
+      </div>
+    </div>
+  );
+};
 
 const Shop = () => {
   const location = useLocation();
@@ -49,6 +144,8 @@ const Shop = () => {
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState('');
+  // Committed slider range (after debounce, inside PriceRangeFilter). null ⇒ no slider filter.
+  const [priceFilter, setPriceFilter] = useState<[number, number] | null>(null);
   const [selectedMetals, setSelectedMetals] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -68,7 +165,14 @@ const Shop = () => {
     };
   };
 
-  const { minPrice, maxPrice } = getPriceBounds(selectedPriceRange);
+  // The slider (when active) overrides the preset buckets. Handles at the extremes mean "no cap"
+  // on that end, so products below ₹100 / above ₹5,000 stay included.
+  const { minPrice, maxPrice } = priceFilter
+    ? {
+        minPrice: priceFilter[0] > PRICE_MIN ? priceFilter[0] : undefined,
+        maxPrice: priceFilter[1] < PRICE_MAX ? priceFilter[1] : undefined,
+      }
+    : getPriceBounds(selectedPriceRange);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -81,20 +185,54 @@ const Shop = () => {
       setSelectedCategories([category]);
       setSelectedMetals([]);
       setSelectedPriceRange('');
+      setPriceFilter(null);
     }
   }, [location.search]);
 
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ['products', selectedCategories, selectedPriceRange, selectedMetals, searchQuery, sortBy],
-    queryFn: () => productService.getProducts({
+  const {
+    data: productPages,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['products', selectedCategories, selectedPriceRange, priceFilter, selectedMetals, searchQuery, sortBy],
+    queryFn: ({ pageParam }) => productService.getProducts({
       category: selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,
       metal: selectedMetals.length > 0 ? selectedMetals.join(',') : undefined,
       minPrice,
       maxPrice,
       search: searchQuery || undefined,
-      sortBy: (sortBy === 'price-low' ? 'price_asc' : sortBy === 'price-high' ? 'price_desc' : 'newest') as any,
+      sortBy: sortBy === 'price-low' ? 'price_asc' : sortBy === 'price-high' ? 'price_desc' : 'newest',
+      page: pageParam,
+      limit: PAGE_SIZE,
     }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      // Stop when the page is empty, partial (last page), or larger than requested (a backend that
+      // doesn't paginate yet returned everything — show it once, don't keep refetching).
+      if (lastPage.length === 0 || lastPage.length < PAGE_SIZE || lastPage.length > PAGE_SIZE) {
+        return undefined;
+      }
+      // Guard against a non-paginating backend repeating the same full page forever.
+      const seenIds = new Set(allPages.slice(0, -1).flat().map((p) => p.id));
+      if (lastPage.every((p) => seenIds.has(p.id))) return undefined;
+      return allPages.length + 1;
+    },
   });
+
+  // Flatten pages and de-duplicate by id (defensive against an unpaginated backend).
+  const products = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Product[] = [];
+    (productPages?.pages ?? []).flat().forEach((p) => {
+      if (!seen.has(p.id)) {
+        seen.add(p.id);
+        out.push(p);
+      }
+    });
+    return out;
+  }, [productPages]);
 
   const { data: categoriesData = [] } = useQuery({
     queryKey: ['categories'],
@@ -103,6 +241,23 @@ const Shop = () => {
 
   const categories = Array.isArray(categoriesData) ? categoriesData : [];
   const visibleCategories = categories.filter(c => !filterConfig.hiddenCategories.includes(c));
+
+  // Auto-load the next page when the sentinel near the bottom scrolls into view.
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el || !hasNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: '400px' }, // prefetch a bit before the user reaches the end
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const toggleCategory = (category: string) => {
     setSearchQuery(''); // clear search when filtering
@@ -113,7 +268,14 @@ const Shop = () => {
 
   const togglePriceRange = (range: string) => {
     setSearchQuery('');
+    setPriceFilter(null); // preset overrides any custom slider range
     setSelectedPriceRange(prev => prev === range ? '' : range);
+  };
+
+  const handlePriceCommit = (value: [number, number] | null) => {
+    setSearchQuery('');
+    setSelectedPriceRange(''); // custom range overrides preset buckets
+    setPriceFilter(value);
   };
 
   const toggleMetal = (metal: string) => {
@@ -127,6 +289,7 @@ const Shop = () => {
     // clear all filters when typing a search
     setSelectedCategories([]);
     setSelectedPriceRange('');
+    setPriceFilter(null);
     setSelectedMetals([]);
     setSearchQuery(value);
   };
@@ -156,9 +319,14 @@ const Shop = () => {
         </div>
       </div>
 
-      {/* Price Range — single select */}
+      {/* Price Range */}
       <div>
         <h3 className="font-serif text-lg font-semibold mb-4">Price Range</h3>
+
+        {/* Custom slider — self-contained so dragging doesn't re-render the page */}
+        <PriceRangeFilter value={priceFilter} onChange={handlePriceCommit} />
+
+        <p className="text-xs text-muted-foreground mb-3">Or pick a range</p>
         <RadioGroup
           value={selectedPriceRange}
           onValueChange={(val) => {
@@ -212,6 +380,7 @@ const Shop = () => {
         onClick={() => {
           setSelectedCategories([]);
           setSelectedPriceRange('');
+          setPriceFilter(null);
           setSelectedMetals([]);
           setSearchQuery('');
         }}
@@ -228,13 +397,15 @@ const Shop = () => {
         description="Browse our full silver collection — necklaces, rings, coins and more. Filter by category, metal and price at KV Silver Zone."
       />
       {/* Header */}
-      <div className="bg-muted/50 py-12">
+      <div className="relative bg-secondary/40 border-b border-border py-14 overflow-hidden">
+        <div className="rule-metallic absolute bottom-0 inset-x-0" />
         <div className="container mx-auto px-4">
-          <h1 className="font-serif text-4xl font-bold text-foreground mb-2">
+          <span className="eyebrow mb-3 block">The Collection</span>
+          <h1 className="font-serif text-4xl md:text-5xl font-medium text-primary mb-2">
             Shop Silver
           </h1>
-          <p className="text-muted-foreground">
-            Explore our exquisite collection of handcrafted silver jewelry
+          <p className="text-muted-foreground font-light">
+            Explore our exquisite collection of handcrafted silver jewellery
           </p>
         </div>
       </div>
@@ -317,7 +488,7 @@ const Shop = () => {
 
             {/* Results Count */}
             <p className="text-sm text-muted-foreground mb-6">
-              Showing {products.length} products
+              Showing {products.length} product{products.length !== 1 ? 's' : ''}{hasNextPage ? '+' : ''}
             </p>
 
             {/* Products Grid */}
@@ -327,17 +498,26 @@ const Shop = () => {
                 <p className="text-muted-foreground animate-pulse">Loading products...</p>
               </div>
             ) : products.length > 0 ? (
-              <div
-                className={`grid gap-6 ${
-                  viewMode === 'grid'
-                    ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
-                    : 'grid-cols-1'
-                }`}
-              >
-                {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
+              <>
+                <div
+                  className={`grid gap-6 ${
+                    viewMode === 'grid'
+                      ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
+                      : 'grid-cols-1'
+                  }`}
+                >
+                  {products.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+
+                {/* Infinite-scroll sentinel + loading indicator */}
+                {hasNextPage && (
+                  <div ref={loadMoreRef} className="flex justify-center py-10">
+                    {isFetchingNextPage && <Loader2 className="h-6 w-6 text-primary animate-spin" />}
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-16">
                 <p className="text-muted-foreground">No products found matching your criteria.</p>
@@ -347,6 +527,7 @@ const Shop = () => {
                     setSearchQuery('');
                     setSelectedCategories([]);
                     setSelectedPriceRange('');
+                    setPriceFilter(null);
                     setSelectedMetals([]);
                   }}
                 >

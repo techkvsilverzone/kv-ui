@@ -28,26 +28,13 @@ import { useToast } from '@/hooks/use-toast';
 import { productService } from '@/services/product';
 import { wishlistService } from '@/services/wishlist';
 import { reviewService, type Review } from '@/services/review';
-import { silverRateService, type SilverRate } from '@/services/silverRate';
+import { silverRateService } from '@/services/silverRate';
 import { pricingConfigService, DEFAULT_PRICING_CONFIG } from '@/services/pricingConfig';
+import { computeProductPricing, parseGrams } from '@/lib/pricing';
 import ProductCard from '@/components/ProductCard';
+import ProductImageCarousel from '@/components/ProductImageCarousel';
 import Seo from '@/components/Seo';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
-
-/** Extracts the numeric gram value from a free-text weight string (e.g. "10.5 g" -> 10.5). */
-const parseGrams = (weight?: string): number | null => {
-  const match = weight?.match(/[\d.]+/);
-  const grams = match ? parseFloat(match[0]) : NaN;
-  return Number.isFinite(grams) && grams > 0 ? grams : null;
-};
-
-/** Converts a purity label to a 0-1 fraction. Handles per-1000 (925, 999) and percent (92.5%) forms. */
-const parsePurityFraction = (purity?: string): number | null => {
-  const match = purity?.match(/[\d.]+/);
-  const n = match ? parseFloat(match[0]) : NaN;
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return n > 100 ? n / 1000 : n / 100;
-};
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -57,6 +44,7 @@ const ProductDetail = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', comment: '' });
   const [pincode, setPincode] = useState('');
   const [pincodeResult, setPincodeResult] = useState<'available' | 'unavailable' | null>(null);
@@ -158,8 +146,10 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
+    // Add with the live pre-GST price for the selected size so the cart matches what's shown.
+    const cartProduct = { ...product, price: pricing.preGstPrice, weight: displayWeight };
     for (let i = 0; i < quantity; i++) {
-      addToCart(product);
+      addToCart(cartProduct);
     }
     toast({
       title: 'Added to Cart',
@@ -197,53 +187,22 @@ const ProductDetail = () => {
 
   const filteredRelated = relatedProducts.filter((p) => p.id !== product.id).slice(0, 4);
 
-  // Price breakdown reconciled to the displayed total. Prefers the server-computed breakdown
-  // (`product.pricing`); falls back to a live silver-rate × weight estimate, then a 75/25 split.
+  // Size/weight variants (e.g. S–XXL). The selected variant's weight/height/breadth are shown
+  // in the Specifications block; falls back to the product's own weight when there are no variants.
+  const variants = product.variants ?? [];
+  const selectedVariant = variants[selectedVariantIndex] ?? variants[0];
+  const displayWeight = selectedVariant?.weight || product.weight;
+
+  // Gallery images: prefer the full images array, fall back to the single image.
+  const galleryImages = (product.images?.length ? product.images : [product.image]).filter(Boolean);
+
+  // Live pre-GST price for the selected size: metal value (rate/g × weight) + making + wastage.
+  // Falls back to product.price for fixed-price products or when no rate/weight is available.
   // NOTE: display only — the server remains the source of truth for the charged amount.
-  const gstFraction = pricingConfig.gstPercent / 100;
-  const preTax = product.price / (1 + gstFraction);
-  const grams = product.weightInGrams ?? parseGrams(product.weight) ?? undefined;
-  const productPurityFrac = parsePurityFraction(product.purity);
-  const matchedRate: SilverRate | undefined =
-    silverRates.find((r) => {
-      const rf = parsePurityFraction(r.purity);
-      return productPurityFrac && rf && Math.abs(rf - productPurityFrac) < 0.01;
-    }) ?? silverRates[0];
-
-  const serverPricing = product.pricing;
-  const hasServerPricing =
-    serverPricing?.metalValue != null && serverPricing?.makingCharge != null;
-
-  let metalValue: number;
-  let makingCharges: number;
-  let gst: number;
-  let ratePerGramShown: number | undefined;
-
-  if (hasServerPricing) {
-    metalValue = serverPricing!.metalValue!;
-    makingCharges = serverPricing!.makingCharge!;
-    gst = Math.max(product.price - metalValue - makingCharges, 0);
-    ratePerGramShown = serverPricing!.ratePerGram;
-  } else if (grams && matchedRate?.ratePerGram) {
-    metalValue = Math.min(grams * matchedRate.ratePerGram, preTax);
-    makingCharges = Math.max(preTax - metalValue, 0);
-    gst = product.price - preTax;
-    ratePerGramShown = matchedRate.ratePerGram;
-  } else {
-    metalValue = preTax * 0.75;
-    makingCharges = preTax - metalValue;
-    gst = product.price - preTax;
-  }
-
-  const showRateBasis = !!(grams && ratePerGramShown);
-  // Server `basis` is 'live' | 'static'. Only show a rate note when the value is live.
-  const basisNote = hasServerPricing
-    ? serverPricing!.basis === 'live'
-      ? 'a live silver rate'
-      : undefined
-    : matchedRate?.date
-      ? `the silver rate as of ${new Date(matchedRate.date).toLocaleDateString()}`
-      : undefined;
+  // GST + delivery are added at checkout, not baked into this price.
+  const variantGrams = parseGrams(selectedVariant?.weight) ?? undefined;
+  const pricing = computeProductPricing(product, silverRates, variantGrams);
+  const showBreakdown = !product.isFixedPrice && pricing.computed;
 
   return (
     <div className="min-h-screen pt-24 pb-16">
@@ -271,10 +230,11 @@ const ProductDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
           {/* Image */}
           <div className="relative aspect-square overflow-hidden bg-secondary/20">
-            <img
-              src={product.image}
+            <ProductImageCarousel
+              images={galleryImages}
               alt={product.name}
-              className="w-full h-full object-cover"
+              imageClassName="w-full aspect-square object-cover"
+              alwaysShowControls
             />
             {product.isNew && (
               <span className="absolute top-4 left-4 bg-white text-black text-[10px] uppercase tracking-widest px-3 py-1 font-medium">
@@ -316,7 +276,7 @@ const ProductDetail = () => {
 
             {/* Price */}
             <div className="flex items-center gap-4 mb-6">
-              <span className="text-2xl font-semibold">{formatPrice(product.price)}</span>
+              <span className="text-2xl font-semibold">{formatPrice(pricing.preGstPrice)}</span>
               {product.originalPrice && (
                 <>
                   <span className="text-lg text-muted-foreground line-through">
@@ -329,55 +289,100 @@ const ProductDetail = () => {
               )}
             </div>
 
-            {/* Price Breakdown */}
+            {/* Price Breakdown — forward calc from the live silver rate. Shown only for dynamic
+                products with a usable rate + weight (fixed-price / missing-rate fall through). */}
+            {showBreakdown && (
             <div className="mb-6 p-4 bg-secondary/20 rounded-md border border-border/60">
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3">Price Breakdown</p>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
                     Metal Value
-                    {showRateBasis && (
-                      <span className="block text-[11px] text-muted-foreground/70">
-                        {grams} g × {formatPrice(ratePerGramShown!)}/g
-                      </span>
-                    )}
+                    <span className="block text-[11px] text-muted-foreground/70">
+                      {pricing.grams} g × {formatPrice(pricing.ratePerGram!)}/g
+                    </span>
                   </span>
-                  <span>{formatPrice(Math.round(metalValue))}</span>
+                  <span>{formatPrice(Math.round(pricing.metalValue!))}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Making Charges</span>
-                  <span>{formatPrice(Math.round(makingCharges))}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground/70">
-                  <span>GST ({pricingConfig.gstPercent}%)</span>
-                  <span>{formatPrice(Math.round(gst))}</span>
-                </div>
+                {pricing.makingCharge! > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Making Charges</span>
+                    <span>{formatPrice(Math.round(pricing.makingCharge!))}</span>
+                  </div>
+                )}
+                {pricing.wastage! > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Wastage</span>
+                    <span>{formatPrice(Math.round(pricing.wastage!))}</span>
+                  </div>
+                )}
                 <div className="border-t border-border pt-2 flex justify-between font-medium">
-                  <span>Total</span>
-                  <span>{formatPrice(product.price)}</span>
+                  <span>Price (before GST)</span>
+                  <span>{formatPrice(Math.round(pricing.preGstPrice))}</span>
                 </div>
               </div>
-              {basisNote && (
-                <p className="text-[10px] text-muted-foreground/60 mt-3">
-                  Metal value is indicative, based on {basisNote}.
-                </p>
-              )}
+              <p className="text-[10px] text-muted-foreground/60 mt-3">
+                Metal value is indicative, based on today's silver rate. GST ({pricingConfig.gstPercent}%)
+                and delivery are added at checkout.
+              </p>
             </div>
+            )}
 
             <p className="text-muted-foreground leading-relaxed mb-6">
               {product.description}
             </p>
 
+            {/* Size / Weight selector */}
+            {variants.length > 0 && (
+              <div className="mb-6">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
+                  Select Size
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {variants.map((variant, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => setSelectedVariantIndex(index)}
+                      aria-pressed={selectedVariantIndex === index}
+                      className={`min-w-[3rem] px-3 py-2 text-sm border rounded-md transition-colors ${
+                        selectedVariantIndex === index
+                          ? 'border-primary bg-primary/10 text-primary font-medium'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <span className="block">{variant.label || variant.weight}</span>
+                      {variant.label && variant.weight && (
+                        <span className="block text-[10px] text-muted-foreground">{variant.weight}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Specifications */}
             <div className="grid grid-cols-2 gap-4 mb-8 p-4 bg-secondary/30 rounded-md">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Weight</p>
-                <p className="font-medium">{product.weight}</p>
+                <p className="font-medium">{displayWeight}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Purity</p>
                 <p className="font-medium">{product.purity}</p>
               </div>
+              {selectedVariant?.height && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Height</p>
+                  <p className="font-medium">{selectedVariant.height}</p>
+                </div>
+              )}
+              {selectedVariant?.breadth && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Breadth</p>
+                  <p className="font-medium">{selectedVariant.breadth}</p>
+                </div>
+              )}
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Category</p>
                 <p className="font-medium">{product.category}</p>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -85,8 +85,241 @@ import { savingsService } from '@/services/savings';
 import { couponService, type CreateCouponPayload } from '@/services/coupon';
 import { returnsService } from '@/services/returns';
 import { silverRateService, type UpdateSilverRatePayload } from '@/services/silverRate';
+import { goldRateService } from '@/services/goldRate';
+import { RateUpdateGate } from '@/components/RateUpdateGate';
+import { computeRateBlock, resolveRateBlock, latestRateDate } from '@/lib/rateFreshness';
+import { rateStatusService } from '@/services/rateStatus';
 import { inventoryService } from '@/services/inventory';
+import { deliveryConfigService, DEFAULT_DELIVERY_CONFIG, type DeliveryConfig } from '@/services/deliveryConfig';
+import { Switch } from '@/components/ui/switch';
+import type { ProductVariant, ChargeType } from '@/context/CartContext';
 import { ApiError } from '@/lib/api';
+
+/**
+ * Editor for a product's size/weight variants (S–XXL style). Each row carries a free-text
+ * label plus weight (used for the total calculation) and optional height/breadth (display only).
+ */
+const VariantsEditor = ({
+  variants,
+  onChange,
+  disabled,
+}: {
+  variants: ProductVariant[];
+  onChange: (next: ProductVariant[]) => void;
+  disabled?: boolean;
+}) => {
+  const update = (index: number, patch: Partial<ProductVariant>) =>
+    onChange(variants.map((v, i) => (i === index ? { ...v, ...patch } : v)));
+  const remove = (index: number) => onChange(variants.filter((_, i) => i !== index));
+  const add = () => onChange([...variants, { label: '', weight: '', height: '', breadth: '' }]);
+
+  return (
+    <div>
+      <Label>Sizes / Weights</Label>
+      <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+        Add each available size. Weight is used for pricing; height & breadth are shown for customer reference.
+      </p>
+      <div className="space-y-2">
+        {variants.map((variant, index) => (
+          <div key={index} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-center">
+            <Input
+              aria-label={`Size label ${index + 1}`}
+              placeholder="Size (e.g. S)"
+              value={variant.label}
+              disabled={disabled}
+              onChange={(e) => update(index, { label: e.target.value })}
+            />
+            <Input
+              aria-label={`Weight ${index + 1}`}
+              placeholder="Weight (e.g. 20g)"
+              value={variant.weight}
+              disabled={disabled}
+              onChange={(e) => update(index, { weight: e.target.value })}
+            />
+            <Input
+              aria-label={`Height ${index + 1}`}
+              placeholder="Height"
+              value={variant.height ?? ''}
+              disabled={disabled}
+              onChange={(e) => update(index, { height: e.target.value })}
+            />
+            <Input
+              aria-label={`Breadth ${index + 1}`}
+              placeholder="Breadth"
+              value={variant.breadth ?? ''}
+              disabled={disabled}
+              onChange={(e) => update(index, { breadth: e.target.value })}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              disabled={disabled}
+              onClick={() => remove(index)}
+              aria-label={`Remove size ${index + 1}`}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+      </div>
+      {!disabled && (
+        <Button type="button" variant="outline" size="sm" className="mt-2" onClick={add}>
+          <Plus className="h-4 w-4 mr-1" /> Add Size
+        </Button>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Multi-image uploader for a product. Reads selected files to base64, shows thumbnails with
+ * remove + "make primary" controls. The first image is the primary one shown on cards.
+ */
+const ImagesUploader = ({
+  images,
+  onChange,
+  disabled,
+}: {
+  images: string[];
+  onChange: (next: string[]) => void;
+  disabled?: boolean;
+}) => {
+  const readFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    Promise.all(
+      files.map(
+        (file) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          }),
+      ),
+    ).then((base64s) => onChange([...images, ...base64s]));
+    e.target.value = ''; // allow re-selecting the same file(s)
+  };
+
+  const removeAt = (index: number) => onChange(images.filter((_, i) => i !== index));
+  const makePrimary = (index: number) => {
+    if (index === 0) return;
+    const next = [...images];
+    const [moved] = next.splice(index, 1);
+    next.unshift(moved);
+    onChange(next);
+  };
+
+  return (
+    <div>
+      <Label>Product Images</Label>
+      {!disabled && (
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          className="mt-1 block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-muted file:text-foreground cursor-pointer"
+          onChange={readFiles}
+        />
+      )}
+      {images.length > 0 ? (
+        <div className="mt-2 grid grid-cols-4 gap-2">
+          {images.map((src, index) => (
+            <div key={index} className="relative group/img aspect-square">
+              <img src={src} alt={`Product image ${index + 1}`} className="h-full w-full object-cover rounded border" />
+              {index === 0 && (
+                <span className="absolute top-1 left-1 bg-primary text-primary-foreground text-[9px] px-1.5 py-0.5 rounded">
+                  Primary
+                </span>
+              )}
+              {!disabled && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => removeAt(index)}
+                    aria-label={`Remove image ${index + 1}`}
+                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover/img:opacity-100 transition-opacity"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                  {index !== 0 && (
+                    <button
+                      type="button"
+                      onClick={() => makePrimary(index)}
+                      className="absolute bottom-1 inset-x-1 bg-black/60 text-white text-[9px] py-0.5 rounded opacity-0 group-hover/img:opacity-100 transition-opacity"
+                    >
+                      Make primary
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground mt-2">No images added yet.</p>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Validates a making-charge / wastage value. Empty is allowed (charge is optional).
+ * Returns an error message, or '' when valid.
+ */
+const validateCharge = (type: ChargeType, value: string): string => {
+  if (value.trim() === '') return '';
+  const n = Number(value);
+  if (Number.isNaN(n)) return 'Enter a valid number';
+  if (n < 0) return 'Cannot be negative';
+  if (type === 'percentage' && n > 100) return 'Percentage cannot exceed 100';
+  return '';
+};
+
+/**
+ * Input row for a per-product charge (making charge / wastage): a percentage/amount
+ * type selector plus a numeric value, with an inline validation error.
+ */
+const ChargeInput = ({
+  label,
+  type,
+  value,
+  error,
+  disabled,
+  onTypeChange,
+  onValueChange,
+}: {
+  label: string;
+  type: ChargeType;
+  value: string;
+  error?: string;
+  disabled?: boolean;
+  onTypeChange: (type: ChargeType) => void;
+  onValueChange: (value: string) => void;
+}) => (
+  <div>
+    <Label>{label}</Label>
+    <div className="grid grid-cols-[140px_1fr] gap-2 mt-1">
+      <Select value={type} onValueChange={(v) => onTypeChange(v as ChargeType)} disabled={disabled}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent className="bg-card">
+          <SelectItem value="percentage">Percentage (%)</SelectItem>
+          <SelectItem value="amount">Amount (₹)</SelectItem>
+        </SelectContent>
+      </Select>
+      <Input
+        type="number"
+        min="0"
+        value={value}
+        disabled={disabled}
+        aria-invalid={!!error}
+        placeholder={type === 'percentage' ? 'e.g. 12' : 'e.g. 500'}
+        onChange={(e) => onValueChange(e.target.value)}
+      />
+    </div>
+    {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+  </div>
+);
 
 const Admin = () => {
   const { user, isAuthenticated } = useAuth();
@@ -103,7 +336,7 @@ const Admin = () => {
   // Edit product modal state
   const [productModalMode, setProductModalMode] = useState<'view' | 'edit' | null>(null);
   const [editingProduct, setEditingProduct] = useState<{ id: string; name: string; price: number; originalPrice?: number; image?: string; category: string; weight?: string; purity?: string; description?: string; inStock: boolean } | null>(null);
-  const [editProductForm, setEditProductForm] = useState({ name: '', price: '', originalPrice: '', image: '', category: '', weight: '', purity: '', description: '', inStock: true });
+  const [editProductForm, setEditProductForm] = useState({ name: '', price: '', originalPrice: '', images: [] as string[], category: '', weight: '', purity: '', description: '', inStock: true, variants: [] as ProductVariant[], isFixedPrice: false, makingChargeType: 'percentage' as ChargeType, makingChargeValue: '', wastageType: 'percentage' as ChargeType, wastageValue: '' });
 
   // Edit user modal state
   const [editingUser, setEditingUser] = useState<{ id: string; name: string; email: string; phone?: string; city?: string; isAdmin?: boolean } | null>(null);
@@ -117,8 +350,11 @@ const Admin = () => {
 
   // Product form state
   const [productForm, setProductForm] = useState({
-    name: '', price: '', originalPrice: '', image: '', category: 'Necklaces',
-    weight: '', purity: '925', description: '', inStock: true,
+    name: '', price: '', originalPrice: '', images: [] as string[], category: 'Necklaces',
+    weight: '', purity: '925', description: '', inStock: true, variants: [] as ProductVariant[],
+    isFixedPrice: false,
+    makingChargeType: 'percentage' as ChargeType, makingChargeValue: '',
+    wastageType: 'percentage' as ChargeType, wastageValue: '',
   });
 
   // Coupon form state
@@ -139,6 +375,13 @@ const Admin = () => {
     { pincode: '600006', label: 'Mylapore', rate: 50 },
   ]);
   const [newPincode, setNewPincode] = useState({ pincode: '', label: '', rate: '' });
+
+  // Zone-based delivery charges (Chennai / Other District / Other State).
+  const [deliveryForm, setDeliveryForm] = useState({
+    chennai: String(DEFAULT_DELIVERY_CONFIG.chennai),
+    otherDistrict: String(DEFAULT_DELIVERY_CONFIG.otherDistrict),
+    otherState: String(DEFAULT_DELIVERY_CONFIG.otherState),
+  });
 
   // Inventory state
   const [showInwardModal, setShowInwardModal] = useState(false);
@@ -264,6 +507,13 @@ const Admin = () => {
     meta: { errorMessage: 'Failed to load store theme config' },
   });
 
+  const { data: deliveryConfig } = useQuery({
+    queryKey: ['admin-delivery-config'],
+    queryFn: deliveryConfigService.getAdminDeliveryConfig,
+    enabled: role === 'admin' || role === 'staff',
+    meta: { errorMessage: 'Failed to load delivery charges' },
+  });
+
   const { data: adminStats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: adminService.getStats,
@@ -313,12 +563,71 @@ const Admin = () => {
     meta: { errorMessage: 'Failed to load return requests' },
   });
 
-  const { data: silverRates = [], isLoading: ratesLoading, isError: ratesError } = useQuery({
+  const { data: silverRates = [], isLoading: ratesLoading, isError: ratesError, isSuccess: ratesSuccess } = useQuery({
     queryKey: ['admin-silver-rates'],
     queryFn: silverRateService.getAllRates,
     enabled: role === 'admin' || role === 'staff',
     meta: { errorMessage: 'Failed to load silver rates' },
   });
+
+  // Gold rates mirror silver. The endpoint may not be deployed yet (see
+  // docs/25-price-update-guard-and-notification.md); retry is disabled so a 404 settles
+  // quickly and the freshness check simply skips gold until it exists.
+  const { data: goldRates = [], isSuccess: goldRatesSuccess } = useQuery({
+    queryKey: ['admin-gold-rates'],
+    queryFn: goldRateService.getAllRates,
+    enabled: role === 'admin' || role === 'staff',
+    retry: false,
+    meta: { errorMessage: 'Failed to load gold rates' },
+  });
+
+  // Authoritative block flag persisted by the 10:00 IST cron (B4). Source of truth for the
+  // lock; admin-only endpoint, so staff fall back to the client-side rule below. Polled so the
+  // lock engages at the cutoff without a manual reload.
+  const { data: rateStatus, isSuccess: rateStatusSuccess } = useQuery({
+    queryKey: ['admin-rate-status'],
+    queryFn: rateStatusService.getRateStatus,
+    enabled: role === 'admin',
+    retry: false,
+    refetchInterval: 60_000,
+  });
+
+  // Re-evaluate the daily-rate block as the clock advances (so the client-side fallback engages
+  // at the 10am cutoff without a manual reload).
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const rateBlock = useMemo(() => {
+    // Prefer the server's authoritative flag; reconcile with fresh client data so saving a
+    // rate clears the lock instantly. Fall back to the pure client-side rule when the
+    // endpoint is unavailable (staff, or server down).
+    if (rateStatusSuccess && rateStatus) {
+      return resolveRateBlock(
+        rateStatus,
+        { silver: latestRateDate(silverRates), gold: latestRateDate(goldRates) },
+        now,
+      );
+    }
+    return computeRateBlock(
+      {
+        silver: { available: ratesSuccess, latestDate: latestRateDate(silverRates) },
+        gold: { available: goldRatesSuccess, latestDate: latestRateDate(goldRates) },
+      },
+      now,
+    );
+  }, [rateStatusSuccess, rateStatus, ratesSuccess, silverRates, goldRates, goldRatesSuccess, now]);
+
+  // Combined silver + gold history for the rate-management table (newest first).
+  const allMetalRates = useMemo(
+    () =>
+      [...silverRates, ...goldRates].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      ),
+    [silverRates, goldRates],
+  );
 
   const { data: inventoryTransactions = [], isLoading: inventoryLoading } = useQuery({
     queryKey: ['admin-inventory-transactions'],
@@ -355,7 +664,7 @@ const Admin = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       setShowAddProduct(false);
-      setProductForm({ name: '', price: '', originalPrice: '', image: '', category: 'Necklaces', weight: '', purity: '925', description: '', inStock: true });
+      setProductForm({ name: '', price: '', originalPrice: '', images: [], category: 'Necklaces', weight: '', purity: '925', description: '', inStock: true, variants: [], isFixedPrice: false, makingChargeType: 'percentage', makingChargeValue: '', wastageType: 'percentage', wastageValue: '' });
       toast({ title: 'Product Created' });
     },
   });
@@ -403,12 +712,26 @@ const Admin = () => {
     },
   });
 
+  // Route to the right metal: the dialog's purity dropdown offers Silver / 22K Gold,
+  // so a "gold" selection must hit the gold endpoint instead of the silver one.
   const updateRateMutation = useMutation({
-    mutationFn: silverRateService.updateRate,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-silver-rates'] });
+    mutationFn: (payload: UpdateSilverRatePayload) =>
+      /gold/i.test(payload.purity)
+        ? goldRateService.updateRate(payload)
+        : silverRateService.updateRate(payload),
+    onSuccess: (_data, payload) => {
+      const isGold = /gold/i.test(payload.purity);
+      queryClient.invalidateQueries({ queryKey: [isGold ? 'admin-gold-rates' : 'admin-silver-rates'] });
       setShowUpdateRate(false);
-      toast({ title: 'Silver Rate Updated' });
+      toast({ title: isGold ? 'Gold Rate Updated' : 'Silver Rate Updated' });
+    },
+    onError: (err, payload) => {
+      const isGold = /gold/i.test(payload.purity);
+      toast({
+        variant: 'destructive',
+        title: `Failed to update ${isGold ? 'gold' : 'silver'} rate`,
+        description: err instanceof ApiError ? err.message : 'Please try again.',
+      });
     },
   });
 
@@ -501,6 +824,18 @@ const Admin = () => {
     },
   });
 
+  const updateDeliveryConfigMutation = useMutation({
+    mutationFn: deliveryConfigService.updateDeliveryConfig,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-delivery-config'] });
+      void queryClient.invalidateQueries({ queryKey: ['delivery-config'] });
+      toast({ title: 'Delivery Charges Saved', description: 'Zone delivery charges have been updated.' });
+    },
+    onError: () => {
+      toast({ title: 'Save failed', description: 'Unable to save delivery charges.', variant: 'destructive' });
+    },
+  });
+
   const changeUserPasswordMutation = useMutation({
     mutationFn: ({ userId, newPassword }: { userId: string; newPassword: string }) =>
       authService.changePassword(userId, newPassword),
@@ -564,6 +899,16 @@ const Admin = () => {
     document.documentElement.classList.toggle('dark', !!adminStoreConfig.isDark);
     localStorage.setItem('kv-theme-config', JSON.stringify(adminStoreConfig));
   }, [adminStoreConfig]);
+
+  // Seed the delivery-charges form once the saved config arrives.
+  useEffect(() => {
+    if (!deliveryConfig) return;
+    setDeliveryForm({
+      chennai: String(deliveryConfig.chennai),
+      otherDistrict: String(deliveryConfig.otherDistrict),
+      otherState: String(deliveryConfig.otherState),
+    });
+  }, [deliveryConfig]);
 
   // Searchable Product Dropdown Component
   const ProductSearchSelect = ({ 
@@ -676,17 +1021,65 @@ const Admin = () => {
 
   const selectedOrderDetails = allOrders.find((o) => o.id === selectedOrder);
 
+  /** Drops empty variant rows and trims fields before sending to the API. */
+  const cleanVariants = (variants: ProductVariant[]): ProductVariant[] =>
+    variants
+      .map((v) => ({
+        label: v.label.trim(),
+        weight: v.weight.trim(),
+        height: v.height?.trim() || undefined,
+        breadth: v.breadth?.trim() || undefined,
+      }))
+      .filter((v) => v.label || v.weight);
+
+  /** Builds a ProductCharge from form fields, or undefined when no value was entered. */
+  const toCharge = (type: ChargeType, value: string) =>
+    value.trim() === '' ? undefined : { type, value: Number(value) };
+
+  // Validation for the create / edit charge inputs (skipped when the product is fixed-price).
+  const createMakingErr = productForm.isFixedPrice ? '' : validateCharge(productForm.makingChargeType, productForm.makingChargeValue);
+  const createWastageErr = productForm.isFixedPrice ? '' : validateCharge(productForm.wastageType, productForm.wastageValue);
+  const createChargesInvalid = !!createMakingErr || !!createWastageErr;
+  const editMakingErr = editProductForm.isFixedPrice ? '' : validateCharge(editProductForm.makingChargeType, editProductForm.makingChargeValue);
+  const editWastageErr = editProductForm.isFixedPrice ? '' : validateCharge(editProductForm.wastageType, editProductForm.wastageValue);
+  const editChargesInvalid = !!editMakingErr || !!editWastageErr;
+
+  // A delivery charge must be a non-negative number.
+  const isValidCharge = (value: string) => {
+    const n = Number(value);
+    return value.trim() !== '' && Number.isFinite(n) && n >= 0;
+  };
+  const deliveryFormValid =
+    isValidCharge(deliveryForm.chennai) &&
+    isValidCharge(deliveryForm.otherDistrict) &&
+    isValidCharge(deliveryForm.otherState);
+
+  const handleSaveDeliveryConfig = () => {
+    if (!deliveryFormValid) return;
+    updateDeliveryConfigMutation.mutate({
+      chennai: Number(deliveryForm.chennai),
+      otherDistrict: Number(deliveryForm.otherDistrict),
+      otherState: Number(deliveryForm.otherState),
+    } satisfies DeliveryConfig);
+  };
+
   const handleCreateProduct = () => {
     createProductMutation.mutate({
       name: productForm.name,
       price: Number(productForm.price),
       originalPrice: productForm.originalPrice ? Number(productForm.originalPrice) : undefined,
-      image: productForm.image,
+      image: productForm.images[0] || '',
+      images: productForm.images,
       category: productForm.category,
       weight: productForm.weight,
       purity: productForm.purity,
       description: productForm.description,
       inStock: productForm.inStock,
+      variants: cleanVariants(productForm.variants),
+      isFixedPrice: productForm.isFixedPrice,
+      // Making charge & wastage feed the dynamic price calc, which a fixed-price product skips.
+      makingCharge: productForm.isFixedPrice ? undefined : toCharge(productForm.makingChargeType, productForm.makingChargeValue),
+      wastage: productForm.isFixedPrice ? undefined : toCharge(productForm.wastageType, productForm.wastageValue),
     });
   };
 
@@ -698,12 +1091,17 @@ const Admin = () => {
         name: editProductForm.name,
         price: Number(editProductForm.price),
         originalPrice: editProductForm.originalPrice ? Number(editProductForm.originalPrice) : undefined,
-        image: editProductForm.image,
+        image: editProductForm.images[0] || '',
+        images: editProductForm.images,
         category: editProductForm.category,
         weight: editProductForm.weight,
         purity: editProductForm.purity,
         description: editProductForm.description,
         inStock: editProductForm.inStock,
+        variants: cleanVariants(editProductForm.variants),
+        isFixedPrice: editProductForm.isFixedPrice,
+        makingCharge: editProductForm.isFixedPrice ? undefined : toCharge(editProductForm.makingChargeType, editProductForm.makingChargeValue),
+        wastage: editProductForm.isFixedPrice ? undefined : toCharge(editProductForm.wastageType, editProductForm.wastageValue),
       },
     });
   };
@@ -715,22 +1113,32 @@ const Admin = () => {
       name: product.name,
       price: String(product.price),
       originalPrice: product.originalPrice ? String(product.originalPrice) : '',
-      image: product.image || '',
+      images: product.images?.length ? [...product.images] : (product.image ? [product.image] : []),
       category: product.category || '',
       weight: product.weight || '',
       purity: product.purity || '',
       description: product.description || '',
       inStock: product.inStock,
+      variants: product.variants ? product.variants.map((v) => ({ ...v })) : [],
+      isFixedPrice: product.isFixedPrice ?? false,
+      makingChargeType: product.makingCharge?.type ?? 'percentage',
+      makingChargeValue: product.makingCharge ? String(product.makingCharge.value) : '',
+      wastageType: product.wastage?.type ?? 'percentage',
+      wastageValue: product.wastage ? String(product.wastage.value) : '',
     });
   };
 
-  const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>, setter: (base64: string) => void) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setter(reader.result as string);
-    reader.readAsDataURL(file);
-  };
+  // Mandatory daily rate update: lock the panel for admin/staff until today's stale
+  // metal rate(s) are recorded. Customers never reach this page (guarded above).
+  if (rateBlock.blocked) {
+    return (
+      <RateUpdateGate
+        staleMetals={rateBlock.staleMetals}
+        userName={user?.name}
+        notifyNumber="+918825649680"
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen pt-24 pb-16 bg-muted/30">
@@ -907,29 +1315,54 @@ const Admin = () => {
                           <Label htmlFor="prod-name">Product Name</Label>
                           <Input id="prod-name" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} className="mt-1" />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="prod-price">Price (₹)</Label>
-                            <Input id="prod-price" type="number" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} className="mt-1" />
+                        <div className="rounded-md border border-border/60 p-3 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label htmlFor="prod-fixed">Fixed Price</Label>
+                              <p className="text-xs text-muted-foreground">Sold at a flat price — no dynamic rate calculation.</p>
+                            </div>
+                            <Switch
+                              id="prod-fixed"
+                              checked={productForm.isFixedPrice}
+                              onCheckedChange={(checked) => setProductForm({ ...productForm, isFixedPrice: checked })}
+                            />
                           </div>
-                          <div>
-                            <Label htmlFor="prod-original">Original Price (₹)</Label>
-                            <Input id="prod-original" type="number" value={productForm.originalPrice} onChange={(e) => setProductForm({ ...productForm, originalPrice: e.target.value })} className="mt-1" placeholder="Optional" />
-                          </div>
-                        </div>
-                        <div>
-                          <Label htmlFor="prod-image">Product Image</Label>
-                          <input
-                            id="prod-image"
-                            type="file"
-                            accept="image/*"
-                            className="mt-1 block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-muted file:text-foreground cursor-pointer"
-                            onChange={(e) => handleImageFile(e, (base64) => setProductForm({ ...productForm, image: base64 }))}
-                          />
-                          {productForm.image && (
-                            <img src={productForm.image} alt="preview" className="mt-2 h-20 w-20 object-cover rounded border" />
+                          {productForm.isFixedPrice ? (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="prod-price">Price (₹)</Label>
+                                <Input id="prod-price" type="number" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} className="mt-1" />
+                              </div>
+                              <div>
+                                <Label htmlFor="prod-original">Original Price (₹)</Label>
+                                <Input id="prod-original" type="number" value={productForm.originalPrice} onChange={(e) => setProductForm({ ...productForm, originalPrice: e.target.value })} className="mt-1" placeholder="Optional" />
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <ChargeInput
+                                label="Making Charge"
+                                type={productForm.makingChargeType}
+                                value={productForm.makingChargeValue}
+                                error={createMakingErr}
+                                onTypeChange={(makingChargeType) => setProductForm({ ...productForm, makingChargeType })}
+                                onValueChange={(makingChargeValue) => setProductForm({ ...productForm, makingChargeValue })}
+                              />
+                              <ChargeInput
+                                label="Wastage"
+                                type={productForm.wastageType}
+                                value={productForm.wastageValue}
+                                error={createWastageErr}
+                                onTypeChange={(wastageType) => setProductForm({ ...productForm, wastageType })}
+                                onValueChange={(wastageValue) => setProductForm({ ...productForm, wastageValue })}
+                              />
+                            </>
                           )}
                         </div>
+                        <ImagesUploader
+                          images={productForm.images}
+                          onChange={(images) => setProductForm({ ...productForm, images })}
+                        />
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label>Category</Label>
@@ -958,11 +1391,15 @@ const Admin = () => {
                           <Label htmlFor="prod-weight">Weight (e.g. 45g)</Label>
                           <Input id="prod-weight" value={productForm.weight} onChange={(e) => setProductForm({ ...productForm, weight: e.target.value })} className="mt-1" />
                         </div>
+                        <VariantsEditor
+                          variants={productForm.variants}
+                          onChange={(variants) => setProductForm({ ...productForm, variants })}
+                        />
                         <div>
                           <Label htmlFor="prod-desc">Description</Label>
                           <Textarea id="prod-desc" value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} className="mt-1" rows={3} />
                         </div>
-                        <Button onClick={handleCreateProduct} disabled={createProductMutation.isPending || !productForm.name || !productForm.price}>
+                        <Button onClick={handleCreateProduct} disabled={createProductMutation.isPending || !productForm.name || (productForm.isFixedPrice && !productForm.price) || createChargesInvalid}>
                           {createProductMutation.isPending ? 'Creating...' : 'Create Product'}
                         </Button>
                       </div>
@@ -1063,20 +1500,11 @@ const Admin = () => {
                     <Input type="number" value={editProductForm.originalPrice} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, originalPrice: e.target.value })} className="mt-1" placeholder="Optional" />
                   </div>
                 </div>
-                <div>
-                  <Label>Product Image</Label>
-                  {editProductForm.image && (
-                    <img src={editProductForm.image} alt="current" className="mt-1 h-20 w-20 object-cover rounded border mb-2" />
-                  )}
-                  {productModalMode === 'edit' && (
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-muted file:text-foreground cursor-pointer"
-                      onChange={(e) => handleImageFile(e, (base64) => setEditProductForm({ ...editProductForm, image: base64 }))}
-                    />
-                  )}
-                </div>
+                <ImagesUploader
+                  images={editProductForm.images}
+                  disabled={productModalMode === 'view'}
+                  onChange={(images) => setEditProductForm({ ...editProductForm, images })}
+                />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Category</Label>
@@ -1113,12 +1541,53 @@ const Admin = () => {
                   <Label>Weight</Label>
                   <Input value={editProductForm.weight} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, weight: e.target.value })} className="mt-1" placeholder="e.g. 45g" />
                 </div>
+                <VariantsEditor
+                  variants={editProductForm.variants}
+                  disabled={productModalMode === 'view'}
+                  onChange={(variants) => setEditProductForm({ ...editProductForm, variants })}
+                />
+                <div className="rounded-md border border-border/60 p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="edit-prod-fixed">Fixed Price</Label>
+                      <p className="text-xs text-muted-foreground">Sold at a flat price — no dynamic rate calculation.</p>
+                    </div>
+                    <Switch
+                      id="edit-prod-fixed"
+                      checked={editProductForm.isFixedPrice}
+                      disabled={productModalMode === 'view'}
+                      onCheckedChange={(checked) => setEditProductForm({ ...editProductForm, isFixedPrice: checked })}
+                    />
+                  </div>
+                  {!editProductForm.isFixedPrice && (
+                    <>
+                      <ChargeInput
+                        label="Making Charge"
+                        type={editProductForm.makingChargeType}
+                        value={editProductForm.makingChargeValue}
+                        error={editMakingErr}
+                        disabled={productModalMode === 'view'}
+                        onTypeChange={(makingChargeType) => setEditProductForm({ ...editProductForm, makingChargeType })}
+                        onValueChange={(makingChargeValue) => setEditProductForm({ ...editProductForm, makingChargeValue })}
+                      />
+                      <ChargeInput
+                        label="Wastage"
+                        type={editProductForm.wastageType}
+                        value={editProductForm.wastageValue}
+                        error={editWastageErr}
+                        disabled={productModalMode === 'view'}
+                        onTypeChange={(wastageType) => setEditProductForm({ ...editProductForm, wastageType })}
+                        onValueChange={(wastageValue) => setEditProductForm({ ...editProductForm, wastageValue })}
+                      />
+                    </>
+                  )}
+                </div>
                 <div>
                   <Label>Description</Label>
                   <Textarea value={editProductForm.description} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, description: e.target.value })} className="mt-1" rows={3} />
                 </div>
                 {productModalMode === 'edit' && (
-                  <Button onClick={handleUpdateProduct} disabled={updateProductMutation.isPending || !editProductForm.name || !editProductForm.price}>
+                  <Button onClick={handleUpdateProduct} disabled={updateProductMutation.isPending || !editProductForm.name || !editProductForm.price || editChargesInvalid}>
                     {updateProductMutation.isPending ? 'Saving...' : 'Save Changes'}
                   </Button>
                 )}
@@ -1689,14 +2158,14 @@ const Admin = () => {
           <TabsContent value="silver-rates">
             <Card className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="font-serif text-xl font-semibold">Silver Rate Management</h2>
+                <h2 className="font-serif text-xl font-semibold">Metal Rate Management</h2>
                 <Dialog open={showUpdateRate} onOpenChange={setShowUpdateRate}>
                   <DialogTrigger asChild>
                     <Button><Plus className="h-4 w-4 mr-2" />Update Today's Rate</Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle className="font-serif">Update Silver Rate</DialogTitle>
+                      <DialogTitle className="font-serif">Update Metal Rate</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div>
@@ -1726,7 +2195,7 @@ const Admin = () => {
                 </div>
               ) : ratesError ? (
                 <ApiErrorState message="Failed to load silver rates from API" />
-              ) : silverRates.length > 0 ? (
+              ) : allMetalRates.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1738,8 +2207,8 @@ const Admin = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {silverRates.map((rate) => (
-                      <TableRow key={rate.id}>
+                    {allMetalRates.map((rate) => (
+                      <TableRow key={`${rate.purity}-${rate.id}-${rate.date}`}>
                         <TableCell>{new Date(rate.date).toLocaleDateString()}</TableCell>
                         <TableCell>{rate.purity}</TableCell>
                         <TableCell className="font-medium">{formatPrice(rate.ratePerGram)}</TableCell>
@@ -1750,7 +2219,7 @@ const Admin = () => {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-muted-foreground text-center py-8">No silver rates recorded yet.</p>
+                <p className="text-muted-foreground text-center py-8">No metal rates recorded yet.</p>
               )}
             </Card>
           </TabsContent>
@@ -1758,6 +2227,62 @@ const Admin = () => {
           {/* ═══════ SHIPPING CONFIG ═══════ */}
           <TabsContent value="shipping">
             <div className="space-y-6">
+              {/* Zone-based Delivery Charges */}
+              <Card className="p-6">
+                <h2 className="font-serif text-xl font-semibold mb-1">Delivery Charges</h2>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Set the delivery charge for each zone. Chennai is the home city; Other District covers
+                  the rest of Tamil Nadu; Other State covers everywhere else.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                  <div>
+                    <Label htmlFor="delivery-chennai">Chennai (₹)</Label>
+                    <Input
+                      id="delivery-chennai"
+                      type="number"
+                      min={0}
+                      className="mt-1"
+                      value={deliveryForm.chennai}
+                      aria-invalid={!isValidCharge(deliveryForm.chennai)}
+                      onChange={(e) => setDeliveryForm((f) => ({ ...f, chennai: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="delivery-district">Other District (₹)</Label>
+                    <Input
+                      id="delivery-district"
+                      type="number"
+                      min={0}
+                      className="mt-1"
+                      value={deliveryForm.otherDistrict}
+                      aria-invalid={!isValidCharge(deliveryForm.otherDistrict)}
+                      onChange={(e) => setDeliveryForm((f) => ({ ...f, otherDistrict: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="delivery-state">Other State (₹)</Label>
+                    <Input
+                      id="delivery-state"
+                      type="number"
+                      min={0}
+                      className="mt-1"
+                      value={deliveryForm.otherState}
+                      aria-invalid={!isValidCharge(deliveryForm.otherState)}
+                      onChange={(e) => setDeliveryForm((f) => ({ ...f, otherState: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                {!deliveryFormValid && (
+                  <p className="text-xs text-destructive mb-3">Enter a valid amount (₹0 or more) for every zone.</p>
+                )}
+                <Button
+                  onClick={handleSaveDeliveryConfig}
+                  disabled={!deliveryFormValid || updateDeliveryConfigMutation.isPending}
+                >
+                  {updateDeliveryConfigMutation.isPending ? 'Saving...' : 'Save Delivery Charges'}
+                </Button>
+              </Card>
+
               {/* Offline Stall Toggle */}
               <Card className="p-6">
                 <div className="flex items-center justify-between">

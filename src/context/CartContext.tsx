@@ -6,12 +6,36 @@ import { cartService } from '@/services/cart';
 import { pricingConfigService, DEFAULT_PRICING_CONFIG } from '@/services/pricingConfig';
 import { normalizeImageSrc } from '@/lib/image';
 
+/**
+ * A size/weight variant of a product (think dress sizes S–XXL).
+ * `label` is a free-text size name; `weight` will drive the total calculation;
+ * `height`/`breadth` are display-only, for customer understanding.
+ */
+export interface ProductVariant {
+  label: string;
+  weight: string;
+  height?: string;
+  breadth?: string;
+}
+
+/** Whether a charge is expressed as a percentage of value or a flat rupee amount. */
+export type ChargeType = 'percentage' | 'amount';
+
+/** A configurable per-product charge (making charge / wastage). */
+export interface ProductCharge {
+  type: ChargeType;
+  value: number;
+}
+
 export interface Product {
   id: string;
   name: string;
   price: number;
   originalPrice?: number;
+  /** Primary image (first of `images`); kept for backward compatibility. */
   image: string;
+  /** All product images (normalized srcs), ordered. Empty/absent ⇒ use `image` only. */
+  images?: string[];
   category: string;
   weight: string;
   purity: string;
@@ -26,6 +50,14 @@ export interface Product {
   stockAvailable?: number;
   /** Numeric weight in grams (server-provided), used for the live price breakdown. */
   weightInGrams?: number;
+  /** Optional size/weight variants (e.g. S–XXL), each with its own weight/height/breadth. */
+  variants?: ProductVariant[];
+  /** When true, the product is sold at a fixed price (no dynamic metal-rate calculation). */
+  isFixedPrice?: boolean;
+  /** Admin-configured making charge (percentage or flat amount). Feeds the price calc (next phase). */
+  makingCharge?: ProductCharge;
+  /** Admin-configured wastage (percentage or flat amount). Feeds the price calc (next phase). */
+  wastage?: ProductCharge;
   /** Server-computed price breakdown for display. */
   pricing?: {
     metalValue?: number;
@@ -48,7 +80,10 @@ interface CartContextType {
   isCartSyncing: boolean;
   isItemUpdating: (productId: string) => boolean;
   totalItems: number;
+  /** Pre-GST subtotal of all line items. */
   totalPrice: number;
+  /** Pre-GST subtotal of GST-taxable items only (excludes tax-inclusive gift vouchers). */
+  taxableTotal: number;
   taxAmount: number;
   totalWithTax: number;
 }
@@ -270,8 +305,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  // Line prices are pre-GST (silver rate × weight + making + wastage, or a fixed price).
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  // GST (from pricing-config) on non-gift-voucher items; gift vouchers are tax-inclusive.
+  // GST (from pricing-config) applies to non-gift-voucher items; gift vouchers are tax-inclusive.
   // Display only — the server computes the authoritative total at checkout.
   const taxableTotal = items.reduce(
     (sum, item) => (item.isGiftVoucher ? sum : sum + item.price * item.quantity),
@@ -292,6 +328,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isItemUpdating,
         totalItems,
         totalPrice,
+        taxableTotal,
         taxAmount,
         totalWithTax,
       }}

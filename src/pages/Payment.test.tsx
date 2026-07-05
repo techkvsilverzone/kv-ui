@@ -6,12 +6,12 @@ import { HelmetProvider } from 'react-helmet-async';
 import Payment from './Payment';
 import { paymentService } from '@/services/payment';
 
-// Cart with one ₹1,000 item; GST 3% => tax 30, total 1,030.
+// Cart with one ₹1,000 (pre-GST) item; GST 3% => 30. No address yet => delivery 0, total 1,030.
 vi.mock('@/context/CartContext', () => ({
   useCart: () => ({
     items: [{ id: 'p1', name: 'Silver Ring', price: 1000, quantity: 1, image: '' }],
     totalPrice: 1000,
-    taxAmount: 30,
+    taxableTotal: 1000,
     clearCart: vi.fn(),
   }),
 }));
@@ -30,6 +30,15 @@ vi.mock('@/services/pricingConfig', () => ({
   pricingConfigService: { getPricingConfig: vi.fn().mockResolvedValue({ gstPercent: 3 }) },
   DEFAULT_PRICING_CONFIG: { gstPercent: 3 },
 }));
+vi.mock('@/services/deliveryConfig', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/deliveryConfig')>();
+  return {
+    ...actual,
+    deliveryConfigService: {
+      getDeliveryConfig: vi.fn().mockResolvedValue(actual.DEFAULT_DELIVERY_CONFIG),
+    },
+  };
+});
 
 const renderPayment = () => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -54,8 +63,8 @@ describe('Payment (checkout) page', () => {
     renderPayment();
     expect(screen.getByRole('heading', { name: /checkout/i })).toBeInTheDocument();
     // GST label reflects the configured percent, not a hardcoded value.
-    expect(screen.getByText(/Tax \(GST 3%\)/i)).toBeInTheDocument();
-    // Total = 1000 + 30 tax.
+    expect(screen.getByText(/GST \(3%\)/i)).toBeInTheDocument();
+    // Total = 1000 subtotal + 30 GST + 0 delivery (no address yet).
     expect(screen.getByRole('button', { name: /pay/i })).toHaveTextContent('1,030');
   });
 
