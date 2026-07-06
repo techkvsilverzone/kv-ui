@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '@/services/auth';
 import { UNAUTHORIZED_EVENT } from '@/lib/api';
-import { TOKEN_STORAGE_KEY } from '@/lib/platform';
+import { TOKEN_STORAGE_KEY, isMobileApp } from '@/lib/platform';
 
 export type UserRole = 'admin' | 'staff' | 'customer';
 
@@ -60,6 +60,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const initAuth = async () => {
+      // Migration cleanup: earlier builds wrote the JWT to localStorage on every
+      // platform. Web never reads it (cookie-based), so a stray token there is
+      // pure XSS exposure with no functional purpose — purge it on web sessions.
+      if (!isMobileApp()) localStorage.removeItem(TOKEN_STORAGE_KEY);
+
       // Auth lives in an httpOnly cookie. If we have a previously-stored user, the
       // session likely exists — validate it via the cookie-authenticated /users/me.
       const savedUser = localStorage.getItem('kv-silver-user');
@@ -88,14 +93,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Web: server sets the httpOnly auth cookie and the token is unused.
-      // Mobile (Capacitor): the token is persisted and sent as a Bearer header
-      // by the API layer, since the WebView can't rely on the cookie.
+      // Web: server sets the httpOnly auth cookie and the token is unused — never
+      // persist it to localStorage there, since JS-readable storage is an XSS target
+      // and the cookie already carries the session. Mobile (Capacitor): the token is
+      // persisted and sent as a Bearer header by the API layer, since the WebView
+      // can't rely on the cookie.
       const { user, token } = await authService.login(email, password);
       const normalizedUser = normalizeUser(user);
       setUser(normalizedUser);
       localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));
-      if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
+      if (token && isMobileApp()) localStorage.setItem(TOKEN_STORAGE_KEY, token);
       return true;
     } catch (error) {
       console.error('Login failed', error);
@@ -109,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const normalizedUser = normalizeUser(user);
       setUser(normalizedUser);
       localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));
-      if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
+      if (token && isMobileApp()) localStorage.setItem(TOKEN_STORAGE_KEY, token);
       return true;
     } catch (error) {
       console.error('Signup failed', error);

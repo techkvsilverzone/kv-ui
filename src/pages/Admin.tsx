@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   LayoutDashboard,
@@ -321,11 +321,26 @@ const ChargeInput = ({
   </div>
 );
 
+/** Every admin tab's route segment — 'theme' is additionally gated to non-staff at render time. */
+const ADMIN_TABS = [
+  'dashboard', 'products', 'orders', 'customers', 'savings', 'coupons',
+  'returns', 'silver-rates', 'shipping', 'filters', 'inventory', 'theme',
+] as const;
+type AdminTab = (typeof ADMIN_TABS)[number];
+
 const Admin = () => {
   const { user, isAuthenticated } = useAuth();
   const role = user ? getUserRole(user) : 'customer';
   const isStaffOnly = role === 'staff';
   const { toast } = useToast();
+  const navigate = useNavigate();
+  // Route is /admin/* — the splat segment is the active tab; empty splat -> dashboard.
+  const { '*': tabParam } = useParams();
+  const requestedTab = tabParam || 'dashboard';
+  const isKnownTab = (ADMIN_TABS as readonly string[]).includes(requestedTab);
+  const ADMIN_ONLY_TABS = ['theme', 'inventory'];
+  const isTabAccessible = isKnownTab && !(ADMIN_ONLY_TABS.includes(requestedTab) && isStaffOnly);
+  const activeTab: AdminTab = isTabAccessible ? (requestedTab as AdminTab) : 'dashboard';
   const [searchQuery, setSearchQuery] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
@@ -582,12 +597,14 @@ const Admin = () => {
   });
 
   // Authoritative block flag persisted by the 10:00 IST cron (B4). Source of truth for the
-  // lock; admin-only endpoint, so staff fall back to the client-side rule below. Polled so the
-  // lock engages at the cutoff without a manual reload.
+  // lock — the backend allows staff to read this too (adminOrStaff), since staff can hit the
+  // same mandatory-update lock. Without it, staff fall back to the client-side rule below,
+  // which uses the BROWSER's local clock/timezone and can spuriously lock/unlock relative to
+  // the server's IST-correct check. Polled so the lock engages at the cutoff without a reload.
   const { data: rateStatus, isSuccess: rateStatusSuccess } = useQuery({
     queryKey: ['admin-rate-status'],
     queryFn: rateStatusService.getRateStatus,
-    enabled: role === 'admin',
+    enabled: role === 'admin' || role === 'staff',
     retry: false,
     refetchInterval: 60_000,
   });
@@ -620,33 +637,59 @@ const Admin = () => {
     );
   }, [rateStatusSuccess, rateStatus, ratesSuccess, silverRates, goldRates, goldRatesSuccess, now]);
 
-  // Combined silver + gold history for the rate-management table (newest first).
-  const allMetalRates = useMemo(
-    () =>
-      [...silverRates, ...goldRates].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-      ),
-    [silverRates, goldRates],
-  );
+  // Combined silver + gold history for the rate-management table, one row per calendar day
+  // (newest first) so a day's silver and gold rates sit side by side instead of as separate,
+  // visually-identical rows distinguished only by a raw purity value (e.g. "999" vs "916").
+  const metalRateHistory = useMemo(() => {
+    interface MetalRateRow {
+      dateKey: string;
+      date: string;
+      silver?: (typeof silverRates)[number];
+      gold?: (typeof goldRates)[number];
+    }
+    const byDate = new Map<string, MetalRateRow>();
+    const dayKey = (raw: string) => {
+      const d = new Date(raw);
+      return Number.isNaN(d.getTime()) ? raw : d.toISOString().slice(0, 10);
+    };
 
+    silverRates.forEach((rate) => {
+      const key = dayKey(rate.date);
+      const row = byDate.get(key) ?? { dateKey: key, date: rate.date };
+      row.silver = rate;
+      byDate.set(key, row);
+    });
+    goldRates.forEach((rate) => {
+      const key = dayKey(rate.date);
+      const row = byDate.get(key) ?? { dateKey: key, date: rate.date };
+      row.gold = rate;
+      byDate.set(key, row);
+    });
+
+    return Array.from(byDate.values()).sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+  }, [silverRates, goldRates]);
+
+  // Inventory is admin-only (product decision) — staff mirror admin everywhere else.
   const { data: inventoryTransactions = [], isLoading: inventoryLoading } = useQuery({
     queryKey: ['admin-inventory-transactions'],
     queryFn: () => inventoryService.getTransactions(),
-    enabled: role === 'admin' || role === 'staff',
+    enabled: role === 'admin',
     meta: { errorMessage: 'Failed to load inventory transactions' },
   });
 
   const { data: lowStockItems = [], isLoading: lowStockLoading } = useQuery({
     queryKey: ['admin-inventory-low-stock'],
     queryFn: inventoryService.getLowStock,
-    enabled: role === 'admin' || role === 'staff',
+    enabled: role === 'admin',
     meta: { errorMessage: 'Failed to load low stock alerts' },
   });
 
   const { data: inventorySummary } = useQuery({
     queryKey: ['admin-inventory-summary'],
     queryFn: inventoryService.getSummary,
-    enabled: role === 'admin' || role === 'staff',
+    enabled: role === 'admin',
     meta: { errorMessage: 'Failed to load inventory summary' },
   });
 
@@ -1140,6 +1183,12 @@ const Admin = () => {
     );
   }
 
+  // Unknown tab in the URL, or a staff user hitting the admin-only "theme" route directly —
+  // send them to a valid default rather than rendering a blank tab panel.
+  if (!isTabAccessible) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
   return (
     <div className="min-h-screen pt-24 pb-16 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -1159,7 +1208,11 @@ const Admin = () => {
           </Button>
         </div>
 
-        <Tabs defaultValue="dashboard" className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => navigate(`/admin/${value}`)}
+          className="space-y-6"
+        >
           <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
@@ -1203,10 +1256,13 @@ const Admin = () => {
               <SlidersHorizontal className="h-4 w-4" />
               Filters
             </TabsTrigger>
-            <TabsTrigger value="inventory" className="gap-2">
-              <ClipboardList className="h-4 w-4" />
-              Inventory
-            </TabsTrigger>
+            {/* Inventory — admin only (product decision) */}
+            {!isStaffOnly && (
+              <TabsTrigger value="inventory" className="gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Inventory
+              </TabsTrigger>
+            )}
             {/* Theme editor — admin only (financial/branding control) */}
             {!isStaffOnly && (
               <TabsTrigger value="theme" className="gap-2">
@@ -2195,27 +2251,54 @@ const Admin = () => {
                 </div>
               ) : ratesError ? (
                 <ApiErrorState message="Failed to load silver rates from API" />
-              ) : allMetalRates.length > 0 ? (
+              ) : metalRateHistory.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
-                      <TableHead>Purity</TableHead>
-                      <TableHead>Rate/Gram</TableHead>
-                      <TableHead>Rate/Kg</TableHead>
+                      <TableHead>Silver Rate</TableHead>
+                      <TableHead>Gold (22K) Rate</TableHead>
                       <TableHead>Updated By</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allMetalRates.map((rate) => (
-                      <TableRow key={`${rate.purity}-${rate.id}-${rate.date}`}>
-                        <TableCell>{new Date(rate.date).toLocaleDateString()}</TableCell>
-                        <TableCell>{rate.purity}</TableCell>
-                        <TableCell className="font-medium">{formatPrice(rate.ratePerGram)}</TableCell>
-                        <TableCell>{formatPrice(rate.ratePerKg)}</TableCell>
-                        <TableCell>{rate.updatedBy || '—'}</TableCell>
-                      </TableRow>
-                    ))}
+                    {metalRateHistory.map((row) => {
+                      const updatedBySilver = row.silver?.updatedBy;
+                      const updatedByGold = row.gold?.updatedBy;
+                      const updatedBy =
+                        updatedBySilver && updatedByGold
+                          ? updatedBySilver === updatedByGold
+                            ? updatedBySilver
+                            : `Silver: ${updatedBySilver} · Gold: ${updatedByGold}`
+                          : updatedBySilver || updatedByGold || '—';
+
+                      return (
+                        <TableRow key={row.dateKey}>
+                          <TableCell>{new Date(row.date).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            {row.silver ? (
+                              <>
+                                <span className="font-medium">{formatPrice(row.silver.ratePerGram)}/g</span>
+                                <span className="block text-xs text-muted-foreground">{formatPrice(row.silver.ratePerKg)}/kg</span>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {row.gold ? (
+                              <>
+                                <span className="font-medium">{formatPrice(row.gold.ratePerGram)}/g</span>
+                                <span className="block text-xs text-muted-foreground">{formatPrice(row.gold.ratePerKg)}/kg</span>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{updatedBy}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               ) : (

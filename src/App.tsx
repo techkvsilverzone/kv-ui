@@ -114,7 +114,7 @@ const AppContent = () => {
           <Route path="/dashboard" element={<RequireAuth><CustomerDashboard /></RequireAuth>} />
           {!IS_MOBILE_BUILD && Admin && (
             <Route
-              path="/admin"
+              path="/admin/*"
               element={
                 <Suspense fallback={null}>
                   <Admin />

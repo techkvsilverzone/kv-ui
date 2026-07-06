@@ -2429,6 +2429,42 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-07-05T00:00:00.000Z"
+    },
+    {
+      "id": "bug-150",
+      "timestamp": "2026-07-05T00:00:00.000Z",
+      "error_message": "Product-owner audit: logging in as staff and opening /admin produced 30 console errors (403 Forbidden) across nearly every tab — dashboard stats, orders, customers, savings, coupons, returns, inventory, shipping",
+      "file": "src/pages/Admin.tsx (frontend enabled staff for these queries; root cause was backend kv-api/src/routes/admin.routes.ts)",
+      "root_cause": "Admin.tsx's queries were already `enabled: role==='admin'||'staff'` for most tabs (the frontend was built assuming staff access), but the backend's admin.routes.ts blanket-required isAdmin for the whole router. Browser-verified via Playwright with the seeded staff@kvsilverzone.com account.",
+      "fix": "Backend fixed (see kv-api buglog bug-090) to allow staff on all these routes except inventory (user decision: staff mirrors admin except inventory). Frontend: inventory queries (`admin-inventory-transactions`, `admin-inventory-low-stock`, `admin-inventory-summary`) changed to `enabled: role === 'admin'` only, Inventory TabsTrigger hidden behind `!isStaffOnly`, and the inventory tab added to a new `ADMIN_ONLY_TABS` list so a staff user hitting `/admin/inventory` directly redirects to `/admin/dashboard`.",
+      "tags": [
+        "auth",
+        "rbac",
+        "staff",
+        "admin-panel",
+        "403",
+        "inventory"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-05T00:00:00.000Z"
+    },
+    {
+      "id": "bug-151",
+      "timestamp": "2026-07-05T00:00:00.000Z",
+      "error_message": "Admin panel tabs had no individual URLs — /admin always showed whichever tab was last clicked in local state; no deep links, no bookmarking, no browser back/forward between tabs",
+      "file": "src/pages/Admin.tsx, src/App.tsx",
+      "root_cause": "Radix `Tabs` was uncontrolled (`defaultValue=\"dashboard\"`) and App.tsx mounted Admin at the single flat path `/admin`.",
+      "fix": "App.tsx route changed to `path=\"/admin/*\"`. Admin.tsx reads the splat segment via `useParams()['*']` as the active tab (falls back to 'dashboard'), and `Tabs`' `onValueChange` calls `navigate(/admin/${value})`. Added `ADMIN_TABS`/`ADMIN_ONLY_TABS` validation: an unknown tab segment, or a staff user hitting an admin-only tab's URL directly (theme, inventory), redirects to `/admin/dashboard`. Verified live via Playwright: deep links, tab-click URL sync, back/forward, and both redirect cases.",
+      "tags": [
+        "routing",
+        "admin-panel",
+        "react-router",
+        "ux"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-05T00:00:00.000Z"
     }
   ]
 }
