@@ -1,3 +1,13 @@
+# AI tooling / session state — local working state, not part of the application
+.claude/
+.wolf/
+
+# Generated whole-codebase snapshot (repomix) — regenerate locally, don't commit
+repomix-output.xml
+
+# Shell crash dumps
+*.stackdump
+
 # Logs
 logs
 *.log
