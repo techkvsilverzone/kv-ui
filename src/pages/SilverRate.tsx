@@ -9,7 +9,9 @@ import Seo from '@/components/Seo';
 
 const metalAliases = {
   silver: ['silver', '999', '999 fine silver', 'silver 999'],
-  gold22k: ['gold22k', 'gold 22k', '22k', 'gold-22k', '916 gold'],
+  // '916' bare is what the API actually returns for gold purity — the aliased
+  // forms below are kept for any legacy/manually-entered records.
+  gold22k: ['gold22k', 'gold 22k', '22k', 'gold-22k', '916 gold', '916'],
 };
 
 const getMetalKey = (purity: string): 'silver' | 'gold22k' | null => {
