@@ -571,6 +571,16 @@ const Admin = () => {
     meta: { errorMessage: 'Failed to load products' },
   });
 
+  // Total grams of metal currently in stock — Photo Frames aren't tracked by
+  // metal weight the way jewelry is, so they don't count toward this total.
+  const totalStockWeightGrams = useMemo(
+    () =>
+      allProducts
+        .filter((p) => p.category !== 'Photo Frames')
+        .reduce((sum, p) => sum + (p.weightInGrams || 0) * (p.stockAvailable ?? 0), 0),
+    [allProducts],
+  );
+
   const { data: allOrders = [], isLoading: ordersLoading, isError: ordersError } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: adminService.getAllOrders,
@@ -1535,6 +1545,7 @@ const Admin = () => {
                             <Select value={productForm.purity} onValueChange={(v) => setProductForm({ ...productForm, purity: v })}>
                               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                               <SelectContent className="bg-card">
+                                <SelectItem value="800">800 Silver</SelectItem>
                                 <SelectItem value="925">925 Silver</SelectItem>
                                 <SelectItem value="999">999 Fine Silver</SelectItem>
                                 <SelectItem value="22K Gold">22K Gold</SelectItem>
@@ -1683,6 +1694,7 @@ const Admin = () => {
                       <Select value={editProductForm.purity} onValueChange={(v) => setEditProductForm({ ...editProductForm, purity: v })}>
                         <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-card">
+                          <SelectItem value="800">800 Silver</SelectItem>
                           <SelectItem value="925">925 Silver</SelectItem>
                           <SelectItem value="999">999 Fine Silver</SelectItem>
                           <SelectItem value="22K Gold">22K Gold</SelectItem>
@@ -2935,7 +2947,7 @@ const Admin = () => {
           <TabsContent value="inventory">
             <div className="space-y-6">
               {/* Inventory Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 <Card className="p-6 bg-gradient-to-br from-primary/5 to-transparent">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -2983,6 +2995,24 @@ const Admin = () => {
                       <p className="text-2xl font-bold text-blue-600">
                         {inventoryLoading ? '…' : inventoryTransactions.length}
                       </p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-6 bg-gradient-to-br from-purple-500/5 to-transparent border-purple-500/20">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                      <Scale className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground font-medium">Total Weight</p>
+                      <p className="text-2xl font-bold text-purple-600">
+                        {productsLoading
+                          ? '…'
+                          : totalStockWeightGrams >= 1000
+                            ? `${(totalStockWeightGrams / 1000).toFixed(2)} kg`
+                            : `${totalStockWeightGrams.toFixed(0)} g`}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Excludes Photo Frames</p>
                     </div>
                   </div>
                 </Card>
