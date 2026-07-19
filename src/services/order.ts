@@ -11,6 +11,8 @@ export interface OrderItem {
 export interface Order {
   _id: string;
   id?: string;
+  /** Sequential tax invoice number generated server-side, e.g. "INV-2026-000123". */
+  invoiceNumber?: string;
   items: OrderItem[];
   totalAmount: number;
   tax: number;

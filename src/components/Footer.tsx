@@ -30,6 +30,7 @@ const Footer = () => {
             <ul className="space-y-4">
               <FooterLink to="/shop" label="Silver Collection" />
               <FooterLink to="/savings-scheme" label="Investment Plan" />
+              <FooterLink to="/gift-vouchers" label="Gift Vouchers" />
               <FooterLink to="/offers" label="Deals & Offers" />
               <FooterLink to="/about" label="Our Heritage" />
               <FooterLink to="/contact" label="Concierge" />

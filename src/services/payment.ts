@@ -12,6 +12,17 @@ export interface RazorpayOrderPayload {
   }>;
   couponCode?: string;
   pincode?: string;
+  /** Full shipping address — drives the zone delivery charge. Send this (not just pincode) so the
+   * create-order amount already includes delivery, matching what /payments/verify recomputes. */
+  shippingAddress?: {
+    firstName?: string;
+    lastName?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    phone?: string;
+  };
 }
 
 export interface RazorpayOrderBreakdown {

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import heroImage from '@/assets/hero-silver.jpg';
 import savingsImage from '@/assets/savings-scheme.jpg';
 import ProductCard from '@/components/ProductCard';
+import FloatingRateWidget from '@/components/FloatingRateWidget';
 import Seo from '@/components/Seo';
 import { productService } from '@/services/product';
 import { useReveal } from '@/hooks/useReveal';
@@ -23,7 +24,7 @@ const Index = () => {
   const trustBar = [
     { icon: Award, title: '100% BIS Hallmarked', description: 'Certified Silver' },
     { icon: Shield, title: 'Insured Shipping', description: 'Every parcel fully covered' },
-    { icon: RotateCcw, title: 'Easy Returns', description: '7-day hassle-free policy' },
+    { icon: RotateCcw, title: 'Fault-Protected Returns', description: 'Video-verified, 48-hr window' },
     { icon: Headphones, title: 'Concierge Support', description: 'Dedicated relationship managers' },
   ];
 
@@ -247,6 +248,8 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      <FloatingRateWidget />
     </div>
   );
 };

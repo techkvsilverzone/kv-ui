@@ -96,17 +96,17 @@ const faqData: FAQCategory[] = [
       {
         question: 'What is your return policy?',
         answer:
-          'We accept returns within 7 days of delivery. Items must be unworn, in original condition with all tags intact, and returned with the original packaging, invoice, and authenticity certificate. Personalized or engraved items are non-returnable.',
+          'Refunds and replacements are only available for KV-fault claims — a wrong, damaged, or defective item. These must be filed within 48 hours of delivery, and we require an unedited unboxing video (filmed continuously from before opening the sealed parcel through the full reveal) sent via WhatsApp to verify the claim. Change-of-mind requests are not eligible for a refund, but may qualify for an exchange or store credit — see below. Personalized or engraved items are non-returnable.',
       },
       {
         question: 'How do I initiate a return?',
         answer:
-          'Log in to your account, go to Profile → Returns, and submit a return request. Our team will review it within 24 hours and arrange a pickup. Once received and verified, your refund will be processed in 5–7 business days.',
+          'Log in to your account, go to Profile → Orders, and select "Request Return" on the delivered order. Choose whether it\'s a KV-fault claim or a change-of-mind request. For KV-fault claims, you\'ll get a reference code — WhatsApp your unboxing video with that code as the caption within 48 hours of delivery. Once verified, refunds are processed in 5–7 business days.',
       },
       {
         question: 'Can I exchange for a different size or design?',
         answer:
-          'Yes. We offer exchanges for size and design changes within 7 days of delivery, subject to product availability. Exchange shipping costs are borne by the customer for the first request; subsequent exchanges may incur additional charges.',
+          'Yes. Change-of-mind requests (wrong size, design preference, etc.) are eligible for an exchange or store credit — not a cash refund, since silver/gold value fluctuates daily. No unboxing video is required for these. Exchange shipping costs are borne by the customer for the first request; subsequent exchanges may incur additional charges.',
       },
       {
         question: 'Do you offer a silver buyback?',

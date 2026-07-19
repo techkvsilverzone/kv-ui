@@ -1,5 +1,7 @@
 import { forwardRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { Order } from '@/services/order';
+import { invoiceConfigService, DEFAULT_INVOICE_CONFIG } from '@/services/invoiceConfig';
 
 interface InvoiceViewProps {
   order: Order;
@@ -19,9 +21,18 @@ const formatDate = (iso: string) =>
  */
 const InvoiceView = forwardRef<HTMLDivElement, InvoiceViewProps>(
   ({ order, customerName, customerEmail }, ref) => {
+    const { data: invoiceConfig = DEFAULT_INVOICE_CONFIG } = useQuery({
+      queryKey: ['invoice-config'],
+      queryFn: invoiceConfigService.getInvoiceConfig,
+      staleTime: 10 * 60_000,
+    });
+
     const subtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const tax = order.tax ?? subtotal * 0.03;
-    const orderId = (order.id ?? order._id ?? '').slice(-10).toUpperCase();
+    const gstPercent = subtotal > 0 ? Math.round((tax / subtotal) * 1000) / 10 : 3;
+    // Server-generated sequential invoice number; falls back to the order id for
+    // orders created before invoice numbering shipped.
+    const invoiceNumber = order.invoiceNumber ?? (order.id ?? order._id ?? '').slice(-10).toUpperCase();
 
     return (
       <div
@@ -32,11 +43,15 @@ const InvoiceView = forwardRef<HTMLDivElement, InvoiceViewProps>(
         {/* Header */}
         <div className="flex items-start justify-between mb-8 pb-4 border-b-2 border-gray-800">
           <div>
-            <h1 className="text-2xl font-bold">KV Silver Zone</h1>
+            <h1 className="text-2xl font-bold">{invoiceConfig.companyName}</h1>
             <p className="text-xs text-gray-500 mt-0.5">Tax Invoice</p>
+            {invoiceConfig.companyAddress && (
+              <p className="text-xs text-gray-500 mt-1 max-w-xs">{invoiceConfig.companyAddress}</p>
+            )}
+            {invoiceConfig.gstin && <p className="text-xs text-gray-500 mt-0.5">GSTIN: {invoiceConfig.gstin}</p>}
           </div>
           <div className="text-right text-sm">
-            <p className="font-semibold text-base">Invoice #{orderId}</p>
+            <p className="font-semibold text-base">Invoice #{invoiceNumber}</p>
             <p className="text-gray-500">Date: {formatDate(order.createdAt)}</p>
           </div>
         </div>
@@ -90,7 +105,7 @@ const InvoiceView = forwardRef<HTMLDivElement, InvoiceViewProps>(
               <span>{formatPrice(subtotal)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">GST (3%)</span>
+              <span className="text-gray-600">GST ({gstPercent}%)</span>
               <span>{formatPrice(tax)}</span>
             </div>
             <div className="flex justify-between font-bold text-base border-t border-gray-300 pt-2 mt-2">

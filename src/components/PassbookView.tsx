@@ -19,11 +19,24 @@ const formatDate = (iso: string) =>
  * Includes `@media print` styles via Tailwind's print: variant.
  */
 const PassbookView = forwardRef<HTMLDivElement, PassbookViewProps>(
-  ({ scheme, userName, userPhone, ledger = [] }, ref) => {
+  ({ scheme, userName, userPhone, ledger }, ref) => {
     const start = new Date(scheme.startDate);
     const maturity = new Date(start);
     maturity.setMonth(maturity.getMonth() + scheme.duration);
-    const passbookNumber = (scheme as any).passbookNumber ?? scheme._id.slice(-8).toUpperCase();
+    const passbookNumber = scheme.passbookNumber ?? scheme._id.slice(-8).toUpperCase();
+
+    // Derive the ledger from the scheme's own payment history when the caller
+    // doesn't supply one — each deposit's running balance is the cumulative sum.
+    const resolvedLedger =
+      ledger ??
+      (scheme.payments ?? [])
+        .slice()
+        .sort((a, b) => new Date(a.paidAt).getTime() - new Date(b.paidAt).getTime())
+        .reduce<{ date: string; description: string; amount: number; balance: number }[]>((acc, p) => {
+          const balance = (acc[acc.length - 1]?.balance ?? 0) + p.amount;
+          acc.push({ date: p.paidAt, description: `Month ${p.month} installment`, amount: p.amount, balance });
+          return acc;
+        }, []);
 
     return (
       <div
@@ -82,7 +95,7 @@ const PassbookView = forwardRef<HTMLDivElement, PassbookViewProps>(
         {/* Ledger */}
         <div className="mb-6">
           <h2 className="text-base font-bold mb-3 border-b border-gray-300 pb-1">Transaction Ledger</h2>
-          {ledger.length === 0 ? (
+          {resolvedLedger.length === 0 ? (
             <p className="text-sm text-gray-500 italic">No transactions recorded yet.</p>
           ) : (
             <table className="w-full text-sm">
@@ -95,7 +108,7 @@ const PassbookView = forwardRef<HTMLDivElement, PassbookViewProps>(
                 </tr>
               </thead>
               <tbody>
-                {ledger.map((row, i) => (
+                {resolvedLedger.map((row, i) => (
                   <tr key={i} className="border-t border-gray-100">
                     <td className="py-1.5 pr-4">{formatDate(row.date)}</td>
                     <td className="py-1.5 pr-4">{row.description}</td>

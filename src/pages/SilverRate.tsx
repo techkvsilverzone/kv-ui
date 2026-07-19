@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { silverRateService, type SilverRate as SilverRateType } from '@/services/silverRate';
+import { goldRateService } from '@/services/goldRate';
 import Seo from '@/components/Seo';
 
 const metalAliases = {
@@ -19,15 +20,30 @@ const getMetalKey = (purity: string): 'silver' | 'gold22k' | null => {
 };
 
 const SilverRate = () => {
-  const { data: todayRates = [], isLoading: todayLoading } = useQuery({
+  // Silver and gold rates live in separate collections/endpoints (split from a
+  // single "metal rate" collection) — both must be fetched and merged, or gold
+  // silently never appears since /silver-rates/today never contains it.
+  const { data: silverToday = [], isLoading: silverTodayLoading } = useQuery({
     queryKey: ['silver-rates-today'],
     queryFn: silverRateService.getTodayRate,
   });
+  const { data: goldToday = [], isLoading: goldTodayLoading } = useQuery({
+    queryKey: ['gold-rates-today'],
+    queryFn: goldRateService.getTodayRate,
+  });
+  const todayRates: SilverRateType[] = [...silverToday, ...goldToday];
+  const todayLoading = silverTodayLoading || goldTodayLoading;
 
-  const { data: historyRates = [], isLoading: historyLoading } = useQuery({
+  const { data: silverHistory = [], isLoading: silverHistoryLoading } = useQuery({
     queryKey: ['silver-rates-history'],
     queryFn: () => silverRateService.getRateHistory(30),
   });
+  const { data: goldHistory = [], isLoading: goldHistoryLoading } = useQuery({
+    queryKey: ['gold-rates-history'],
+    queryFn: () => goldRateService.getRateHistory(30),
+  });
+  const historyRates: SilverRateType[] = [...silverHistory, ...goldHistory];
+  const historyLoading = silverHistoryLoading || goldHistoryLoading;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -67,12 +83,50 @@ const SilverRate = () => {
     { key: 'gold22k' as const, label: 'Gold 22K', description: 'Daily live 22K gold market price' },
   ];
 
+  // Auto-scrolling ticker at the top of the page — dynamic green (up) / red (down)
+  // arrows reflecting the ACTUAL day-over-day change, not a hardcoded direction.
+  const tickerItems = metalTypes
+    .map((metal) => {
+      const rate = getTopRate(metal.key);
+      if (!rate) return null;
+      const prevRate = getPreviousRate(metal.key);
+      const { change } = getChange(rate, prevRate);
+      return { key: metal.key, label: metal.label, rate, change };
+    })
+    .filter((item): item is { key: 'silver' | 'gold22k'; label: string; rate: SilverRateType; change: number } => !!item);
+
   return (
     <div className="min-h-screen pt-24 pb-16">
       <Seo
         title="Today's Silver Rate"
         description="Live silver and gold rates per gram at KV Silver Zone. Check today's prices before you buy or enrol in a savings scheme."
       />
+
+      {!todayLoading && tickerItems.length > 0 && (
+        <div className="bg-muted/40 border-y border-border py-2 overflow-hidden mb-10">
+          <div className="flex">
+            <div className="flex gap-12 whitespace-nowrap marquee">
+              {[...tickerItems, ...tickerItems].map((item, index) => (
+                <div key={`${item.key}-${index}`} className="flex items-center gap-2 text-sm">
+                  {item.change > 0 ? (
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  ) : item.change < 0 ? (
+                    <TrendingDown className="h-4 w-4 text-destructive" />
+                  ) : (
+                    <Minus className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="font-medium">{item.label}:</span>
+                  <span>{formatPrice(item.rate.ratePerGram)}/g</span>
+                  <span className={item.change > 0 ? 'text-green-600' : item.change < 0 ? 'text-destructive' : 'text-muted-foreground'}>
+                    ({item.change >= 0 ? '+' : ''}{formatPrice(item.change)})
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-12">

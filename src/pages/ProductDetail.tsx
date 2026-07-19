@@ -608,8 +608,8 @@ const ProductDetail = () => {
               <div>
                 <h3 className="font-serif text-lg font-semibold mb-2">Returns & Exchange</h3>
                 <ul className="text-sm text-muted-foreground space-y-2">
-                  <li>• 7-day easy return policy from delivery date</li>
-                  <li>• Products must be in original condition with tags intact</li>
+                  <li>• Refunds for wrong/damaged/defective items — filed within 48 hrs, unboxing video required</li>
+                  <li>• Change-of-mind requests: exchange or store credit only, no video needed</li>
                   <li>• Exchange available for size/design changes</li>
                   <li>• Refunds processed within 5-7 business days</li>
                   <li>• Buyback available at prevailing silver rates</li>

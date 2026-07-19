@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Eye, EyeOff, Mail, Lock, User, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { validateForm, signupSchema } from '@/lib/validation';
+import { stallConfigService, DEFAULT_STALL_CONFIG } from '@/services/stallConfig';
 import Seo from '@/components/Seo';
 
 const Signup = () => {
@@ -18,10 +20,16 @@ const Signup = () => {
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
-  // Offline stall mode: activated by Admin panel, passed via ?stall=1 or localStorage flag
-  const offlineStallActive =
-    searchParams.get('stall') === '1' ||
-    localStorage.getItem('kv-offline-stall') === 'true';
+
+  // Offline stall mode: the link (?stall=1) marks this as a stall registration,
+  // but it only actually applies while the admin toggle is server-side active —
+  // this can't be spoofed by a customer just adding the query param themselves.
+  const { data: stallConfig = DEFAULT_STALL_CONFIG } = useQuery({
+    queryKey: ['stall-config'],
+    queryFn: stallConfigService.getStallConfig,
+    staleTime: 60_000,
+  });
+  const offlineStallActive = searchParams.get('stall') === '1' && stallConfig.active;
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -43,12 +51,17 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
-      const success = await signup(formData.email, formData.password, formData.name);
+      const { success, promoCoupon } = await signup(
+        formData.email,
+        formData.password,
+        formData.name,
+        offlineStallActive,
+      );
       if (success) {
-        if (offlineStallActive) {
+        if (promoCoupon) {
           toast({
             title: 'Welcome! Promo coupon applied 🎉',
-            description: 'A stall event coupon has been credited to your account. Check your profile.',
+            description: `Use code ${promoCoupon} for 10% off your first order.`,
           });
         } else {
           toast({

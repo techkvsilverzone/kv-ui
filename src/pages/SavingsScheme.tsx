@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { ArrowRight, Check, Calculator, Calendar, Gift, Shield, BookOpen, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, Check, Calculator, Calendar, Gift, Shield, BookOpen, Loader2, Search, Printer } from 'lucide-react';
+import { useReactToPrint } from 'react-to-print';
 import Seo from '@/components/Seo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,20 +13,59 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import savingsImage from '@/assets/savings-scheme.jpg';
-import { savingsService } from '@/services/savings';
+import { savingsService, type SavingsEnrollment } from '@/services/savings';
 import { useAuth } from '@/context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import PassbookView from '@/components/PassbookView';
 
 const SavingsScheme = () => {
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [monthlyAmount, setMonthlyAmount] = useState('5000');
   const [duration, setDuration] = useState('11');
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [selectedScheme, setSelectedScheme] = useState<SavingsEnrollment | null>(null);
+  const [passbookSearch, setPassbookSearch] = useState('');
+  const [isSearchingPassbook, setIsSearchingPassbook] = useState(false);
+  const passbookRef = useRef<HTMLDivElement>(null);
+  const handlePrintPassbook = useReactToPrint({
+    contentRef: passbookRef,
+    documentTitle: `KV-Silver-Zone-Passbook-${selectedScheme?.passbookNumber ?? ''}`,
+  });
+
+  const handleTrackPassbook = async (value?: string) => {
+    const query = value ?? passbookSearch;
+    if (!query.trim()) return;
+    setIsSearchingPassbook(true);
+    try {
+      const scheme = await savingsService.getByPassbookNumber(query);
+      setSelectedScheme(scheme);
+    } catch {
+      toast({
+        title: 'Not found',
+        description: 'No savings scheme matches that passbook number.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSearchingPassbook(false);
+    }
+  };
+
+  // Deep-link from CustomerDashboard's "Passbook" button (?passbook=PB-...).
+  useEffect(() => {
+    const fromQuery = searchParams.get('passbook');
+    if (fromQuery) {
+      setPassbookSearch(fromQuery);
+      void handleTrackPassbook(fromQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const { data: mySchemes = [], isLoading: schemesLoading, refetch: refetchSchemes } = useQuery({
     queryKey: ['my-savings'],
@@ -196,7 +236,22 @@ const SavingsScheme = () => {
       {isAuthenticated && (
         <section className="py-12 bg-muted/30">
           <div className="container mx-auto px-4">
-            <h2 className="font-serif text-2xl font-bold text-foreground mb-6">My Schemes</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+              <h2 className="font-serif text-2xl font-bold text-foreground">My Schemes</h2>
+              <div className="flex gap-2 max-w-sm w-full sm:w-auto">
+                <Input
+                  placeholder="Track by passbook number (PB-...)"
+                  value={passbookSearch}
+                  onChange={(e) => setPassbookSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleTrackPassbook()}
+                  className="text-sm"
+                />
+                <Button variant="outline" size="sm" onClick={handleTrackPassbook} disabled={isSearchingPassbook} className="gap-1.5 shrink-0">
+                  {isSearchingPassbook ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                  Track
+                </Button>
+              </div>
+            </div>
             {schemesLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -206,7 +261,7 @@ const SavingsScheme = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {mySchemes.map((scheme) => {
-                  const passbookNumber = (scheme as any).passbookNumber ?? scheme._id.slice(-8).toUpperCase();
+                  const passbookNumber = scheme.passbookNumber ?? scheme._id.slice(-8).toUpperCase();
                   const start = new Date(scheme.startDate);
                   const maturity = new Date(start);
                   maturity.setMonth(maturity.getMonth() + scheme.duration);
@@ -239,7 +294,7 @@ const SavingsScheme = () => {
                           <span className="font-medium text-foreground">{maturity.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm" className="mt-4 w-full gap-2">
+                      <Button variant="outline" size="sm" className="mt-4 w-full gap-2" onClick={() => setSelectedScheme(scheme)}>
                         <BookOpen className="h-3.5 w-3.5" />
                         View Passbook
                       </Button>
@@ -422,6 +477,24 @@ const SavingsScheme = () => {
           </div>
         </div>
       </section>
+
+      {/* Passbook viewer (own schemes, or looked up by passbook number) */}
+      <Dialog open={!!selectedScheme} onOpenChange={(open) => !open && setSelectedScheme(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between gap-4">
+              <span>Savings Passbook</span>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handlePrintPassbook()}>
+                <Printer className="h-3.5 w-3.5" />
+                Print
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          {selectedScheme && (
+            <PassbookView ref={passbookRef} scheme={selectedScheme} userName={user?.name} userPhone={user?.phone} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -84,6 +84,7 @@ import { productService } from '@/services/product';
 import { savingsService } from '@/services/savings';
 import { couponService, type CreateCouponPayload } from '@/services/coupon';
 import { returnsService } from '@/services/returns';
+import { API_URL } from '@/lib/api';
 import { silverRateService, type UpdateSilverRatePayload } from '@/services/silverRate';
 import { goldRateService } from '@/services/goldRate';
 import { RateUpdateGate } from '@/components/RateUpdateGate';
@@ -91,6 +92,8 @@ import { computeRateBlock, resolveRateBlock, latestRateDate } from '@/lib/rateFr
 import { rateStatusService } from '@/services/rateStatus';
 import { inventoryService } from '@/services/inventory';
 import { deliveryConfigService, DEFAULT_DELIVERY_CONFIG, type DeliveryConfig } from '@/services/deliveryConfig';
+import { stallConfigService, DEFAULT_STALL_CONFIG } from '@/services/stallConfig';
+import { invoiceConfigService, DEFAULT_INVOICE_CONFIG } from '@/services/invoiceConfig';
 import { Switch } from '@/components/ui/switch';
 import type { ProductVariant, ChargeType } from '@/context/CartContext';
 import { ApiError } from '@/lib/api';
@@ -448,8 +451,19 @@ const Admin = () => {
     toast({ title: 'Pincode Rate Removed' });
   };
 
-  // Offline stall toggle (persisted in localStorage so Signup page can read it)
-  const [offlineStallActive, setOfflineStallActive] = useState(() => localStorage.getItem('kv-offline-stall') === 'true');
+  // Festival-promotion WhatsApp broadcast.
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+
+  // Invoice/GSTIN settings (printed on customer tax invoices).
+  const [invoiceForm, setInvoiceForm] = useState({
+    companyName: DEFAULT_INVOICE_CONFIG.companyName,
+    gstin: DEFAULT_INVOICE_CONFIG.gstin,
+    companyAddress: DEFAULT_INVOICE_CONFIG.companyAddress,
+    companyPhone: DEFAULT_INVOICE_CONFIG.companyPhone,
+    companyEmail: DEFAULT_INVOICE_CONFIG.companyEmail,
+  });
+
+  // Offline stall toggle — server-authoritative (public /stall-config is what Signup.tsx reads).
 
   // Shop filter config (persisted in localStorage so Shop page can read it)
   interface FilterPriceRange { label: string; value: string }
@@ -529,6 +543,20 @@ const Admin = () => {
     meta: { errorMessage: 'Failed to load delivery charges' },
   });
 
+  const { data: stallConfig = DEFAULT_STALL_CONFIG } = useQuery({
+    queryKey: ['admin-stall-config'],
+    queryFn: stallConfigService.getAdminStallConfig,
+    enabled: role === 'admin' || role === 'staff',
+    meta: { errorMessage: 'Failed to load offline-stall config' },
+  });
+
+  const { data: invoiceConfig } = useQuery({
+    queryKey: ['admin-invoice-config'],
+    queryFn: invoiceConfigService.getAdminInvoiceConfig,
+    enabled: role === 'admin' || role === 'staff',
+    meta: { errorMessage: 'Failed to load invoice settings' },
+  });
+
   const { data: adminStats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: adminService.getStats,
@@ -577,6 +605,14 @@ const Admin = () => {
     enabled: role === 'admin' || role === 'staff',
     meta: { errorMessage: 'Failed to load return requests' },
   });
+
+  const { data: unmatchedVideos = [], isLoading: unmatchedVideosLoading } = useQuery({
+    queryKey: ['admin-unmatched-return-videos'],
+    queryFn: returnsService.getUnmatchedVideos,
+    enabled: role === 'admin' || role === 'staff',
+    meta: { errorMessage: 'Failed to load unmatched return videos' },
+  });
+  const [linkVideoSelection, setLinkVideoSelection] = useState<Record<string, string>>({});
 
   const { data: silverRates = [], isLoading: ratesLoading, isError: ratesError, isSuccess: ratesSuccess } = useQuery({
     queryKey: ['admin-silver-rates'],
@@ -755,6 +791,19 @@ const Admin = () => {
     },
   });
 
+  const linkVideoMutation = useMutation({
+    mutationFn: ({ videoId, returnId }: { videoId: string; returnId: string }) =>
+      returnsService.linkUnmatchedVideo(videoId, returnId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-returns'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-unmatched-return-videos'] });
+      toast({ title: 'Video Linked', description: 'The video is now attached to the return request.' });
+    },
+    onError: () => {
+      toast({ title: 'Link failed', description: 'Unable to link this video.', variant: 'destructive' });
+    },
+  });
+
   // Route to the right metal: the dialog's purity dropdown offers Silver / 22K Gold,
   // so a "gold" selection must hit the gold endpoint instead of the silver one.
   const updateRateMutation = useMutation({
@@ -879,6 +928,44 @@ const Admin = () => {
     },
   });
 
+  const updateStallConfigMutation = useMutation({
+    mutationFn: stallConfigService.updateStallConfig,
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-stall-config'] });
+      void queryClient.invalidateQueries({ queryKey: ['stall-config'] });
+      toast({ title: `Offline Stall ${data.active ? 'Activated' : 'Deactivated'}` });
+    },
+    onError: () => {
+      toast({ title: 'Save failed', description: 'Unable to update offline-stall mode.', variant: 'destructive' });
+    },
+  });
+
+  const updateInvoiceConfigMutation = useMutation({
+    mutationFn: invoiceConfigService.updateInvoiceConfig,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-invoice-config'] });
+      void queryClient.invalidateQueries({ queryKey: ['invoice-config'] });
+      toast({ title: 'Invoice Settings Saved', description: 'Company details for customer invoices have been updated.' });
+    },
+    onError: () => {
+      toast({ title: 'Save failed', description: 'Unable to save invoice settings.', variant: 'destructive' });
+    },
+  });
+
+  const sendBroadcastMutation = useMutation({
+    mutationFn: adminService.sendWhatsAppBroadcast,
+    onSuccess: (data) => {
+      setBroadcastMessage('');
+      toast({
+        title: 'Broadcast Sent',
+        description: `Delivered to ${data.sent}/${data.recipients} customers${data.failed ? ` (${data.failed} failed)` : ''}.`,
+      });
+    },
+    onError: () => {
+      toast({ title: 'Broadcast failed', description: 'Unable to send WhatsApp broadcast.', variant: 'destructive' });
+    },
+  });
+
   const changeUserPasswordMutation = useMutation({
     mutationFn: ({ userId, newPassword }: { userId: string; newPassword: string }) =>
       authService.changePassword(userId, newPassword),
@@ -952,6 +1039,18 @@ const Admin = () => {
       otherState: String(deliveryConfig.otherState),
     });
   }, [deliveryConfig]);
+
+  // Seed the invoice/GSTIN settings form once the saved config arrives.
+  useEffect(() => {
+    if (!invoiceConfig) return;
+    setInvoiceForm({
+      companyName: invoiceConfig.companyName,
+      gstin: invoiceConfig.gstin,
+      companyAddress: invoiceConfig.companyAddress,
+      companyPhone: invoiceConfig.companyPhone,
+      companyEmail: invoiceConfig.companyEmail,
+    });
+  }, [invoiceConfig]);
 
   // Searchable Product Dropdown Component
   const ProductSearchSelect = ({ 
@@ -1439,6 +1538,7 @@ const Admin = () => {
                                 <SelectItem value="925">925 Silver</SelectItem>
                                 <SelectItem value="999">999 Fine Silver</SelectItem>
                                 <SelectItem value="22K Gold">22K Gold</SelectItem>
+                                <SelectItem value="18K Gold">18K Gold</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1586,6 +1686,7 @@ const Admin = () => {
                           <SelectItem value="925">925 Silver</SelectItem>
                           <SelectItem value="999">999 Fine Silver</SelectItem>
                           <SelectItem value="22K Gold">22K Gold</SelectItem>
+                          <SelectItem value="18K Gold">18K Gold</SelectItem>
                         </SelectContent>
                       </Select>
                     ) : (
@@ -2155,6 +2256,8 @@ const Admin = () => {
                       <TableHead>Order</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead>Reason</TableHead>
+                      <TableHead>Fault Type</TableHead>
+                      <TableHead>Video</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -2167,6 +2270,27 @@ const Admin = () => {
                         <TableCell>#{String(ret.orderId || '').slice(-6)}</TableCell>
                         <TableCell>{ret.userName || ret.userId}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{ret.reason}</TableCell>
+                        <TableCell>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${ret.faultType === 'kv_fault' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                            {ret.faultType === 'kv_fault' ? 'KV Fault' : 'Exchange Only'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {ret.videoStatus === 'received' ? (
+                            <a
+                              href={`${API_URL}/admin/returns/${ret.id || ret._id}/video`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-primary hover:underline"
+                            >
+                              View video
+                            </a>
+                          ) : ret.videoStatus === 'awaiting' ? (
+                            <span className="text-xs text-yellow-700">Awaiting ({ret.videoReferenceCode})</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
                         <TableCell>{formatPrice(ret.refundAmount)}</TableCell>
                         <TableCell>
                           <span className={`text-xs px-2 py-1 rounded-full ${
@@ -2206,6 +2330,72 @@ const Admin = () => {
                 </Table>
               ) : (
                 <p className="text-muted-foreground text-center py-8">No return requests.</p>
+              )}
+            </Card>
+
+            {/* Unmatched WhatsApp unboxing videos — no/garbled reference code, or the sender phone
+                didn't uniquely match a single return awaiting video. Needs manual linking. */}
+            <Card className="p-6 mt-6">
+              <h2 className="font-serif text-xl font-semibold mb-1">Unmatched WhatsApp Videos</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                Unboxing videos received on the returns WhatsApp number that couldn't be auto-matched to a claim.
+              </p>
+              {unmatchedVideosLoading ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : unmatchedVideos.length > 0 ? (
+                <div className="space-y-3">
+                  {unmatchedVideos.map((video) => {
+                    const videoId = video.id || video._id || '';
+                    const pendingReturns = allReturns.filter((r) => r.videoStatus === 'awaiting');
+                    return (
+                      <div key={videoId} className="flex flex-wrap items-center gap-3 p-3 border border-border rounded-lg">
+                        <a
+                          href={`${API_URL}/admin/return-videos/unmatched/${videoId}/file`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          View video
+                        </a>
+                        <span className="text-xs text-muted-foreground">From {video.senderPhone}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(video.receivedAt).toLocaleString()}
+                        </span>
+                        {video.caption && (
+                          <span className="text-xs text-muted-foreground italic">"{video.caption}"</span>
+                        )}
+                        <div className="flex items-center gap-2 ml-auto">
+                          <Select
+                            value={linkVideoSelection[videoId] || ''}
+                            onValueChange={(v) => setLinkVideoSelection((prev) => ({ ...prev, [videoId]: v }))}
+                          >
+                            <SelectTrigger className="w-56"><SelectValue placeholder="Link to a return..." /></SelectTrigger>
+                            <SelectContent>
+                              {pendingReturns.map((r) => (
+                                <SelectItem key={r.id} value={r.id}>
+                                  #{r.id.slice(-6)} — {r.userName || 'Customer'}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            disabled={!linkVideoSelection[videoId] || linkVideoMutation.isPending}
+                            onClick={() =>
+                              linkVideoMutation.mutate({ videoId, returnId: linkVideoSelection[videoId] })
+                            }
+                          >
+                            Link
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-6 text-sm">No unmatched videos.</p>
               )}
             </Card>
           </TabsContent>
@@ -2376,20 +2566,103 @@ const Admin = () => {
                     </p>
                   </div>
                   <button
-                    onClick={() => {
-                      const next = !offlineStallActive;
-                      setOfflineStallActive(next);
-                      localStorage.setItem('kv-offline-stall', String(next));
-                      toast({ title: `Offline Stall ${next ? 'Activated' : 'Deactivated'}` });
-                    }}
-                    className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${offlineStallActive ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                    onClick={() => updateStallConfigMutation.mutate({ active: !stallConfig.active })}
+                    disabled={updateStallConfigMutation.isPending}
+                    className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors ${stallConfig.active ? 'bg-primary' : 'bg-muted-foreground/30'}`}
                   >
-                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${offlineStallActive ? 'translate-x-8' : 'translate-x-1'}`} />
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${stallConfig.active ? 'translate-x-8' : 'translate-x-1'}`} />
                   </button>
                 </div>
-                <p className={`mt-3 text-xs font-medium ${offlineStallActive ? 'text-green-600' : 'text-muted-foreground'}`}>
-                  {offlineStallActive ? '● Offline stall mode is ACTIVE' : '○ Offline stall mode is inactive'}
+                <p className={`mt-3 text-xs font-medium ${stallConfig.active ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  {stallConfig.active ? '● Offline stall mode is ACTIVE' : '○ Offline stall mode is inactive'}
                 </p>
+              </Card>
+
+              {/* Invoice / GSTIN Settings */}
+              <Card className="p-6">
+                <h2 className="font-serif text-xl font-semibold mb-1">Invoice Settings</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Company details printed on every customer tax invoice, including GSTIN.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="invoiceCompanyName">Company Name</Label>
+                    <Input
+                      id="invoiceCompanyName"
+                      className="mt-1"
+                      value={invoiceForm.companyName}
+                      onChange={(e) => setInvoiceForm((f) => ({ ...f, companyName: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="invoiceGstin">GSTIN</Label>
+                    <Input
+                      id="invoiceGstin"
+                      className="mt-1"
+                      placeholder="e.g. 33ABCDE1234F1Z5"
+                      value={invoiceForm.gstin}
+                      onChange={(e) => setInvoiceForm((f) => ({ ...f, gstin: e.target.value }))}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="invoiceCompanyAddress">Company Address</Label>
+                    <Input
+                      id="invoiceCompanyAddress"
+                      className="mt-1"
+                      value={invoiceForm.companyAddress}
+                      onChange={(e) => setInvoiceForm((f) => ({ ...f, companyAddress: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="invoiceCompanyPhone">Phone</Label>
+                    <Input
+                      id="invoiceCompanyPhone"
+                      className="mt-1"
+                      value={invoiceForm.companyPhone}
+                      onChange={(e) => setInvoiceForm((f) => ({ ...f, companyPhone: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="invoiceCompanyEmail">Email</Label>
+                    <Input
+                      id="invoiceCompanyEmail"
+                      className="mt-1"
+                      value={invoiceForm.companyEmail}
+                      onChange={(e) => setInvoiceForm((f) => ({ ...f, companyEmail: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <Button
+                  className="mt-4"
+                  onClick={() => updateInvoiceConfigMutation.mutate(invoiceForm)}
+                  disabled={updateInvoiceConfigMutation.isPending}
+                >
+                  {updateInvoiceConfigMutation.isPending ? 'Saving...' : 'Save Invoice Settings'}
+                </Button>
+              </Card>
+
+              {/* Festival Promotions — WhatsApp Broadcast */}
+              <Card className="p-6">
+                <h2 className="font-serif text-xl font-semibold mb-1">Festival Promotions</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Send a one-off WhatsApp message to every registered customer — festival offers, sale announcements, etc.
+                </p>
+                <Label htmlFor="broadcastMessage">Message</Label>
+                <Textarea
+                  id="broadcastMessage"
+                  className="mt-1"
+                  rows={3}
+                  placeholder="🪔 Diwali Special: Flat 10% off on all silver collections this week!"
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                />
+                <Button
+                  className="mt-3"
+                  onClick={() => sendBroadcastMutation.mutate(broadcastMessage.trim())}
+                  disabled={!broadcastMessage.trim() || sendBroadcastMutation.isPending}
+                >
+                  {sendBroadcastMutation.isPending ? 'Sending...' : 'Send Broadcast'}
+                </Button>
               </Card>
 
               {/* Pincode Rate Matrix */}

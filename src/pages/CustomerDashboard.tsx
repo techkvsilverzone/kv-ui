@@ -122,7 +122,7 @@ const SavingsTab = ({ schemes, isLoading }: { schemes: SavingsEnrollment[]; isLo
         const start = new Date(scheme.startDate);
         const maturity = new Date(start);
         maturity.setMonth(maturity.getMonth() + scheme.duration);
-        const passbookNumber = (scheme as any).passbookNumber ?? scheme._id.slice(-8).toUpperCase();
+        const passbookNumber = scheme.passbookNumber ?? scheme._id.slice(-8).toUpperCase();
 
         return (
           <Card key={scheme._id} className="p-5">
@@ -138,7 +138,7 @@ const SavingsTab = ({ schemes, isLoading }: { schemes: SavingsEnrollment[]; isLo
                 </span>
               </div>
               <Button variant="outline" size="sm" asChild>
-                <Link to={`/savings-scheme#passbook-${scheme._id}`}>
+                <Link to={`/savings-scheme?passbook=${encodeURIComponent(passbookNumber)}`}>
                   <BookOpen className="h-3.5 w-3.5 mr-1.5" />
                   Passbook
                 </Link>

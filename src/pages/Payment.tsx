@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, Wallet, Building, Shield, CheckCircle, Tag, X } from 'lucide-react';
+import { CreditCard, Shield, CheckCircle, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -61,7 +60,6 @@ const Payment = () => {
   const { totalPrice, taxableTotal, clearCart, items } = useCart();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
-  const [paymentMethod, setPaymentMethod] = useState('razorpay');
   const [isProcessing, setIsProcessing] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -235,6 +233,9 @@ const Payment = () => {
         })),
         couponCode: appliedCoupon || undefined,
         pincode: address.pincode || undefined,
+        // Full address (not just pincode) so the initial order amount already
+        // includes the zone delivery charge — must match what /verify recomputes.
+        shippingAddress: address,
       });
 
       const options = {
@@ -314,42 +315,7 @@ const Payment = () => {
     setErrors({});
 
     setIsProcessing(true);
-
-    if (paymentMethod === 'razorpay') {
-      await handleRazorpayPayment();
-    } else {
-      // COD fallback
-      try {
-        const result = await paymentService.verifyPayment({
-          razorpayOrderId: '',
-          razorpayPaymentId: '',
-          razorpaySignature: '',
-          orderData: {
-            items: items.map(item => ({
-              product: item.id,
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity,
-              image: item.image,
-              weight: item.weight || undefined,
-            })),
-            shippingAddress: address,
-            paymentMethod: 'cod',
-            totalAmount: totalWithTax,
-            couponCode: appliedCoupon || undefined,
-          },
-        });
-
-        persistAddress();
-        toast({ title: 'Order Placed!', description: 'Your COD order has been placed successfully.' });
-        clearCart();
-        navigate(`/order/${result.orderId}`);
-      } catch (error: any) {
-        toast({ title: 'Order Failed', description: error.message || 'There was an error.', variant: 'destructive' });
-      } finally {
-        setIsProcessing(false);
-      }
-    }
+    await handleRazorpayPayment();
   };
 
   if (items.length === 0) {
@@ -448,26 +414,13 @@ const Payment = () => {
             {/* Payment Method */}
             <Card className="p-6">
               <h2 className="font-serif text-xl font-semibold mb-4">Payment Method</h2>
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-4 p-4 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                    <RadioGroupItem value="razorpay" />
-                    <CreditCard className="h-5 w-5 text-muted-foreground" />
-                    <div className="flex-1">
-                      <span className="block">Pay Online (Razorpay)</span>
-                      <span className="text-xs text-muted-foreground">Card, UPI, Net Banking, Wallets</span>
-                    </div>
-                  </label>
-                  <label className="flex items-center gap-4 p-4 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                    <RadioGroupItem value="cod" />
-                    <Wallet className="h-5 w-5 text-muted-foreground" />
-                    <div className="flex-1">
-                      <span className="block">Cash on Delivery</span>
-                      <span className="text-xs text-muted-foreground">Pay when you receive</span>
-                    </div>
-                  </label>
+              <div className="flex items-center gap-4 p-4 border border-border rounded-lg bg-muted/30">
+                <CreditCard className="h-5 w-5 text-muted-foreground" />
+                <div className="flex-1">
+                  <span className="block">Pay Online (Razorpay)</span>
+                  <span className="text-xs text-muted-foreground">Card, UPI, Net Banking, Wallets</span>
                 </div>
-              </RadioGroup>
+              </div>
             </Card>
           </div>
 

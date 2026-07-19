@@ -15,6 +15,10 @@ export interface User {
   city?: string;
   state?: string;
   pincode?: string;
+  /** Used for the daily WhatsApp birthday-wish cron (year is ignored). */
+  dateOfBirth?: string;
+  /** Used for the daily WhatsApp wedding-anniversary-wish cron. */
+  anniversaryDate?: string;
   isAdmin?: boolean;
   role?: UserRole;
   createdAt?: string;
@@ -32,7 +36,13 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, name: string) => Promise<boolean>;
+  loginWithOtp: (email: string, code: string) => Promise<boolean>;
+  signup: (
+    email: string,
+    password: string,
+    name: string,
+    stallEvent?: boolean,
+  ) => Promise<{ success: boolean; promoCoupon?: string }>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<boolean>;
 }
@@ -110,16 +120,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signup = async (email: string, password: string, name: string): Promise<boolean> => {
+  const signup = async (
+    email: string,
+    password: string,
+    name: string,
+    stallEvent?: boolean,
+  ): Promise<{ success: boolean; promoCoupon?: string }> => {
     try {
-      const { user, token } = await authService.signup(name, email, password);
+      const { user, token, promoCoupon } = await authService.signup(
+        name,
+        email,
+        password,
+        undefined,
+        stallEvent,
+      );
+      const normalizedUser = normalizeUser(user);
+      setUser(normalizedUser);
+      localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));
+      if (token && isMobileApp()) localStorage.setItem(TOKEN_STORAGE_KEY, token);
+      return { success: true, promoCoupon };
+    } catch (error) {
+      console.error('Signup failed', error);
+      return { success: false };
+    }
+  };
+
+  const loginWithOtp = async (email: string, code: string): Promise<boolean> => {
+    try {
+      const { user, token } = await authService.verifyOtp(email, code);
       const normalizedUser = normalizeUser(user);
       setUser(normalizedUser);
       localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));
       if (token && isMobileApp()) localStorage.setItem(TOKEN_STORAGE_KEY, token);
       return true;
     } catch (error) {
-      console.error('Signup failed', error);
+      console.error('OTP login failed', error);
       return false;
     }
   };
@@ -153,6 +188,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isAuthenticated: !!user,
         login,
+        loginWithOtp,
         signup,
         logout,
         updateProfile,

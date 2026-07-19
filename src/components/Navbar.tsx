@@ -35,6 +35,7 @@ const Navbar = () => {
     { name: 'Collections', path: '/shop' },
     { name: 'Silver Rate', path: '/silver-rate' },
     { name: 'Savings Scheme', path: '/savings-scheme' },
+    { name: 'Gift Vouchers', path: '/gift-vouchers' },
     { name: 'About', path: '/about' },
     { name: 'Contact', path: '/contact' },
   ];
@@ -161,6 +162,9 @@ const Navbar = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="text-foreground focus:bg-muted/50 focus:text-foreground cursor-pointer">
                     <Link to="/profile">My Orders</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="text-foreground focus:bg-muted/50 focus:text-foreground cursor-pointer">
+                    <Link to="/dashboard">My Dashboard</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="text-foreground focus:bg-muted/50 focus:text-foreground cursor-pointer">
                     <Link to="/wishlist">My Wishlist</Link>

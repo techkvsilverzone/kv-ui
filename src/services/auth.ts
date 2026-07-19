@@ -11,8 +11,20 @@ export const authService = {
     return api.post<AuthResponse>('/auth/login', { email, password });
   },
 
-  signup: async (name: string, email: string, password: string, phone?: string): Promise<AuthResponse> => {
-    return api.post<AuthResponse>('/auth/signup', { name, email, password, phone });
+  signup: async (
+    name: string,
+    email: string,
+    password: string,
+    phone?: string,
+    stallEvent?: boolean,
+  ): Promise<AuthResponse & { promoCoupon?: string }> => {
+    return api.post<AuthResponse & { promoCoupon?: string }>('/auth/signup', {
+      name,
+      email,
+      password,
+      phone,
+      stallEvent,
+    });
   },
 
   logout: async (): Promise<void> => {
@@ -34,5 +46,13 @@ export const authService = {
 
   forgotPassword: async (email: string): Promise<{ message: string }> => {
     return api.post<{ message: string }>('/auth/forgot-password', { email });
+  },
+
+  requestOtp: async (email: string): Promise<{ message: string }> => {
+    return api.post<{ message: string }>('/auth/otp/request', { email });
+  },
+
+  verifyOtp: async (email: string, code: string): Promise<AuthResponse> => {
+    return api.post<AuthResponse>('/auth/otp/verify', { email, code });
   },
 };

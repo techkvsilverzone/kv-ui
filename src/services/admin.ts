@@ -91,4 +91,15 @@ export const adminService = {
       throw error;
     }
   },
+
+  /** Send a WhatsApp broadcast (festival promotions etc.) to all registered customers. */
+  sendWhatsAppBroadcast: async (
+    message: string,
+  ): Promise<{ recipients: number; sent: number; failed: number }> => {
+    const res = await api.post<{ status?: string; data?: { recipients: number; sent: number; failed: number } }>(
+      '/admin/whatsapp/broadcast',
+      { message },
+    );
+    return res.data ?? { recipients: 0, sent: 0, failed: 0 };
+  },
 };

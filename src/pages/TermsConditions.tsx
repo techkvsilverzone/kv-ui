@@ -89,16 +89,24 @@ const TermsConditions = () => (
 
       <Section title="5. Returns, Exchanges & Refunds">
         <p>
-          We accept returns within 7 days of delivery, provided items are in original, unworn condition with all tags
-          intact, packed in original packaging, and accompanied by the original invoice and authenticity certificate.
+          Refunds or replacements are available only for <strong className="text-foreground font-medium">KV-fault
+          claims</strong> — a wrong, damaged, or defective item — filed within 48 hours of delivery. Every KV-fault
+          claim requires an unedited unboxing video, filmed continuously from before the sealed parcel is opened
+          through the full reveal, sent via WhatsApp to the number provided when the claim is filed and referenced
+          by its claim code. Claims without a matching video within the window cannot be processed.
+        </p>
+        <p>
+          <strong className="text-foreground font-medium">Change-of-mind requests</strong> (size, design preference,
+          or other non-fault reasons) are not eligible for a cash refund — silver and gold value fluctuates daily,
+          so a melt-value refund is not offered — but may qualify for an exchange or store credit, subject to
+          product availability, within 48 hours of delivery and no video is required.
         </p>
         <p>
           <strong className="text-foreground font-medium">Non-Returnable Items:</strong> Personalized or engraved
           pieces, items showing signs of wear, and items damaged due to misuse.
         </p>
         <p>
-          Approved refunds are processed within 5–7 business days to the original payment method. For COD orders,
-          refunds are issued via bank transfer.
+          Approved refunds are processed within 5–7 business days to the original payment method.
         </p>
         <p>
           <strong className="text-foreground font-medium">Buyback Policy:</strong> KV Silver Zone offers a buyback
