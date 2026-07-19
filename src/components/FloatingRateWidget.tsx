@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Coins } from 'lucide-react';
-import { silverRateService } from '@/services/silverRate';
+import { TrendingUp, TrendingDown, Minus, ArrowUpRight } from 'lucide-react';
+import { silverRateService, type SilverRate as SilverRateType } from '@/services/silverRate';
 import { goldRateService } from '@/services/goldRate';
 
 const metalAliases = {
@@ -21,9 +21,15 @@ const getMetalKey = (purity: string): 'silver' | 'gold22k' | null => {
 const formatPrice = (price: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(price);
 
+const METALS = [
+  { key: 'silver' as const, label: 'Silver', swatch: 'bg-slate-300' },
+  { key: 'gold22k' as const, label: 'Gold 22K', swatch: 'bg-amber-400' },
+];
+
 /**
  * Fixed, always-visible bottom-right rate card for the Home page — a static
- * (non-dismissible) glanceable summary of today's Silver / Gold 22K rate.
+ * (non-dismissible) glanceable summary of today's Silver / Gold 22K rate,
+ * with day-over-day change direction.
  */
 const FloatingRateWidget = () => {
   const { data: silverToday = [] } = useQuery({
@@ -36,34 +42,70 @@ const FloatingRateWidget = () => {
     queryFn: goldRateService.getTodayRate,
     staleTime: 5 * 60_000,
   });
+  const { data: silverHistory = [] } = useQuery({
+    queryKey: ['silver-rates-history'],
+    queryFn: () => silverRateService.getRateHistory(2),
+    staleTime: 5 * 60_000,
+  });
+  const { data: goldHistory = [] } = useQuery({
+    queryKey: ['gold-rates-history'],
+    queryFn: () => goldRateService.getRateHistory(2),
+    staleTime: 5 * 60_000,
+  });
 
-  const silver = silverToday.find((r) => getMetalKey(r.purity) === 'silver');
-  const gold = goldToday.find((r) => getMetalKey(r.purity) === 'gold22k');
+  const today: SilverRateType[] = [...silverToday, ...goldToday];
+  const history: SilverRateType[] = [...silverHistory, ...goldHistory];
 
-  if (!silver && !gold) return null;
+  const rows = METALS.map(({ key, label, swatch }) => {
+    const current = today.find((r) => getMetalKey(r.purity) === key);
+    if (!current) return null;
+    const sorted = history
+      .filter((r) => getMetalKey(r.purity) === key)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const previous = sorted.length > 1 ? sorted[1] : null;
+    const change = previous ? current.ratePerGram - previous.ratePerGram : 0;
+    return { key, label, swatch, current, change };
+  }).filter((r): r is NonNullable<typeof r> => !!r);
+
+  if (rows.length === 0) return null;
 
   return (
     <Link
       to="/silver-rate"
-      className="fixed bottom-5 right-5 z-40 bg-card border border-border rounded-xl shadow-lg px-4 py-3 hidden sm:flex flex-col gap-1.5 hover:shadow-xl transition-shadow"
+      className="fixed bottom-5 right-5 z-40 hidden sm:block w-64 rounded-2xl border border-border/60 bg-card/95 backdrop-blur-sm shadow-lg overflow-hidden hover:shadow-xl hover:-translate-y-0.5 transition-[box-shadow,transform] duration-300"
       aria-label="Today's silver and gold rates"
     >
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-        <Coins className="h-3.5 w-3.5 text-primary" />
-        Today's Rate
+      <div className="flex items-center justify-between px-4 py-2.5 bg-primary text-primary-foreground">
+        <span className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary-foreground/70" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary-foreground" />
+          </span>
+          Today's Rate
+        </span>
+        <ArrowUpRight className="h-3.5 w-3.5 opacity-70" />
       </div>
-      {silver && (
-        <div className="flex items-center justify-between gap-4 text-sm">
-          <span className="text-muted-foreground">Silver</span>
-          <span className="font-semibold text-primary">{formatPrice(silver.ratePerGram)}/g</span>
-        </div>
-      )}
-      {gold && (
-        <div className="flex items-center justify-between gap-4 text-sm">
-          <span className="text-muted-foreground">Gold 22K</span>
-          <span className="font-semibold text-primary">{formatPrice(gold.ratePerGram)}/g</span>
-        </div>
-      )}
+
+      <div className="divide-y divide-border/60">
+        {rows.map((row) => (
+          <div key={row.key} className="flex items-center justify-between gap-3 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <span className={`h-2.5 w-2.5 rounded-full ${row.swatch}`} />
+              <span className="text-sm text-muted-foreground">{row.label}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold text-foreground">{formatPrice(row.current.ratePerGram)}/g</span>
+              {row.change > 0 ? (
+                <TrendingUp className="h-3.5 w-3.5 text-green-600" />
+              ) : row.change < 0 ? (
+                <TrendingDown className="h-3.5 w-3.5 text-destructive" />
+              ) : (
+                <Minus className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </Link>
   );
 };
