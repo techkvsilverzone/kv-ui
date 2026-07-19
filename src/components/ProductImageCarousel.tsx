@@ -18,10 +18,18 @@ interface ProductImageCarouselProps {
   alwaysShowControls?: boolean;
 }
 
-/** Stops a control click from triggering a surrounding <Link> navigation. */
+/**
+ * Stops a control click from triggering a surrounding <Link> navigation.
+ * `preventDefault()` alone is enough — React Router's Link checks `event.defaultPrevented`
+ * before navigating. Do NOT also call `stopPropagation()` here: CarouselPrevious/CarouselNext
+ * receive this via `onClickCapture` while their own `onClick` (scrollPrev/scrollNext) is a
+ * separate bubble-phase handler on the same element — React dispatches capture- and
+ * bubble-phase listeners on one element as a single ordered sequence, so stopPropagation()
+ * in the capture phase would stop that sequence before the bubble-phase scrollPrev/scrollNext
+ * ever runs, silently breaking the arrows (bug-092).
+ */
 const stopNav = (e: React.MouseEvent) => {
   e.preventDefault();
-  e.stopPropagation();
 };
 
 const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
