@@ -8,6 +8,7 @@ import type { SavingsEnrollment } from './savings';
 export interface StoreConfig {
   theme: string;
   isDark: boolean;
+  marqueeMessages?: string[];
 }
 
 export interface AdminStats {

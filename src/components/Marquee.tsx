@@ -4,6 +4,7 @@ import FastMarquee from 'react-fast-marquee';
 import { TrendingUp, TrendingDown, Minus, Bell } from 'lucide-react';
 import { silverRateService, type SilverRate as SilverRateType } from '@/services/silverRate';
 import { goldRateService } from '@/services/goldRate';
+import { storeConfigService } from '@/services/storeConfig';
 
 interface PriceUpdate {
   type: 'price' | 'notification';
@@ -25,7 +26,8 @@ const getMetalKey = (purity: string): 'silver' | 'gold22k' | null => {
   return null;
 };
 
-const staticUpdates: PriceUpdate[] = [
+// Shown only until an admin sets custom messages via the Theme tab in the admin panel.
+const fallbackMessages: PriceUpdate[] = [
   { type: 'notification', text: '🎉 Festive Sale: Up to 25% OFF on all jewelry!' },
   { type: 'notification', text: '💎 New Arrival: Exclusive Temple Jewelry Collection' },
   { type: 'notification', text: '🏆 Join our Monthly Savings Scheme - Get 1 month bonus!' },
@@ -58,8 +60,18 @@ const Marquee = () => {
     queryFn: () => goldRateService.getRateHistory(2),
     staleTime: 5 * 60_000,
   });
+  const { data: storeConfig } = useQuery({
+    queryKey: ['store-config'],
+    queryFn: storeConfigService.getPublicStoreConfig,
+    staleTime: 5 * 60_000,
+  });
 
   if (location.pathname.startsWith('/admin')) return null;
+
+  const customMessages: PriceUpdate[] = (storeConfig?.marqueeMessages ?? [])
+    .filter((text) => text.trim().length > 0)
+    .map((text) => ({ type: 'notification' as const, text }));
+  const messageUpdates = customMessages.length > 0 ? customMessages : fallbackMessages;
 
   const rates: SilverRateType[] = [...silverToday, ...goldToday];
   const history: SilverRateType[] = [...silverHistory, ...goldHistory];
@@ -93,11 +105,11 @@ const Marquee = () => {
     .filter((u): u is PriceUpdate => !!u);
 
   const updates = rateUpdates.length > 0
-    ? [...rateUpdates, ...staticUpdates]
+    ? [...rateUpdates, ...messageUpdates]
     : [
         { type: 'price' as const, text: 'Silver: Live rate update soon' },
         { type: 'price' as const, text: 'Gold 22K: Live rate update soon' },
-        ...staticUpdates,
+        ...messageUpdates,
       ];
 
   return (

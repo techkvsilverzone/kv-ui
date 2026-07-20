@@ -501,6 +501,8 @@ const Admin = () => {
   // Theme customization state
   const [activeTheme, setActiveTheme] = useState('ocean-teal');
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [marqueeMessages, setMarqueeMessages] = useState<string[]>([]);
+  const [newMarqueeMessage, setNewMarqueeMessage] = useState('');
 
   const colorThemes: Record<string, { label: string; swatch: string; primary: string; ring: string }> = {
     'ocean-teal': { label: 'Ocean Teal', swatch: 'hsl(195 50% 45%)', primary: '195 50% 45%', ring: '195 50% 45%' },
@@ -1037,6 +1039,7 @@ const Admin = () => {
     document.documentElement.style.setProperty('--ring', selected.ring);
     setIsDark(!!adminStoreConfig.isDark);
     document.documentElement.classList.toggle('dark', !!adminStoreConfig.isDark);
+    setMarqueeMessages(adminStoreConfig.marqueeMessages ?? []);
     localStorage.setItem('kv-theme-config', JSON.stringify(adminStoreConfig));
   }, [adminStoreConfig]);
 
@@ -1545,7 +1548,7 @@ const Admin = () => {
                             <Select value={productForm.purity} onValueChange={(v) => setProductForm({ ...productForm, purity: v })}>
                               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                               <SelectContent className="bg-card">
-                                <SelectItem value="800">800 Silver</SelectItem>
+                                <SelectItem value="80">80 Silver</SelectItem>
                                 <SelectItem value="925">925 Silver</SelectItem>
                                 <SelectItem value="999">999 Fine Silver</SelectItem>
                                 <SelectItem value="22K Gold">22K Gold</SelectItem>
@@ -1694,7 +1697,7 @@ const Admin = () => {
                       <Select value={editProductForm.purity} onValueChange={(v) => setEditProductForm({ ...editProductForm, purity: v })}>
                         <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-card">
-                          <SelectItem value="800">800 Silver</SelectItem>
+                          <SelectItem value="80">80 Silver</SelectItem>
                           <SelectItem value="925">925 Silver</SelectItem>
                           <SelectItem value="999">999 Fine Silver</SelectItem>
                           <SelectItem value="22K Gold">22K Gold</SelectItem>
@@ -3255,15 +3258,74 @@ const Admin = () => {
                 </div>
               </Card>
 
+              {/* Marquee Ticker Messages */}
+              <Card className="p-6">
+                <h2 className="font-serif text-xl font-semibold mb-1">Marquee Ticker Messages</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Custom messages scrolling in the top ticker, alongside the live Silver and Gold rates (which always show and can't be edited here).
+                </p>
+                <div className="space-y-2 mb-4">
+                  {marqueeMessages.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No custom messages yet — a default set of promo messages will show instead.</p>
+                  ) : (
+                    marqueeMessages.map((msg, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Input
+                          value={msg}
+                          onChange={(e) => {
+                            const updated = [...marqueeMessages];
+                            updated[index] = e.target.value;
+                            setMarqueeMessages(updated);
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setMarqueeMessages(marqueeMessages.filter((_, i) => i !== index))}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="e.g. 🎉 Festive Sale: Up to 25% OFF on all jewelry!"
+                    value={newMarqueeMessage}
+                    onChange={(e) => setNewMarqueeMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Enter' || !newMarqueeMessage.trim()) return;
+                      e.preventDefault();
+                      setMarqueeMessages([...marqueeMessages, newMarqueeMessage.trim()]);
+                      setNewMarqueeMessage('');
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (!newMarqueeMessage.trim()) return;
+                      setMarqueeMessages([...marqueeMessages, newMarqueeMessage.trim()]);
+                      setNewMarqueeMessage('');
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add
+                  </Button>
+                </div>
+              </Card>
+
               {/* Save Global Theme */}
               <Card className="p-6">
                 <h2 className="font-serif text-xl font-semibold mb-1">Save Global Theme</h2>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Persist the selected theme and display mode for all users by saving to the server. Theme is also saved to localStorage for instant fallback.
+                  Persist the selected theme, display mode, and marquee messages for all users by saving to the server. Theme is also saved to localStorage for instant fallback.
                 </p>
                 <Button
                   onClick={async () => {
-                    const config = { theme: activeTheme, isDark };
+                    const config = { theme: activeTheme, isDark, marqueeMessages };
                     localStorage.setItem('kv-theme-config', JSON.stringify(config));
                     await updateStoreConfigMutation.mutateAsync(config);
                   }}
