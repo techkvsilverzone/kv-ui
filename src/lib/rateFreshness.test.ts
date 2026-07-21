@@ -163,4 +163,26 @@ describe('resolveRateBlock', () => {
     expect(result.blocked).toBe(false);
     expect(result.staleMetals).toEqual([]);
   });
+
+  it('ignores a leftover-blocked server flag during the new day\'s grace period (e.g. 00:23)', () => {
+    // Yesterday's cron blocked the flag because the rate wasn't updated in time; it won't be
+    // recomputed until today's 10am run. Overnight (before today's cutoff) must not be locked.
+    const result = resolveRateBlock(
+      { blocked: true, staleMetals: ['silver', 'gold'] },
+      { silver: at(2026, 6, 15), gold: at(2026, 6, 15) },
+      at(2026, 6, 16, 0, 23),
+    );
+    expect(result.blocked).toBe(false);
+    expect(result.staleMetals).toEqual([]);
+  });
+
+  it('still blocks at/after the cutoff when the flag is genuinely stale today', () => {
+    const result = resolveRateBlock(
+      { blocked: true, staleMetals: ['silver'] },
+      { silver: at(2026, 6, 15) },
+      at(2026, 6, 16, RATE_UPDATE_CUTOFF_HOUR),
+    );
+    expect(result.blocked).toBe(true);
+    expect(result.staleMetals).toEqual(['silver']);
+  });
 });

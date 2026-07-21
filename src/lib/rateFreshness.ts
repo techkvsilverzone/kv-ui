@@ -110,6 +110,12 @@ export interface ServerRateStatus {
  * immediately rather than wait for the next run: a metal the server marks stale is dropped
  * the moment the client's latest rate record for it is dated today.
  *
+ * The flag also only updates once a day (at the cutoff), so it stays `blocked: true`
+ * overnight into the next calendar day until that day's own cron run — even during that
+ * new day's grace period (00:00 up to the cutoff hour), which should never be locked. So
+ * the cutoff-hour grace period is re-applied here too, exactly like `isMetalStale`: before
+ * the cutoff, today is never blocked regardless of what the (possibly-yesterday's) flag says.
+ *
  * Sunday is exempt regardless of the server flag — this guards against a stale flag left
  * over from Saturday's cutoff (or a server not yet updated with the Sunday exemption).
  */
@@ -117,8 +123,10 @@ export function resolveRateBlock(
   server: ServerRateStatus,
   latestByMetal: Partial<Record<Metal, Date | null>>,
   now: Date,
+  cutoffHour = RATE_UPDATE_CUTOFF_HOUR,
 ): RateBlockResult {
   if (isRateUpdateExemptDay(now)) return { blocked: false, staleMetals: [] };
+  if (now.getHours() < cutoffHour) return { blocked: false, staleMetals: [] };
   const staleMetals = server.staleMetals.filter((metal) => {
     const latest = latestByMetal[metal] ?? null;
     // Keep blocked unless today's rate is already present (just saved).

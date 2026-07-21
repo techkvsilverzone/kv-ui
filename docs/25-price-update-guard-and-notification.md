@@ -103,6 +103,11 @@ GET /admin/rate-status  →  { blocked: boolean, staleMetals: ("silver"|"gold")[
   data: a server-stale metal is **dropped the instant the client's latest record for it is
   dated today**, so saving a rate via the gate unlocks immediately without waiting for the
   next cron run.
+- Because the flag only updates once a day, a `blocked: true` set by yesterday's cutoff would
+  otherwise persist into the next day's grace period (00:00 up to today's cutoff hour) until
+  today's cron finally runs at 10am — incorrectly locking the panel overnight. `resolveRateBlock`
+  re-applies the same cutoff-hour grace check as `isMetalStale`: before the cutoff, today is
+  never blocked, regardless of what the (possibly stale) flag says.
 - `/admin/rate-status` is **admin-only**; the query is `enabled` for `admin` only. Staff fall
   back to the client-side rule (which reads the same `/admin/silver-rates` / `/admin/gold-rates`
   they already load).
