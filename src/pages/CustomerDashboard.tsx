@@ -122,13 +122,14 @@ const SavingsTab = ({ schemes, isLoading }: { schemes: SavingsEnrollment[]; isLo
         const start = new Date(scheme.startDate);
         const maturity = new Date(start);
         maturity.setMonth(maturity.getMonth() + scheme.duration);
-        const passbookNumber = scheme.passbookNumber ?? scheme._id.slice(-8).toUpperCase();
 
         return (
           <Card key={scheme._id} className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Passbook #{passbookNumber}</p>
+                <p className="text-xs text-muted-foreground mb-1">
+                  {scheme.passbookNumber ? `Passbook #${scheme.passbookNumber}` : 'Passbook pending first payment'}
+                </p>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   scheme.status === 'active' ? 'bg-green-100 text-green-700' :
                   scheme.status === 'completed' ? 'bg-blue-100 text-blue-700' :
@@ -137,12 +138,14 @@ const SavingsTab = ({ schemes, isLoading }: { schemes: SavingsEnrollment[]; isLo
                   {scheme.status}
                 </span>
               </div>
-              <Button variant="outline" size="sm" asChild>
-                <Link to={`/savings-scheme?passbook=${encodeURIComponent(passbookNumber)}`}>
-                  <BookOpen className="h-3.5 w-3.5 mr-1.5" />
-                  Passbook
-                </Link>
-              </Button>
+              {scheme.passbookNumber && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/savings-scheme?passbook=${encodeURIComponent(scheme.passbookNumber)}`}>
+                    <BookOpen className="h-3.5 w-3.5 mr-1.5" />
+                    Passbook
+                  </Link>
+                </Button>
+              )}
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">

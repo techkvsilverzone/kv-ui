@@ -2187,7 +2187,8 @@ const Admin = () => {
                                 size="icon"
                                 className="text-destructive"
                                 onClick={() => {
-                                  if (window.confirm(`Delete passbook "${s.passbookNumber}"? This cannot be undone.`)) {
+                                  const label = s.passbookNumber ? `passbook "${s.passbookNumber}"` : 'this enrollment (no passbook issued yet)';
+                                  if (window.confirm(`Delete ${label}? This cannot be undone.`)) {
                                     deleteSavingsMutation.mutate(s._id);
                                   }
                                 }}

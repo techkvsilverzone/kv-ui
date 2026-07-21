@@ -21,8 +21,10 @@ export interface SavingsEnrollment {
    */
   userId: string | { _id: string; name: string; email: string };
   /** Unique per-enrollment tracking number, e.g. "PB-00000042". One customer can hold
-   * several concurrent schemes; the passbook number is what distinguishes them. */
-  passbookNumber: string;
+   * several concurrent schemes; the passbook number is what distinguishes them.
+   * Unset until the scheme's first payment is recorded — enrollment alone does not
+   * issue a passbook. */
+  passbookNumber?: string;
   planName?: string;
   monthlyAmount: number;
   duration: number;

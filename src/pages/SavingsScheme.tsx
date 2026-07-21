@@ -148,7 +148,7 @@ const SavingsScheme = () => {
 
       toast({
         title: 'Enrollment Initiated',
-        description: 'Your new savings scheme is now active.',
+        description: 'Your new savings scheme is now active. Your passbook will be issued after your first payment.',
       });
       void refetchSchemes();
     } catch (error: any) {
@@ -261,7 +261,6 @@ const SavingsScheme = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {mySchemes.map((scheme) => {
-                  const passbookNumber = scheme.passbookNumber ?? scheme._id.slice(-8).toUpperCase();
                   const start = new Date(scheme.startDate);
                   const maturity = new Date(start);
                   maturity.setMonth(maturity.getMonth() + scheme.duration);
@@ -269,7 +268,9 @@ const SavingsScheme = () => {
                     <Card key={scheme._id} id={`passbook-${scheme._id}`} className="p-5">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <p className="text-xs text-muted-foreground">Passbook #{passbookNumber}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {scheme.passbookNumber ? `Passbook #${scheme.passbookNumber}` : 'Passbook pending first payment'}
+                          </p>
                           <p className="font-semibold text-lg mt-0.5">{formatPrice(scheme.monthlyAmount)}<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
                         </div>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -294,10 +295,16 @@ const SavingsScheme = () => {
                           <span className="font-medium text-foreground">{maturity.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm" className="mt-4 w-full gap-2" onClick={() => setSelectedScheme(scheme)}>
-                        <BookOpen className="h-3.5 w-3.5" />
-                        View Passbook
-                      </Button>
+                      {scheme.passbookNumber ? (
+                        <Button variant="outline" size="sm" className="mt-4 w-full gap-2" onClick={() => setSelectedScheme(scheme)}>
+                          <BookOpen className="h-3.5 w-3.5" />
+                          View Passbook
+                        </Button>
+                      ) : (
+                        <p className="mt-4 text-xs text-muted-foreground text-center">
+                          Your passbook is issued once your first payment is recorded.
+                        </p>
+                      )}
                     </Card>
                   );
                 })}

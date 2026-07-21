@@ -23,7 +23,9 @@ const PassbookView = forwardRef<HTMLDivElement, PassbookViewProps>(
     const start = new Date(scheme.startDate);
     const maturity = new Date(start);
     maturity.setMonth(maturity.getMonth() + scheme.duration);
-    const passbookNumber = scheme.passbookNumber ?? scheme._id.slice(-8).toUpperCase();
+    // Callers only route here once a real passbook exists (issued on first payment) —
+    // this is a defensive label, not a fabricated identity.
+    const passbookNumber = scheme.passbookNumber ?? 'Pending (issued after first payment)';
 
     // Derive the ledger from the scheme's own payment history when the caller
     // doesn't supply one — each deposit's running balance is the cumulative sum.
