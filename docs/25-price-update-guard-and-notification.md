@@ -12,14 +12,17 @@ Make the daily silver **and gold** rate a mandatory update. Every morning by **1
    - **Block the admin panel** for `admin` and `staff` users (customers are unaffected — they cannot reach it).
    - **Send a WhatsApp reminder** to **+91 88256 49680**.
 2. The block clears automatically the moment today's rate is saved.
+3. **Sunday is exempt** — no rate update is required that day. The lock never engages on
+   Sunday (IST) and no WhatsApp reminder is sent, regardless of how stale the last recorded
+   rate is.
 
-Timezone is **Asia/Kolkata (IST)** for both the cron and the "today" comparison.
+Timezone is **Asia/Kolkata (IST)** for both the cron and the "today"/"Sunday" comparison.
 
 ---
 
 ## Part A — Frontend (done in this repo)
 
-- `src/lib/rateFreshness.ts` — pure rule: a metal is *stale* if, at/after `RATE_UPDATE_CUTOFF_HOUR` (10), its latest rate record is not dated today. Before 10am nothing is blocked (grace period).
+- `src/lib/rateFreshness.ts` — pure rule: a metal is *stale* if, at/after `RATE_UPDATE_CUTOFF_HOUR` (10), its latest rate record is not dated today. Before 10am nothing is blocked (grace period). On Sunday (`isRateUpdateExemptDay`) nothing is ever blocked, before or after the cutoff.
 - `Admin.tsx` fetches `/admin/silver-rates` and `/admin/gold-rates`, computes the block, and renders `RateUpdateGate` (with inline rate-update forms so admins can unblock themselves). A 1-minute ticker re-evaluates so the lock engages at 10am without a reload.
 - **Gold degrades gracefully:** the gold query has `retry: false`. Until the gold endpoints below exist, the request errors, gold is marked *source unavailable*, and it is skipped — only silver is enforced. As soon as the endpoints ship, gold is automatically enforced too.
 
@@ -49,6 +52,9 @@ Pseudocode:
 
 ```
 cron("0 10 * * *", tz="Asia/Kolkata"):
+  if isSunday(nowIST):
+    setRateBlockFlag(blocked=false, staleMetals=[])
+    return   # Sunday is exempt — no update required, no reminder sent
   today = startOfDay(nowIST)
   staleMetals = []
   for metal in ["silver", "gold"]:
@@ -122,4 +128,5 @@ GET /admin/rate-status  →  { blocked: boolean, staleMetals: ("silver"|"gold")[
 - [x] At 10:00 IST with no today-rate, admin see the lock and a WhatsApp lands at +918825649680.
 - [x] Saving today's rate clears the lock immediately (`resolveRateBlock` clears on fresh client data).
 - [x] Customers are never blocked (gate is admin-panel-only).
+- [x] Sunday (IST) is exempt — no lock, no WhatsApp reminder — even with a stale rate past the cutoff.
 - [ ] Staff carve-out: staff can reach + clear the rate lock (needs `/admin/*` middleware staff check).

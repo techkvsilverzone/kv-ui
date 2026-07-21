@@ -5,8 +5,10 @@
  * 10:00 (store-local time) the admin must record today's rate. If the rate is still
  * yesterday's (or older) at/after that cutoff, the admin panel is blocked for
  * admin/staff until they update it. Customers are never affected (they cannot reach
- * the admin panel). The matching server-side 10am cron + WhatsApp alert is specified
- * in docs/25-price-update-guard-and-notification.md.
+ * the admin panel). Sunday is exempt — the store does not require a rate update that
+ * day, so the lock never engages regardless of the cutoff hour or rate age. The
+ * matching server-side 10am cron + WhatsApp alert is specified in
+ * docs/25-price-update-guard-and-notification.md.
  */
 
 export type Metal = 'silver' | 'gold';
@@ -39,6 +41,14 @@ export function isSameLocalDay(a: Date, b: Date): boolean {
   );
 }
 
+/** `Date#getDay()` value for Sunday. */
+const SUNDAY = 0;
+
+/** True when `now` falls on a day exempt from the mandatory rate update (Sunday). */
+export function isRateUpdateExemptDay(now: Date): boolean {
+  return now.getDay() === SUNDAY;
+}
+
 /** Most recent valid `date` across a list of rate records, or null when there are none. */
 export function latestRateDate(rates: Array<{ date?: string }>): Date | null {
   let latest: Date | null = null;
@@ -53,13 +63,15 @@ export function latestRateDate(rates: Array<{ date?: string }>): Date | null {
 
 /**
  * A metal is stale when, at/after the cutoff hour, its latest rate is not from today.
- * Before the cutoff there is still time to update, so it is never stale yet.
+ * Before the cutoff there is still time to update, so it is never stale yet. Sunday is
+ * exempt entirely — no update is required, so it is never stale that day.
  */
 export function isMetalStale(
   latest: Date | null,
   now: Date,
   cutoffHour = RATE_UPDATE_CUTOFF_HOUR,
 ): boolean {
+  if (isRateUpdateExemptDay(now)) return false;
   if (now.getHours() < cutoffHour) return false;
   if (!latest) return true;
   return !isSameLocalDay(latest, now);
@@ -97,12 +109,16 @@ export interface ServerRateStatus {
  * only recomputed by the cron, so after an admin saves today's rate we must clear the lock
  * immediately rather than wait for the next run: a metal the server marks stale is dropped
  * the moment the client's latest rate record for it is dated today.
+ *
+ * Sunday is exempt regardless of the server flag — this guards against a stale flag left
+ * over from Saturday's cutoff (or a server not yet updated with the Sunday exemption).
  */
 export function resolveRateBlock(
   server: ServerRateStatus,
   latestByMetal: Partial<Record<Metal, Date | null>>,
   now: Date,
 ): RateBlockResult {
+  if (isRateUpdateExemptDay(now)) return { blocked: false, staleMetals: [] };
   const staleMetals = server.staleMetals.filter((metal) => {
     const latest = latestByMetal[metal] ?? null;
     // Keep blocked unless today's rate is already present (just saved).

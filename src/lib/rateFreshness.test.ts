@@ -4,11 +4,14 @@ import {
   resolveRateBlock,
   isMetalStale,
   isSameLocalDay,
+  isRateUpdateExemptDay,
   latestRateDate,
   RATE_UPDATE_CUTOFF_HOUR,
 } from './rateFreshness';
 
 const at = (y: number, m: number, d: number, h = 0, min = 0) => new Date(y, m - 1, d, h, min);
+// 2026-06-14 is a Sunday.
+const sunday = (h = 0, min = 0) => at(2026, 6, 14, h, min);
 
 describe('isSameLocalDay', () => {
   it('matches the same calendar day regardless of time', () => {
@@ -34,6 +37,15 @@ describe('latestRateDate', () => {
   });
 });
 
+describe('isRateUpdateExemptDay', () => {
+  it('is true on Sunday', () => {
+    expect(isRateUpdateExemptDay(sunday(11))).toBe(true);
+  });
+  it('is false on other days', () => {
+    expect(isRateUpdateExemptDay(at(2026, 6, 15, 11))).toBe(false);
+  });
+});
+
 describe('isMetalStale', () => {
   const cutoff = RATE_UPDATE_CUTOFF_HOUR;
 
@@ -51,6 +63,10 @@ describe('isMetalStale', () => {
 
   it('is fresh after the cutoff when today already has a rate', () => {
     expect(isMetalStale(at(2026, 6, 16, 8), at(2026, 6, 16, cutoff + 1))).toBe(false);
+  });
+
+  it('is never stale on Sunday, even with no rate, past the cutoff', () => {
+    expect(isMetalStale(null, sunday(cutoff + 1))).toBe(false);
   });
 });
 
@@ -87,6 +103,15 @@ describe('computeRateBlock', () => {
       at(2026, 6, 16, RATE_UPDATE_CUTOFF_HOUR - 1),
     );
     expect(result.blocked).toBe(false);
+  });
+
+  it('does not block on Sunday even with a stale rate past the cutoff', () => {
+    const result = computeRateBlock(
+      { silver: { available: true, latestDate: at(2026, 6, 12) } },
+      sunday(RATE_UPDATE_CUTOFF_HOUR + 1),
+    );
+    expect(result.blocked).toBe(false);
+    expect(result.staleMetals).toEqual([]);
   });
 });
 
@@ -127,5 +152,15 @@ describe('resolveRateBlock', () => {
   it('is not blocked when the server reports nothing stale', () => {
     const result = resolveRateBlock({ blocked: false, staleMetals: [] }, {}, now);
     expect(result.blocked).toBe(false);
+  });
+
+  it('ignores a stale server flag on Sunday', () => {
+    const result = resolveRateBlock(
+      { blocked: true, staleMetals: ['silver', 'gold'] },
+      {},
+      sunday(RATE_UPDATE_CUTOFF_HOUR + 1),
+    );
+    expect(result.blocked).toBe(false);
+    expect(result.staleMetals).toEqual([]);
   });
 });
