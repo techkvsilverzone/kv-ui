@@ -14,7 +14,12 @@ export interface SavingsPayment {
 
 export interface SavingsEnrollment {
   _id: string;
-  user: string;
+  /**
+   * The owning customer. Populated as `{ _id, name, email }` on admin listings
+   * (`GET /admin/savings`); a bare id string everywhere else (enroll/my-schemes/passbook
+   * lookup never populate it — the caller already knows it's their own).
+   */
+  userId: string | { _id: string; name: string; email: string };
   /** Unique per-enrollment tracking number, e.g. "PB-00000042". One customer can hold
    * several concurrent schemes; the passbook number is what distinguishes them. */
   passbookNumber: string;
@@ -27,6 +32,18 @@ export interface SavingsEnrollment {
   bonusAmount: number;
   payments?: SavingsPayment[];
   createdAt: string;
+}
+
+/** Admin-only passbook correction — every field optional, only present fields are changed.
+ * The passbook number itself is never editable (it's the tracking key already handed out). */
+export interface SavingsAdminUpdatePayload {
+  planName?: string;
+  monthlyAmount?: number;
+  duration?: number;
+  bonusAmount?: number;
+  totalPaid?: number;
+  status?: 'Active' | 'Completed' | 'Cancelled';
+  startDate?: string;
 }
 
 export const savingsService = {

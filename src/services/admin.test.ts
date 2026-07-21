@@ -57,4 +57,15 @@ describe('adminService', () => {
 
     expect(api.put).toHaveBeenCalledWith('/admin/orders/o1/status', { status: 'Shipped' });
   });
+
+  it('updates and deletes a savings/passbook record at the admin-only endpoint', async () => {
+    vi.mocked(api.put).mockResolvedValue({ _id: 's1', status: 'Cancelled' });
+    vi.mocked(api.delete).mockResolvedValue(undefined);
+
+    await adminService.updateSavingsScheme('s1', { status: 'Cancelled' });
+    await adminService.deleteSavingsScheme('s1');
+
+    expect(api.put).toHaveBeenCalledWith('/admin/savings/s1', { status: 'Cancelled' });
+    expect(api.delete).toHaveBeenCalledWith('/admin/savings/s1');
+  });
 });

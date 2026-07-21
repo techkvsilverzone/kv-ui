@@ -3,7 +3,7 @@ import { ApiError } from '../lib/api';
 import type { Product } from '../context/CartContext';
 import type { Order } from './order';
 import type { User } from '../context/AuthContext';
-import type { SavingsEnrollment } from './savings';
+import type { SavingsEnrollment, SavingsAdminUpdatePayload } from './savings';
 
 export interface StoreConfig {
   theme: string;
@@ -47,6 +47,16 @@ export const adminService = {
 
   getAllSavingsSchemes: async (): Promise<SavingsEnrollment[]> => {
     return api.get<SavingsEnrollment[]>('/admin/savings');
+  },
+
+  /** Admin-only passbook correction — staff cannot call this (backend enforces `admin`, not `adminOrStaff`). */
+  updateSavingsScheme: async (id: string, payload: SavingsAdminUpdatePayload): Promise<SavingsEnrollment> => {
+    return api.put<SavingsEnrollment>(`/admin/savings/${id}`, payload);
+  },
+
+  /** Admin-only passbook deletion — staff cannot call this. */
+  deleteSavingsScheme: async (id: string): Promise<void> => {
+    return api.delete<void>(`/admin/savings/${id}`);
   },
 
   createProduct: async (productData: Omit<Product, 'id'>): Promise<Product> => {

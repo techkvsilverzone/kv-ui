@@ -82,6 +82,7 @@ import { adminService } from '@/services/admin';
 import { authService } from '@/services/auth';
 import { productService } from '@/services/product';
 import { savingsService } from '@/services/savings';
+import type { SavingsEnrollment, SavingsAdminUpdatePayload } from '@/services/savings';
 import { couponService, type CreateCouponPayload } from '@/services/coupon';
 import { returnsService } from '@/services/returns';
 import { API_URL } from '@/lib/api';
@@ -359,6 +360,17 @@ const Admin = () => {
   // Edit user modal state
   const [editingUser, setEditingUser] = useState<{ id: string; name: string; email: string; phone?: string; city?: string; isAdmin?: boolean } | null>(null);
   const [editUserForm, setEditUserForm] = useState({ name: '', phone: '', city: '' });
+
+  // Edit savings/passbook modal state (admin only — see savingsEditForm's usage below)
+  const [editingSavings, setEditingSavings] = useState<SavingsEnrollment | null>(null);
+  const [savingsEditForm, setSavingsEditForm] = useState({
+    planName: '',
+    monthlyAmount: '',
+    duration: '11',
+    totalPaid: '',
+    bonusAmount: '',
+    status: 'Active' as 'Active' | 'Completed' | 'Cancelled',
+  });
   const [passwordTargetUser, setPasswordTargetUser] = useState<{ id: string; name: string; email: string } | null>(null);
   const [newUserPassword, setNewUserPassword] = useState('');
 
@@ -766,6 +778,38 @@ const Admin = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       toast({ title: 'Order Status Updated' });
+    },
+  });
+
+  const updateSavingsMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: SavingsAdminUpdatePayload }) =>
+      adminService.updateSavingsScheme(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-savings'] });
+      setEditingSavings(null);
+      toast({ title: 'Passbook Updated' });
+    },
+    onError: (err) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update passbook',
+        description: err instanceof ApiError ? err.message : 'Please try again.',
+      });
+    },
+  });
+
+  const deleteSavingsMutation = useMutation({
+    mutationFn: adminService.deleteSavingsScheme,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-savings'] });
+      toast({ title: 'Passbook Deleted' });
+    },
+    onError: (err) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete passbook',
+        description: err instanceof ApiError ? err.message : 'Please try again.',
+      });
     },
   });
 
@@ -2086,6 +2130,7 @@ const Admin = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Passbook No.</TableHead>
                       <TableHead>User</TableHead>
                       <TableHead>Monthly Amount</TableHead>
                       <TableHead>Duration</TableHead>
@@ -2093,12 +2138,16 @@ const Admin = () => {
                       <TableHead>Bonus</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Start Date</TableHead>
+                      {role === 'admin' && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {allSavings.map((s) => (
                       <TableRow key={s._id}>
-                        <TableCell className="font-medium">{s.user}</TableCell>
+                        <TableCell className="font-mono text-xs">{s.passbookNumber || '—'}</TableCell>
+                        <TableCell className="font-medium">
+                          {typeof s.userId === 'string' ? s.userId : s.userId?.name || s.userId?.email || '—'}
+                        </TableCell>
                         <TableCell>{formatPrice(s.monthlyAmount)}</TableCell>
                         <TableCell>{s.duration} months</TableCell>
                         <TableCell>{formatPrice(s.totalPaid)}</TableCell>
@@ -2113,6 +2162,41 @@ const Admin = () => {
                           </span>
                         </TableCell>
                         <TableCell>{new Date(s.startDate).toLocaleDateString()}</TableCell>
+                        {role === 'admin' && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setEditingSavings(s);
+                                  setSavingsEditForm({
+                                    planName: s.planName || '',
+                                    monthlyAmount: String(s.monthlyAmount),
+                                    duration: String(s.duration),
+                                    totalPaid: String(s.totalPaid),
+                                    bonusAmount: String(s.bonusAmount),
+                                    status: (s.status as 'Active' | 'Completed' | 'Cancelled') || 'Active',
+                                  });
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive"
+                                onClick={() => {
+                                  if (window.confirm(`Delete passbook "${s.passbookNumber}"? This cannot be undone.`)) {
+                                    deleteSavingsMutation.mutate(s._id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -2122,6 +2206,111 @@ const Admin = () => {
               )}
             </Card>
           </TabsContent>
+
+          {/* Edit Passbook modal (admin only) */}
+          <Dialog open={editingSavings !== null} onOpenChange={(open) => { if (!open) setEditingSavings(null); }}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle className="font-serif">Edit Passbook</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div>
+                  <Label>Passbook Number</Label>
+                  <Input value={editingSavings?.passbookNumber ?? ''} disabled className="mt-1 text-muted-foreground" />
+                </div>
+                <div>
+                  <Label htmlFor="savings-plan-name">Plan Name</Label>
+                  <Input
+                    id="savings-plan-name"
+                    value={savingsEditForm.planName}
+                    onChange={(e) => setSavingsEditForm({ ...savingsEditForm, planName: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="savings-monthly-amount">Monthly Amount (₹)</Label>
+                    <Input
+                      id="savings-monthly-amount"
+                      type="number"
+                      value={savingsEditForm.monthlyAmount}
+                      onChange={(e) => setSavingsEditForm({ ...savingsEditForm, monthlyAmount: e.target.value })}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Duration</Label>
+                    <Select
+                      value={savingsEditForm.duration}
+                      onValueChange={(v) => setSavingsEditForm({ ...savingsEditForm, duration: v })}
+                    >
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="6">6 months</SelectItem>
+                        <SelectItem value="11">11 months</SelectItem>
+                        <SelectItem value="12">12 months</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="savings-total-paid">Total Paid (₹)</Label>
+                    <Input
+                      id="savings-total-paid"
+                      type="number"
+                      value={savingsEditForm.totalPaid}
+                      onChange={(e) => setSavingsEditForm({ ...savingsEditForm, totalPaid: e.target.value })}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="savings-bonus-amount">Bonus (₹)</Label>
+                    <Input
+                      id="savings-bonus-amount"
+                      type="number"
+                      value={savingsEditForm.bonusAmount}
+                      onChange={(e) => setSavingsEditForm({ ...savingsEditForm, bonusAmount: e.target.value })}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <Select
+                    value={savingsEditForm.status}
+                    onValueChange={(v: 'Active' | 'Completed' | 'Cancelled') => setSavingsEditForm({ ...savingsEditForm, status: v })}
+                  >
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Completed">Completed</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={() => {
+                    if (!editingSavings) return;
+                    updateSavingsMutation.mutate({
+                      id: editingSavings._id,
+                      data: {
+                        planName: savingsEditForm.planName,
+                        monthlyAmount: Number(savingsEditForm.monthlyAmount),
+                        duration: Number(savingsEditForm.duration),
+                        totalPaid: Number(savingsEditForm.totalPaid),
+                        bonusAmount: Number(savingsEditForm.bonusAmount),
+                        status: savingsEditForm.status,
+                      },
+                    });
+                  }}
+                  disabled={updateSavingsMutation.isPending || !savingsEditForm.planName}
+                >
+                  {updateSavingsMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* ═══════ COUPONS ═══════ */}
           <TabsContent value="coupons">
