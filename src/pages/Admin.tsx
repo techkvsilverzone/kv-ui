@@ -370,7 +370,19 @@ const Admin = () => {
     totalPaid: '',
     bonusAmount: '',
     status: 'Active' as 'Active' | 'Completed' | 'Cancelled',
+    goldCoinValue: '',
+    silverGrams: '',
+    gifts: [] as string[],
   });
+
+  // Ledger dialog (view for admin+staff; edit/delete rows admin-only)
+  const [viewingLedgerScheme, setViewingLedgerScheme] = useState<SavingsEnrollment | null>(null);
+  const [editingPaymentRowIndex, setEditingPaymentRowIndex] = useState<number | null>(null);
+  const [paymentRowEditForm, setPaymentRowEditForm] = useState({ amount: '', materialRate: '', devidentAmount: '', devidentMaterialRate: '' });
+
+  // Record Collection dialog (admin only)
+  const [recordingPaymentScheme, setRecordingPaymentScheme] = useState<SavingsEnrollment | null>(null);
+  const [recordPaymentForm, setRecordPaymentForm] = useState({ amount: '', materialRate: '' });
   const [passwordTargetUser, setPasswordTargetUser] = useState<{ id: string; name: string; email: string } | null>(null);
   const [newUserPassword, setNewUserPassword] = useState('');
 
@@ -808,6 +820,58 @@ const Admin = () => {
       toast({
         variant: 'destructive',
         title: 'Failed to delete passbook',
+        description: err instanceof ApiError ? err.message : 'Please try again.',
+      });
+    },
+  });
+
+  const recordSavingsPaymentMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { amount: number; materialRate?: number } }) =>
+      adminService.recordSavingsPayment(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-savings'] });
+      setRecordingPaymentScheme(null);
+      setRecordPaymentForm({ amount: '', materialRate: '' });
+      toast({ title: 'Collection Recorded' });
+    },
+    onError: (err) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to record collection',
+        description: err instanceof ApiError ? err.message : 'Please try again.',
+      });
+    },
+  });
+
+  const updateSavingsPaymentRowMutation = useMutation({
+    mutationFn: ({ id, index, data }: { id: string; index: number; data: Record<string, number> }) =>
+      adminService.updateSavingsPaymentRow(id, index, data),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-savings'] });
+      setViewingLedgerScheme(updated);
+      setEditingPaymentRowIndex(null);
+      toast({ title: 'Ledger Row Updated' });
+    },
+    onError: (err) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update ledger row',
+        description: err instanceof ApiError ? err.message : 'Please try again.',
+      });
+    },
+  });
+
+  const deleteSavingsPaymentRowMutation = useMutation({
+    mutationFn: ({ id, index }: { id: string; index: number }) => adminService.deleteSavingsPaymentRow(id, index),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-savings'] });
+      setViewingLedgerScheme(updated);
+      toast({ title: 'Ledger Row Deleted' });
+    },
+    onError: (err) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete ledger row',
         description: err instanceof ApiError ? err.message : 'Please try again.',
       });
     },
@@ -2138,7 +2202,7 @@ const Admin = () => {
                       <TableHead>Bonus</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Start Date</TableHead>
-                      {role === 'admin' && <TableHead className="text-right">Actions</TableHead>}
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2162,12 +2226,34 @@ const Admin = () => {
                           </span>
                         </TableCell>
                         <TableCell>{new Date(s.startDate).toLocaleDateString()}</TableCell>
-                        {role === 'admin' && (
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {/* Ledger view stays available to staff (read-only there); edit/delete/record below are admin-only. */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="View Ledger"
+                              onClick={() => setViewingLedgerScheme(s)}
+                            >
+                              <History className="h-4 w-4" />
+                            </Button>
+                            {role === 'admin' && (
+                              <>
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                title="Record Collection"
+                                onClick={() => {
+                                  setRecordingPaymentScheme(s);
+                                  setRecordPaymentForm({ amount: String(s.monthlyAmount), materialRate: '' });
+                                }}
+                              >
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Edit Passbook"
                                 onClick={() => {
                                   setEditingSavings(s);
                                   setSavingsEditForm({
@@ -2177,6 +2263,9 @@ const Admin = () => {
                                     totalPaid: String(s.totalPaid),
                                     bonusAmount: String(s.bonusAmount),
                                     status: (s.status as 'Active' | 'Completed' | 'Cancelled') || 'Active',
+                                    goldCoinValue: s.maturityBenefits?.goldCoinValue != null ? String(s.maturityBenefits.goldCoinValue) : '',
+                                    silverGrams: s.maturityBenefits?.silverGrams != null ? String(s.maturityBenefits.silverGrams) : '',
+                                    gifts: s.maturityBenefits?.gifts ?? [],
                                   });
                                 }}
                               >
@@ -2195,9 +2284,10 @@ const Admin = () => {
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
-                            </div>
-                          </TableCell>
-                        )}
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -2210,7 +2300,7 @@ const Admin = () => {
 
           {/* Edit Passbook modal (admin only) */}
           <Dialog open={editingSavings !== null} onOpenChange={(open) => { if (!open) setEditingSavings(null); }}>
-            <DialogContent className="max-w-sm">
+            <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="font-serif">Edit Passbook</DialogTitle>
               </DialogHeader>
@@ -2290,6 +2380,71 @@ const Admin = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="border-t pt-4">
+                  <Label className="font-medium">Maturity Benefits</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5 mb-2">Shown on the customer's passbook once the scheme matures.</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="savings-gold-coin" className="text-xs text-muted-foreground">Gold Coin Value (₹)</Label>
+                      <Input
+                        id="savings-gold-coin"
+                        type="number"
+                        value={savingsEditForm.goldCoinValue}
+                        onChange={(e) => setSavingsEditForm({ ...savingsEditForm, goldCoinValue: e.target.value })}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="savings-silver-grams" className="text-xs text-muted-foreground">Silver (Grams)</Label>
+                      <Input
+                        id="savings-silver-grams"
+                        type="number"
+                        value={savingsEditForm.silverGrams}
+                        onChange={(e) => setSavingsEditForm({ ...savingsEditForm, silverGrams: e.target.value })}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    <Label className="text-xs text-muted-foreground">Gifts</Label>
+                    {savingsEditForm.gifts.map((gift, i) => (
+                      <div key={i} className="flex gap-2">
+                        <Input
+                          aria-label={`Gift ${i + 1}`}
+                          value={gift}
+                          placeholder="e.g. Crackers Box"
+                          onChange={(e) =>
+                            setSavingsEditForm({
+                              ...savingsEditForm,
+                              gifts: savingsEditForm.gifts.map((g, gi) => (gi === i ? e.target.value : g)),
+                            })
+                          }
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setSavingsEditForm({ ...savingsEditForm, gifts: savingsEditForm.gifts.filter((_, gi) => gi !== i) })
+                          }
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSavingsEditForm({ ...savingsEditForm, gifts: [...savingsEditForm.gifts, ''] })}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Gift
+                    </Button>
+                  </div>
+                </div>
+
                 <Button
                   onClick={() => {
                     if (!editingSavings) return;
@@ -2302,12 +2457,229 @@ const Admin = () => {
                         totalPaid: Number(savingsEditForm.totalPaid),
                         bonusAmount: Number(savingsEditForm.bonusAmount),
                         status: savingsEditForm.status,
+                        maturityBenefits: {
+                          goldCoinValue: savingsEditForm.goldCoinValue ? Number(savingsEditForm.goldCoinValue) : undefined,
+                          silverGrams: savingsEditForm.silverGrams ? Number(savingsEditForm.silverGrams) : undefined,
+                          gifts: savingsEditForm.gifts,
+                        },
                       },
                     });
                   }}
                   disabled={updateSavingsMutation.isPending || !savingsEditForm.planName}
                 >
                   {updateSavingsMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Ledger dialog — view for admin+staff; row edit/delete admin-only */}
+          <Dialog open={viewingLedgerScheme !== null} onOpenChange={(open) => { if (!open) { setViewingLedgerScheme(null); setEditingPaymentRowIndex(null); } }}>
+            <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="font-serif">
+                  Ledger — {viewingLedgerScheme?.passbookNumber || 'Passbook pending first payment'}
+                </DialogTitle>
+              </DialogHeader>
+              {viewingLedgerScheme && (() => {
+                const rows = (viewingLedgerScheme.payments ?? []);
+                let cumulative = 0;
+                const ledgerRows = rows.map((p, i) => {
+                  const total = p.materialWeight + p.devidentMaterialWeight;
+                  cumulative += total;
+                  return { ...p, no: i + 1, total, cumulative };
+                });
+                const formatGrams = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+                return ledgerRows.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No collections recorded yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>No</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Collection</TableHead>
+                          <TableHead>Rate</TableHead>
+                          <TableHead>Weight (g)</TableHead>
+                          <TableHead>Devident</TableHead>
+                          <TableHead>Devident Rate</TableHead>
+                          <TableHead>Devident Wt (g)</TableHead>
+                          <TableHead>Total (g)</TableHead>
+                          <TableHead>Cumulative (g)</TableHead>
+                          {role === 'admin' && <TableHead className="text-right">Actions</TableHead>}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {ledgerRows.map((r, i) =>
+                          editingPaymentRowIndex === i ? (
+                            <TableRow key={i}>
+                              <TableCell>{r.no}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">{new Date(r.paidAt).toLocaleDateString()}</TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  className="w-24 h-8"
+                                  value={paymentRowEditForm.amount}
+                                  onChange={(e) => setPaymentRowEditForm({ ...paymentRowEditForm, amount: e.target.value })}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  className="w-20 h-8"
+                                  value={paymentRowEditForm.materialRate}
+                                  onChange={(e) => setPaymentRowEditForm({ ...paymentRowEditForm, materialRate: e.target.value })}
+                                />
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs">auto</TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  className="w-20 h-8"
+                                  value={paymentRowEditForm.devidentAmount}
+                                  onChange={(e) => setPaymentRowEditForm({ ...paymentRowEditForm, devidentAmount: e.target.value })}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  className="w-20 h-8"
+                                  value={paymentRowEditForm.devidentMaterialRate}
+                                  onChange={(e) => setPaymentRowEditForm({ ...paymentRowEditForm, devidentMaterialRate: e.target.value })}
+                                />
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs">auto</TableCell>
+                              <TableCell>—</TableCell>
+                              <TableCell>—</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    disabled={updateSavingsPaymentRowMutation.isPending}
+                                    onClick={() =>
+                                      updateSavingsPaymentRowMutation.mutate({
+                                        id: viewingLedgerScheme._id,
+                                        index: i,
+                                        data: {
+                                          amount: Number(paymentRowEditForm.amount),
+                                          materialRate: Number(paymentRowEditForm.materialRate),
+                                          devidentAmount: Number(paymentRowEditForm.devidentAmount),
+                                          devidentMaterialRate: Number(paymentRowEditForm.devidentMaterialRate),
+                                        },
+                                      })
+                                    }
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => setEditingPaymentRowIndex(null)}>
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            <TableRow key={i}>
+                              <TableCell>{r.no}</TableCell>
+                              <TableCell className="text-xs">{new Date(r.paidAt).toLocaleDateString()}</TableCell>
+                              <TableCell>{formatPrice(r.amount)}</TableCell>
+                              <TableCell>{formatPrice(r.materialRate)}</TableCell>
+                              <TableCell>{formatGrams(r.materialWeight)}</TableCell>
+                              <TableCell>{formatPrice(r.devidentAmount)}</TableCell>
+                              <TableCell>{formatPrice(r.devidentMaterialRate)}</TableCell>
+                              <TableCell>{formatGrams(r.devidentMaterialWeight)}</TableCell>
+                              <TableCell className="font-medium">{formatGrams(r.total)}</TableCell>
+                              <TableCell className="font-medium">{formatGrams(r.cumulative)}</TableCell>
+                              {role === 'admin' && (
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => {
+                                        setEditingPaymentRowIndex(i);
+                                        setPaymentRowEditForm({
+                                          amount: String(r.amount),
+                                          materialRate: String(r.materialRate),
+                                          devidentAmount: String(r.devidentAmount),
+                                          devidentMaterialRate: String(r.devidentMaterialRate),
+                                        });
+                                      }}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-destructive"
+                                      onClick={() => {
+                                        if (window.confirm(`Delete row ${r.no}? This cannot be undone.`)) {
+                                          deleteSavingsPaymentRowMutation.mutate({ id: viewingLedgerScheme._id, index: i });
+                                        }
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              )}
+                            </TableRow>
+                          ),
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                );
+              })()}
+            </DialogContent>
+          </Dialog>
+
+          {/* Record Collection dialog (admin only) */}
+          <Dialog open={recordingPaymentScheme !== null} onOpenChange={(open) => { if (!open) setRecordingPaymentScheme(null); }}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle className="font-serif">Record Collection</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <p className="text-sm text-muted-foreground">
+                  Passbook: {recordingPaymentScheme?.passbookNumber || 'Pending — this will be the first payment'}
+                </p>
+                <div>
+                  <Label htmlFor="record-payment-amount">Amount (₹)</Label>
+                  <Input
+                    id="record-payment-amount"
+                    type="number"
+                    value={recordPaymentForm.amount}
+                    onChange={(e) => setRecordPaymentForm({ ...recordPaymentForm, amount: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="record-payment-rate">Material Rate Override (₹/g)</Label>
+                  <Input
+                    id="record-payment-rate"
+                    type="number"
+                    value={recordPaymentForm.materialRate}
+                    onChange={(e) => setRecordPaymentForm({ ...recordPaymentForm, materialRate: e.target.value })}
+                    className="mt-1"
+                    placeholder="Leave blank to use the live silver rate"
+                  />
+                </div>
+                <Button
+                  onClick={() => {
+                    if (!recordingPaymentScheme) return;
+                    recordSavingsPaymentMutation.mutate({
+                      id: recordingPaymentScheme._id,
+                      data: {
+                        amount: Number(recordPaymentForm.amount),
+                        materialRate: recordPaymentForm.materialRate ? Number(recordPaymentForm.materialRate) : undefined,
+                      },
+                    });
+                  }}
+                  disabled={recordSavingsPaymentMutation.isPending || !recordPaymentForm.amount}
+                >
+                  {recordSavingsPaymentMutation.isPending ? 'Recording...' : 'Record Collection'}
                 </Button>
               </div>
             </DialogContent>

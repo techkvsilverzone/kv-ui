@@ -59,6 +59,29 @@ export const adminService = {
     return api.delete<void>(`/admin/savings/${id}`);
   },
 
+  /** Admin-only manual/offline collection entry (cash payment, correction, legacy migration).
+   * `materialRate` optionally overrides the live silver rate. Staff cannot call this. */
+  recordSavingsPayment: async (
+    id: string,
+    payload: { amount: number; materialRate?: number },
+  ): Promise<SavingsEnrollment> => {
+    return api.post<SavingsEnrollment>(`/admin/savings/${id}/pay`, payload);
+  },
+
+  /** Admin-only correction of a single ledger row. Staff cannot call this. */
+  updateSavingsPaymentRow: async (
+    id: string,
+    index: number,
+    patch: { amount?: number; materialRate?: number; devidentAmount?: number; devidentMaterialRate?: number; paidAt?: string },
+  ): Promise<SavingsEnrollment> => {
+    return api.put<SavingsEnrollment>(`/admin/savings/${id}/payments/${index}`, patch);
+  },
+
+  /** Admin-only removal of an erroneous ledger row. Staff cannot call this. */
+  deleteSavingsPaymentRow: async (id: string, index: number): Promise<SavingsEnrollment> => {
+    return api.delete<SavingsEnrollment>(`/admin/savings/${id}/payments/${index}`);
+  },
+
   createProduct: async (productData: Omit<Product, 'id'>): Promise<Product> => {
     return api.post<Product>('/admin/products', productData);
   },

@@ -21,13 +21,8 @@ import {
 import { addressService, type Address } from '@/services/address';
 import { computeOrderSummary } from '@/lib/pricing';
 import { validateForm, shippingAddressSchema } from '@/lib/validation';
+import { loadRazorpayScript } from '@/lib/razorpay';
 import Seo from '@/components/Seo';
-
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
 
 const SAVED_ADDRESS_KEY = 'kv-silver-address';
 
@@ -196,20 +191,6 @@ const Payment = () => {
     setCouponDiscount(0);
     setAppliedCoupon('');
     setCouponCode('');
-  };
-
-  const loadRazorpayScript = (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (window.Razorpay) {
-        resolve(true);
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
   };
 
   const handleRazorpayPayment = async () => {

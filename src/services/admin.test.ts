@@ -68,4 +68,18 @@ describe('adminService', () => {
     expect(api.put).toHaveBeenCalledWith('/admin/savings/s1', { status: 'Cancelled' });
     expect(api.delete).toHaveBeenCalledWith('/admin/savings/s1');
   });
+
+  it('records a manual collection and edits/deletes a ledger row at the admin-only endpoints', async () => {
+    vi.mocked(api.post).mockResolvedValue({ _id: 's1', totalPaid: 2000 });
+    vi.mocked(api.put).mockResolvedValue({ _id: 's1' });
+    vi.mocked(api.delete).mockResolvedValue({ _id: 's1' });
+
+    await adminService.recordSavingsPayment('s1', { amount: 2000, materialRate: 100 });
+    await adminService.updateSavingsPaymentRow('s1', 0, { amount: 2500 });
+    await adminService.deleteSavingsPaymentRow('s1', 0);
+
+    expect(api.post).toHaveBeenCalledWith('/admin/savings/s1/pay', { amount: 2000, materialRate: 100 });
+    expect(api.put).toHaveBeenCalledWith('/admin/savings/s1/payments/0', { amount: 2500 });
+    expect(api.delete).toHaveBeenCalledWith('/admin/savings/s1/payments/0');
+  });
 });

@@ -21,6 +21,9 @@ import { savingsService, type SavingsEnrollment } from '@/services/savings';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PassbookView from '@/components/PassbookView';
+import { loadRazorpayScript } from '@/lib/razorpay';
+import { addressService } from '@/services/address';
+import { ApiError } from '@/lib/api';
 
 const SavingsScheme = () => {
   const { toast } = useToast();
@@ -33,6 +36,7 @@ const SavingsScheme = () => {
   const [selectedScheme, setSelectedScheme] = useState<SavingsEnrollment | null>(null);
   const [passbookSearch, setPassbookSearch] = useState('');
   const [isSearchingPassbook, setIsSearchingPassbook] = useState(false);
+  const [payingSchemeId, setPayingSchemeId] = useState<string | null>(null);
   const passbookRef = useRef<HTMLDivElement>(null);
   const handlePrintPassbook = useReactToPrint({
     contentRef: passbookRef,
@@ -72,6 +76,18 @@ const SavingsScheme = () => {
     queryFn: savingsService.getMySchemes,
     enabled: isAuthenticated,
   });
+
+  // Default saved address, shown on the passbook header — mirrors the same
+  // find(isDefault) ?? [0] fallback Payment.tsx already uses.
+  const { data: myAddresses = [] } = useQuery({
+    queryKey: ['my-addresses'],
+    queryFn: addressService.getAddresses,
+    enabled: isAuthenticated,
+  });
+  const defaultAddress = myAddresses.find((a) => a.isDefault) ?? myAddresses[0];
+  const userAddressLine = defaultAddress
+    ? `${defaultAddress.address}, ${defaultAddress.city}, ${defaultAddress.state} - ${defaultAddress.pincode}`
+    : undefined;
 
   const calculateTotal = () => {
     const amount = parseInt(monthlyAmount) || 0;
@@ -159,6 +175,70 @@ const SavingsScheme = () => {
       });
     } finally {
       setIsEnrolling(false);
+    }
+  };
+
+  /** Pay this scheme's next monthly installment online via Razorpay. Amount is always the
+   * server-known scheme.monthlyAmount — the client never sends/trusts an amount. */
+  const handlePayInstallment = async (scheme: SavingsEnrollment) => {
+    setPayingSchemeId(scheme._id);
+    try {
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast({ title: 'Payment Error', description: 'Failed to load payment gateway.', variant: 'destructive' });
+        setPayingSchemeId(null);
+        return;
+      }
+
+      const order = await savingsService.createInstallmentOrder(scheme._id);
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'KV Silver Zone',
+        description: `Savings installment - ${scheme.planName || 'Silver Savings'}`,
+        order_id: order.id,
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: user?.phone || '',
+        },
+        theme: { color: '#1a1a1a' },
+        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
+          try {
+            const result = await savingsService.verifyInstallmentPayment(scheme._id, {
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            });
+            if (result.success) {
+              toast({
+                title: 'Payment Successful!',
+                description: `₹${scheme.monthlyAmount.toLocaleString('en-IN')} recorded on your passbook.`,
+              });
+              void refetchSchemes();
+            }
+          } catch {
+            toast({ title: 'Verification Failed', description: 'Payment verification failed. Contact support.', variant: 'destructive' });
+          } finally {
+            setPayingSchemeId(null);
+          }
+        },
+        modal: {
+          ondismiss: () => setPayingSchemeId(null),
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (error) {
+      toast({
+        title: 'Payment failed',
+        description: error instanceof ApiError ? error.message : 'Could not initiate payment.',
+        variant: 'destructive',
+      });
+      setPayingSchemeId(null);
     }
   };
 
@@ -264,6 +344,8 @@ const SavingsScheme = () => {
                   const start = new Date(scheme.startDate);
                   const maturity = new Date(start);
                   maturity.setMonth(maturity.getMonth() + scheme.duration);
+                  const realPaymentsCount = (scheme.payments ?? []).filter((p) => p.amount > 0).length;
+                  const canPay = scheme.status === 'Active' && realPaymentsCount < scheme.duration;
                   return (
                     <Card key={scheme._id} id={`passbook-${scheme._id}`} className="p-5">
                       <div className="flex justify-between items-start mb-3">
@@ -295,16 +377,32 @@ const SavingsScheme = () => {
                           <span className="font-medium text-foreground">{maturity.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                         </div>
                       </div>
-                      {scheme.passbookNumber ? (
-                        <Button variant="outline" size="sm" className="mt-4 w-full gap-2" onClick={() => setSelectedScheme(scheme)}>
-                          <BookOpen className="h-3.5 w-3.5" />
-                          View Passbook
-                        </Button>
-                      ) : (
-                        <p className="mt-4 text-xs text-muted-foreground text-center">
-                          Your passbook is issued once your first payment is recorded.
-                        </p>
-                      )}
+                      <div className="mt-4 space-y-2">
+                        {canPay && (
+                          <Button
+                            size="sm"
+                            className="w-full gap-2"
+                            onClick={() => handlePayInstallment(scheme)}
+                            disabled={payingSchemeId === scheme._id}
+                          >
+                            {payingSchemeId === scheme._id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              `Pay This Month (${formatPrice(scheme.monthlyAmount)})`
+                            )}
+                          </Button>
+                        )}
+                        {scheme.passbookNumber ? (
+                          <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => setSelectedScheme(scheme)}>
+                            <BookOpen className="h-3.5 w-3.5" />
+                            View Passbook
+                          </Button>
+                        ) : (
+                          <p className="text-xs text-muted-foreground text-center">
+                            Your passbook is issued once your first payment is recorded.
+                          </p>
+                        )}
+                      </div>
                     </Card>
                   );
                 })}
@@ -493,12 +591,18 @@ const SavingsScheme = () => {
               <span>Savings Passbook</span>
               <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handlePrintPassbook()}>
                 <Printer className="h-3.5 w-3.5" />
-                Print
+                Export / Print
               </Button>
             </DialogTitle>
           </DialogHeader>
           {selectedScheme && (
-            <PassbookView ref={passbookRef} scheme={selectedScheme} userName={user?.name} userPhone={user?.phone} />
+            <PassbookView
+              ref={passbookRef}
+              scheme={selectedScheme}
+              userName={user?.name}
+              userPhone={user?.phone}
+              userAddress={userAddressLine}
+            />
           )}
         </DialogContent>
       </Dialog>
