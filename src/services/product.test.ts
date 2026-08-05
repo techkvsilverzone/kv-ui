@@ -157,12 +157,25 @@ describe('productService', () => {
     expect(list[0].images).toEqual(['normalized:solo']);
   });
 
-  it('reads categories from data wrapper', async () => {
-    vi.mocked(api.get).mockResolvedValue({ status: 'success', data: ['Rings', 'Coins'] });
+  it('reads the category tree from the data wrapper', async () => {
+    const tree = [
+      { name: 'Jewellery', subcategories: ['Mens', 'Womens', 'Kids'] },
+      { name: 'Coins', subcategories: [] },
+    ];
+    vi.mocked(api.get).mockResolvedValue({ status: 'success', data: tree });
 
     const categories = await productService.getCategories();
 
     expect(api.get).toHaveBeenCalledWith('/products/categories');
-    expect(categories).toEqual(['Rings', 'Coins']);
+    expect(categories).toEqual(tree);
+  });
+
+  it('reads tags from the data wrapper', async () => {
+    vi.mocked(api.get).mockResolvedValue({ status: 'success', data: ['gifting', 'bestseller'] });
+
+    const tags = await productService.getTags();
+
+    expect(api.get).toHaveBeenCalledWith('/products/tags');
+    expect(tags).toEqual(['gifting', 'bestseller']);
   });
 });

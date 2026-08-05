@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/sheet';
 import ProductCard from '@/components/ProductCard';
 import Seo from '@/components/Seo';
-import { productService } from '@/services/product';
+import { productService, type CategoryNode } from '@/services/product';
 
 /** Products fetched per infinite-scroll batch. */
 const PAGE_SIZE = 12;
@@ -143,6 +143,8 @@ const Shop = () => {
   });
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState('');
   // Committed slider range (after debounce, inside PriceRangeFilter). null ⇒ no slider filter.
   const [priceFilter, setPriceFilter] = useState<[number, number] | null>(null);
@@ -196,9 +198,11 @@ const Shop = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['products', selectedCategories, selectedPriceRange, priceFilter, selectedMetals, searchQuery, sortBy],
+    queryKey: ['products', selectedCategories, selectedSubcategories, selectedTags, selectedPriceRange, priceFilter, selectedMetals, searchQuery, sortBy],
     queryFn: ({ pageParam }) => productService.getProducts({
       category: selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,
+      subcategory: selectedSubcategories.length > 0 ? selectedSubcategories.join(',') : undefined,
+      tags: selectedTags.length > 0 ? selectedTags.join(',') : undefined,
       metal: selectedMetals.length > 0 ? selectedMetals.join(',') : undefined,
       minPrice,
       maxPrice,
@@ -239,8 +243,14 @@ const Shop = () => {
     queryFn: productService.getCategories,
   });
 
-  const categories = Array.isArray(categoriesData) ? categoriesData : [];
-  const visibleCategories = categories.filter(c => !filterConfig.hiddenCategories.includes(c));
+  const { data: tagsData = [] } = useQuery({
+    queryKey: ['tags'],
+    queryFn: productService.getTags,
+  });
+
+  const categories: CategoryNode[] = Array.isArray(categoriesData) ? categoriesData : [];
+  const visibleCategories = categories.filter(c => !filterConfig.hiddenCategories.includes(c.name));
+  const tags = Array.isArray(tagsData) ? tagsData : [];
 
   // Auto-load the next page when the sentinel near the bottom scrolls into view.
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -263,6 +273,25 @@ const Shop = () => {
     setSearchQuery(''); // clear search when filtering
     setSelectedCategories(prev =>
       prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
+    );
+    // Deselecting a category also drops any of its subcategories that are still selected.
+    const subs = categories.find(c => c.name === category)?.subcategories ?? [];
+    if (subs.length) {
+      setSelectedSubcategories(prev => prev.filter(s => !subs.includes(s)));
+    }
+  };
+
+  const toggleSubcategory = (subcategory: string) => {
+    setSearchQuery('');
+    setSelectedSubcategories(prev =>
+      prev.includes(subcategory) ? prev.filter(s => s !== subcategory) : [...prev, subcategory]
+    );
+  };
+
+  const toggleTag = (tag: string) => {
+    setSearchQuery('');
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
     );
   };
 
@@ -288,6 +317,8 @@ const Shop = () => {
   const handleSearchChange = (value: string) => {
     // clear all filters when typing a search
     setSelectedCategories([]);
+    setSelectedSubcategories([]);
+    setSelectedTags([]);
     setSelectedPriceRange('');
     setPriceFilter(null);
     setSelectedMetals([]);
@@ -301,20 +332,34 @@ const Shop = () => {
         <h3 className="font-serif text-lg font-semibold mb-4">Categories</h3>
         <div className="space-y-3">
           {visibleCategories.map((category) => (
-            <label
-              key={category}
-              className="flex items-center justify-between cursor-pointer group"
-            >
-              <div className="flex items-center gap-3">
-                <Checkbox
-                  checked={selectedCategories.includes(category)}
-                  onCheckedChange={() => toggleCategory(category)}
-                />
-                <span className="text-sm group-hover:text-primary transition-colors">
-                  {category}
-                </span>
-              </div>
-            </label>
+            <div key={category.name}>
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    checked={selectedCategories.includes(category.name)}
+                    onCheckedChange={() => toggleCategory(category.name)}
+                  />
+                  <span className="text-sm group-hover:text-primary transition-colors">
+                    {category.name}
+                  </span>
+                </div>
+              </label>
+              {category.subcategories.length > 0 && (
+                <div className="mt-2 ml-6 space-y-2">
+                  {category.subcategories.map((sub) => (
+                    <label key={sub} className="flex items-center gap-3 cursor-pointer group">
+                      <Checkbox
+                        checked={selectedSubcategories.includes(sub)}
+                        onCheckedChange={() => toggleSubcategory(sub)}
+                      />
+                      <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                        {sub}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>
@@ -373,12 +418,34 @@ const Shop = () => {
         </div>
       </div>
 
+      {/* Tags */}
+      {tags.length > 0 && (
+        <div>
+          <h3 className="font-serif text-lg font-semibold mb-4">Tags</h3>
+          <div className="space-y-3">
+            {tags.map((tag) => (
+              <label key={tag} className="flex items-center gap-3 cursor-pointer group">
+                <Checkbox
+                  checked={selectedTags.includes(tag)}
+                  onCheckedChange={() => toggleTag(tag)}
+                />
+                <span className="text-sm group-hover:text-primary transition-colors">
+                  {tag}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Clear Filters */}
       <Button
         variant="outline"
         className="w-full"
         onClick={() => {
           setSelectedCategories([]);
+          setSelectedSubcategories([]);
+          setSelectedTags([]);
           setSelectedPriceRange('');
           setPriceFilter(null);
           setSelectedMetals([]);

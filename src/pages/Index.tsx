@@ -32,9 +32,9 @@ const Index = () => {
   ];
 
   const occasions = [
-    { label: 'Coins and Bars', query: 'Silver coin + Box', icon: Coins },
-    { label: 'Gifting', query: 'Silver plated', icon: Gift },
-    { label: 'Puja & Ritual', query: 'Wood + Silver', icon: Flame },
+    { label: 'Coins and Bars', query: 'Coins', icon: Coins },
+    { label: 'Gifting', query: 'Silver Articles', icon: Gift },
+    { label: 'Puja & Ritual', query: 'Puja Items', icon: Flame },
   ];
 
   const bannerImages = ['/banner1.png', '/banner2.png', '/banner3.png', '/banner4.png'];

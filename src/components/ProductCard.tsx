@@ -211,7 +211,7 @@ const ProductCard = ({ product, onQuickView }: ProductCardProps) => {
             </span>
           )}
         </div>
-        {availableWeights && (
+        {!product.isFixedPrice && availableWeights && (
           <p className="text-[11px] text-muted-foreground tracking-wide pt-0.5">
             {availableWeights}
           </p>

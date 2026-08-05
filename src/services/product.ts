@@ -16,6 +16,9 @@ interface ApiProduct extends Partial<Omit<Product, 'id' | 'images'>> {
   images?: ProductImage[];
   isNewItem?: boolean;
   material?: string;
+  category?: string;
+  subcategory?: string;
+  tags?: string[];
   isActive?: boolean;
   stockAvailable?: number;
   weightInGrams?: number;
@@ -59,13 +62,26 @@ const normalizeCharge = (charge?: ProductCharge): ProductCharge | undefined => {
   return { type: charge.type === 'amount' ? 'amount' : 'percentage', value };
 };
 
+/** A top-level category and its subcategories (only Jewellery has any today). */
+export interface CategoryNode {
+  name: string;
+  subcategories: string[];
+}
+
 interface CategoriesResponse {
+  status: string;
+  data: CategoryNode[];
+}
+
+interface TagsResponse {
   status: string;
   data: string[];
 }
 
 export interface ProductFilters {
   category?: string;
+  subcategory?: string;
+  tags?: string;
   metal?: string;
   minPrice?: number;
   maxPrice?: number;
@@ -124,7 +140,10 @@ const normalizeProduct = (product: ApiProduct): Product => ({
   originalPrice: product.originalPrice,
   image: normalizeImageSrc(extractImage(product)),
   images: extractImages(product),
-  category: product.category || product.material || '',
+  category: product.category || '',
+  subcategory: product.subcategory || undefined,
+  tags: Array.isArray(product.tags) && product.tags.length ? product.tags : undefined,
+  material: product.material || undefined,
   weight: product.weight !== undefined && product.weight !== null ? String(product.weight) : '',
   purity: product.purity ? String(product.purity) : '',
   description: product.description || '',
@@ -178,24 +197,33 @@ export const productService = {
   },
 
   /**
-   * Fetches the list of unique material/category names from the database.
+   * Fetches the category/subcategory tree.
    */
-  getCategories: async (): Promise<string[]> => {
+  getCategories: async (): Promise<CategoryNode[]> => {
     const response = await api.get<CategoriesResponse>('/products/categories');
     return Array.isArray(response?.data) ? response.data : [];
   },
 
   /**
-   * Administrative: Creates a new category.
+   * Fetches the list of tags in use across active products.
    */
-  createCategory: async (name: string): Promise<void> => {
-    return api.post<void>('/products/categories', { name });
+  getTags: async (): Promise<string[]> => {
+    const response = await api.get<TagsResponse>('/products/tags');
+    return Array.isArray(response?.data) ? response.data : [];
   },
 
   /**
-   * Administrative: Deletes a category by name.
+   * Administrative: Creates a new category, or a subcategory when `parent` is given.
    */
-  deleteCategory: async (name: string): Promise<void> => {
-    return api.delete<void>(`/products/categories/${encodeURIComponent(name)}`);
+  createCategory: async (name: string, parent?: string): Promise<void> => {
+    return api.post<void>('/products/categories', parent ? { name, parent } : { name });
+  },
+
+  /**
+   * Administrative: Deletes a category (or subcategory, when `parent` is given) by name.
+   */
+  deleteCategory: async (name: string, parent?: string): Promise<void> => {
+    const query = parent ? `?parent=${encodeURIComponent(parent)}` : '';
+    return api.delete<void>(`/products/categories/${encodeURIComponent(name)}${query}`);
   },
 };

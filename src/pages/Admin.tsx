@@ -98,6 +98,86 @@ import { invoiceConfigService, DEFAULT_INVOICE_CONFIG } from '@/services/invoice
 import { Switch } from '@/components/ui/switch';
 import type { ProductVariant, ChargeType } from '@/context/CartContext';
 import { ApiError } from '@/lib/api';
+import { Badge } from '@/components/ui/badge';
+
+/** Reconciled union of the material dropdown's previously-divergent create/edit fallback lists. */
+const MATERIAL_FALLBACK_OPTIONS = [
+  '999 Silver', 'Anklets', 'Bangles', 'Coins', 'Earrings', 'Necklaces',
+  'Paper / Board', 'Puja Items', 'Rings', 'Silver', 'Silver coin + Box',
+  'Silver plated', 'Wood + Silver',
+];
+
+/**
+ * Chip-style optional tag editor: type a value, Enter/comma commits it as a removable badge.
+ */
+const TagsEditor = ({
+  tags,
+  draft,
+  onDraftChange,
+  onChange,
+  disabled,
+}: {
+  tags: string[];
+  draft: string;
+  onDraftChange: (value: string) => void;
+  onChange: (next: string[]) => void;
+  disabled?: boolean;
+}) => {
+  const commit = () => {
+    const value = draft.trim();
+    onDraftChange('');
+    if (!value) return;
+    if (tags.some((t) => t.toLowerCase() === value.toLowerCase())) return;
+    onChange([...tags, value]);
+  };
+
+  return (
+    <div>
+      <Label htmlFor="prod-tags">Tags (optional)</Label>
+      <Input
+        id="prod-tags"
+        value={draft}
+        disabled={disabled}
+        placeholder="Type a tag and press Enter"
+        className="mt-1"
+        onChange={(e) => {
+          if (e.target.value.endsWith(',')) {
+            onDraftChange(e.target.value.slice(0, -1));
+            commit();
+          } else {
+            onDraftChange(e.target.value);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            commit();
+          }
+        }}
+        onBlur={commit}
+      />
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {tags.map((tag) => (
+            <Badge key={tag} variant="secondary" className="gap-1">
+              {tag}
+              {!disabled && (
+                <button
+                  type="button"
+                  aria-label={`Remove tag ${tag}`}
+                  onClick={() => onChange(tags.filter((t) => t !== tag))}
+                  className="ml-0.5 hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 /**
  * Editor for a product's size/weight variants (S–XXL style). Each row carries a free-text
@@ -355,7 +435,7 @@ const Admin = () => {
   // Edit product modal state
   const [productModalMode, setProductModalMode] = useState<'view' | 'edit' | null>(null);
   const [editingProduct, setEditingProduct] = useState<{ id: string; name: string; price: number; originalPrice?: number; image?: string; category: string; weight?: string; purity?: string; description?: string; inStock: boolean } | null>(null);
-  const [editProductForm, setEditProductForm] = useState({ name: '', price: '', originalPrice: '', images: [] as string[], category: '', weight: '', purity: '', description: '', inStock: true, variants: [] as ProductVariant[], isFixedPrice: false, makingChargeType: 'percentage' as ChargeType, makingChargeValue: '', wastageType: 'percentage' as ChargeType, wastageValue: '' });
+  const [editProductForm, setEditProductForm] = useState({ name: '', price: '', originalPrice: '', images: [] as string[], material: '', category: '', subcategory: '', tags: [] as string[], weight: '', purity: '', description: '', inStock: true, variants: [] as ProductVariant[], isFixedPrice: false, makingChargeType: 'percentage' as ChargeType, makingChargeValue: '', wastageType: 'percentage' as ChargeType, wastageValue: '' });
 
   // Edit user modal state
   const [editingUser, setEditingUser] = useState<{ id: string; name: string; email: string; phone?: string; city?: string; isAdmin?: boolean } | null>(null);
@@ -388,16 +468,20 @@ const Admin = () => {
 
   // Add Category state
   const [newCategory, setNewCategory] = useState('');
+  const [newCategoryParent, setNewCategoryParent] = useState('');
   const queryClient = useQueryClient();
 
   // Product form state
   const [productForm, setProductForm] = useState({
-    name: '', price: '', originalPrice: '', images: [] as string[], category: 'Necklaces',
+    name: '', price: '', originalPrice: '', images: [] as string[], material: '',
+    category: '', subcategory: '', tags: [] as string[],
     weight: '', purity: '925', description: '', inStock: true, variants: [] as ProductVariant[],
     isFixedPrice: false,
     makingChargeType: 'percentage' as ChargeType, makingChargeValue: '',
     wastageType: 'percentage' as ChargeType, wastageValue: '',
   });
+  const [tagDraft, setTagDraft] = useState('');
+  const [editTagDraft, setEditTagDraft] = useState('');
 
   // Coupon form state
   const [couponForm, setCouponForm] = useState<CreateCouponPayload>({
@@ -554,6 +638,9 @@ const Admin = () => {
     queryFn: productService.getCategories,
     enabled: role === 'admin' || role === 'staff',
   });
+  const categoryNames = useMemo(() => allCategories.map((c) => c.name), [allCategories]);
+  const subcategoriesFor = (categoryName: string): string[] =>
+    allCategories.find((c) => c.name === categoryName)?.subcategories ?? [];
 
   const { data: adminStoreConfig } = useQuery({
     queryKey: ['admin-store-config'],
@@ -779,7 +866,8 @@ const Admin = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       setShowAddProduct(false);
-      setProductForm({ name: '', price: '', originalPrice: '', images: [], category: 'Necklaces', weight: '', purity: '925', description: '', inStock: true, variants: [], isFixedPrice: false, makingChargeType: 'percentage', makingChargeValue: '', wastageType: 'percentage', wastageValue: '' });
+      setProductForm({ name: '', price: '', originalPrice: '', images: [], material: '', category: '', subcategory: '', tags: [], weight: '', purity: '925', description: '', inStock: true, variants: [], isFixedPrice: false, makingChargeType: 'percentage', makingChargeValue: '', wastageType: 'percentage', wastageValue: '' });
+      setTagDraft('');
       toast({ title: 'Product Created' });
     },
   });
@@ -1121,16 +1209,17 @@ const Admin = () => {
   });
 
   const createCategoryMutation = useMutation({
-    mutationFn: productService.createCategory,
+    mutationFn: ({ name, parent }: { name: string; parent?: string }) => productService.createCategory(name, parent),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       setNewCategory('');
+      setNewCategoryParent('');
       toast({ title: 'Category Added' });
     },
   });
 
   const deleteCategoryMutation = useMutation({
-    mutationFn: productService.deleteCategory,
+    mutationFn: ({ name, parent }: { name: string; parent?: string }) => productService.deleteCategory(name, parent),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       toast({ title: 'Category Removed' });
@@ -1333,8 +1422,12 @@ const Admin = () => {
       originalPrice: productForm.originalPrice ? Number(productForm.originalPrice) : undefined,
       image: productForm.images[0] || '',
       images: productForm.images,
+      material: productForm.material,
       category: productForm.category,
-      weight: productForm.weight,
+      subcategory: productForm.subcategory || undefined,
+      tags: productForm.tags,
+      // A fixed-price product has no meaningful gram weight.
+      weight: productForm.isFixedPrice ? '' : productForm.weight,
       purity: productForm.purity,
       description: productForm.description,
       inStock: productForm.inStock,
@@ -1356,8 +1449,16 @@ const Admin = () => {
         originalPrice: editProductForm.originalPrice ? Number(editProductForm.originalPrice) : undefined,
         image: editProductForm.images[0] || '',
         images: editProductForm.images,
+        material: editProductForm.material,
         category: editProductForm.category,
-        weight: editProductForm.weight,
+        // Always send subcategory (even '') so switching a product away from a
+        // category with children actually clears its old subcategory — JSON
+        // serialization drops `undefined` keys, which would otherwise leave
+        // the stale value in place on a partial update.
+        subcategory: editProductForm.subcategory || '',
+        tags: editProductForm.tags,
+        // A fixed-price product has no meaningful gram weight.
+        weight: editProductForm.isFixedPrice ? '' : editProductForm.weight,
         purity: editProductForm.purity,
         description: editProductForm.description,
         inStock: editProductForm.inStock,
@@ -1377,7 +1478,10 @@ const Admin = () => {
       price: String(product.price),
       originalPrice: product.originalPrice ? String(product.originalPrice) : '',
       images: product.images?.length ? [...product.images] : (product.image ? [product.image] : []),
+      material: product.material || '',
       category: product.category || '',
+      subcategory: product.subcategory || '',
+      tags: product.tags ? [...product.tags] : [],
       weight: product.weight || '',
       purity: product.purity || '',
       description: product.description || '',
@@ -1389,6 +1493,7 @@ const Admin = () => {
       wastageType: product.wastage?.type ?? 'percentage',
       wastageValue: product.wastage ? String(product.wastage.value) : '',
     });
+    setEditTagDraft('');
   };
 
   // Mandatory daily rate update: lock the panel for admin/staff until today's stale
@@ -1639,13 +1744,42 @@ const Admin = () => {
                           images={productForm.images}
                           onChange={(images) => setProductForm({ ...productForm, images })}
                         />
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className={`grid ${subcategoriesFor(productForm.category).length > 0 ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
                           <div>
                             <Label>Category</Label>
-                            <Select value={productForm.category} onValueChange={(v) => setProductForm({ ...productForm, category: v })}>
-                              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                            <Select
+                              value={productForm.category}
+                              onValueChange={(v) => setProductForm({ ...productForm, category: v, subcategory: '' })}
+                            >
+                              <SelectTrigger className="mt-1"><SelectValue placeholder="Select a category" /></SelectTrigger>
                               <SelectContent>
-                                {(allCategories.length > 0 ? allCategories : ['Necklaces', 'Bangles', 'Earrings', 'Rings', 'Anklets', 'Coins', 'Puja Items']).map((c) => (
+                                {categoryNames.map((c) => (
+                                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {subcategoriesFor(productForm.category).length > 0 && (
+                            <div>
+                              <Label>Subcategory</Label>
+                              <Select value={productForm.subcategory} onValueChange={(v) => setProductForm({ ...productForm, subcategory: v })}>
+                                <SelectTrigger className="mt-1"><SelectValue placeholder="Select a subcategory" /></SelectTrigger>
+                                <SelectContent>
+                                  {subcategoriesFor(productForm.category).map((s) => (
+                                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Material</Label>
+                            <Select value={productForm.material} onValueChange={(v) => setProductForm({ ...productForm, material: v })}>
+                              <SelectTrigger className="mt-1"><SelectValue placeholder="Select a material" /></SelectTrigger>
+                              <SelectContent>
+                                {MATERIAL_FALLBACK_OPTIONS.map((c) => (
                                   <SelectItem key={c} value={c}>{c}</SelectItem>
                                 ))}
                               </SelectContent>
@@ -1665,19 +1799,27 @@ const Admin = () => {
                             </Select>
                           </div>
                         </div>
-                        <div>
-                          <Label htmlFor="prod-weight">Weight (e.g. 45g)</Label>
-                          <Input id="prod-weight" value={productForm.weight} onChange={(e) => setProductForm({ ...productForm, weight: e.target.value })} className="mt-1" />
-                        </div>
+                        {!productForm.isFixedPrice && (
+                          <div>
+                            <Label htmlFor="prod-weight">Weight (e.g. 45g)</Label>
+                            <Input id="prod-weight" value={productForm.weight} onChange={(e) => setProductForm({ ...productForm, weight: e.target.value })} className="mt-1" />
+                          </div>
+                        )}
                         <VariantsEditor
                           variants={productForm.variants}
                           onChange={(variants) => setProductForm({ ...productForm, variants })}
+                        />
+                        <TagsEditor
+                          tags={productForm.tags}
+                          draft={tagDraft}
+                          onDraftChange={setTagDraft}
+                          onChange={(tags) => setProductForm({ ...productForm, tags })}
                         />
                         <div>
                           <Label htmlFor="prod-desc">Description</Label>
                           <Textarea id="prod-desc" value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} className="mt-1" rows={3} />
                         </div>
-                        <Button onClick={handleCreateProduct} disabled={createProductMutation.isPending || !productForm.name || (productForm.isFixedPrice && !productForm.price) || createChargesInvalid}>
+                        <Button onClick={handleCreateProduct} disabled={createProductMutation.isPending || !productForm.name || !productForm.category || (productForm.isFixedPrice && !productForm.price) || createChargesInvalid}>
                           {createProductMutation.isPending ? 'Creating...' : 'Create Product'}
                         </Button>
                       </div>
@@ -1783,20 +1925,57 @@ const Admin = () => {
                   disabled={productModalMode === 'view'}
                   onChange={(images) => setEditProductForm({ ...editProductForm, images })}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid ${subcategoriesFor(editProductForm.category).length > 0 ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
                   <div>
                     <Label>Category</Label>
                     {productModalMode === 'edit' ? (
-                      <Select value={editProductForm.category} onValueChange={(v) => setEditProductForm({ ...editProductForm, category: v })}>
-                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <Select
+                        value={editProductForm.category}
+                        onValueChange={(v) => setEditProductForm({ ...editProductForm, category: v, subcategory: '' })}
+                      >
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select a category" /></SelectTrigger>
                         <SelectContent className="bg-card">
-                          {(allCategories.length > 0 ? allCategories : ['999 Silver', 'Paper / Board', 'Silver', 'Silver coin + Box', 'Silver plated', 'Wood + Silver']).map((c) => (
+                          {categoryNames.map((c) => (
                             <SelectItem key={c} value={c}>{c}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     ) : (
                       <Input value={editProductForm.category} disabled className="mt-1" />
+                    )}
+                  </div>
+                  {subcategoriesFor(editProductForm.category).length > 0 && (
+                    <div>
+                      <Label>Subcategory</Label>
+                      {productModalMode === 'edit' ? (
+                        <Select value={editProductForm.subcategory} onValueChange={(v) => setEditProductForm({ ...editProductForm, subcategory: v })}>
+                          <SelectTrigger className="mt-1"><SelectValue placeholder="Select a subcategory" /></SelectTrigger>
+                          <SelectContent className="bg-card">
+                            {subcategoriesFor(editProductForm.category).map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input value={editProductForm.subcategory} disabled className="mt-1" />
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Material</Label>
+                    {productModalMode === 'edit' ? (
+                      <Select value={editProductForm.material} onValueChange={(v) => setEditProductForm({ ...editProductForm, material: v })}>
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="Select a material" /></SelectTrigger>
+                        <SelectContent className="bg-card">
+                          {MATERIAL_FALLBACK_OPTIONS.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input value={editProductForm.material} disabled className="mt-1" />
                     )}
                   </div>
                   <div>
@@ -1817,14 +1996,23 @@ const Admin = () => {
                     )}
                   </div>
                 </div>
-                <div>
-                  <Label>Weight</Label>
-                  <Input value={editProductForm.weight} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, weight: e.target.value })} className="mt-1" placeholder="e.g. 45g" />
-                </div>
+                {!editProductForm.isFixedPrice && (
+                  <div>
+                    <Label>Weight</Label>
+                    <Input value={editProductForm.weight} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, weight: e.target.value })} className="mt-1" placeholder="e.g. 45g" />
+                  </div>
+                )}
                 <VariantsEditor
                   variants={editProductForm.variants}
                   disabled={productModalMode === 'view'}
                   onChange={(variants) => setEditProductForm({ ...editProductForm, variants })}
+                />
+                <TagsEditor
+                  tags={editProductForm.tags}
+                  draft={editTagDraft}
+                  onDraftChange={setEditTagDraft}
+                  disabled={productModalMode === 'view'}
+                  onChange={(tags) => setEditProductForm({ ...editProductForm, tags })}
                 />
                 <div className="rounded-md border border-border/60 p-3 space-y-3">
                   <div className="flex items-center justify-between">
@@ -1867,7 +2055,16 @@ const Admin = () => {
                   <Textarea value={editProductForm.description} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, description: e.target.value })} className="mt-1" rows={3} />
                 </div>
                 {productModalMode === 'edit' && (
-                  <Button onClick={handleUpdateProduct} disabled={updateProductMutation.isPending || !editProductForm.name || !editProductForm.price || editChargesInvalid}>
+                  <Button
+                    onClick={handleUpdateProduct}
+                    disabled={
+                      updateProductMutation.isPending ||
+                      !editProductForm.name ||
+                      !editProductForm.category ||
+                      (editProductForm.isFixedPrice && !editProductForm.price) ||
+                      editChargesInvalid
+                    }
+                  >
                     {updateProductMutation.isPending ? 'Saving...' : 'Save Changes'}
                   </Button>
                 )}
@@ -3315,25 +3512,35 @@ const Admin = () => {
               <Card className="p-6">
                 <h2 className="font-serif text-xl font-semibold mb-1">Manage Categories</h2>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Add or remove product categories. Changes update the global category list used by the shop and product forms.
+                  Add or remove categories and subcategories. Changes update the taxonomy used by the shop and product forms.
+                  Only Jewellery has subcategories today — pick it as the parent to add another.
                 </p>
                 <div className="flex gap-3 mb-4">
                   <Input
-                    placeholder="New category name (e.g. Pendants)"
+                    placeholder="New category or subcategory name"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         const trimmed = newCategory.trim();
-                        if (trimmed && !allCategories.includes(trimmed)) createCategoryMutation.mutate(trimmed);
+                        if (trimmed) createCategoryMutation.mutate({ name: trimmed, parent: newCategoryParent || undefined });
                       }
                     }}
                     className="flex-1"
                   />
+                  <Select value={newCategoryParent || '__top__'} onValueChange={(v) => setNewCategoryParent(v === '__top__' ? '' : v)}>
+                    <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__top__">Top-level</SelectItem>
+                      {categoryNames.map((c) => (
+                        <SelectItem key={c} value={c}>Under {c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Button
                     onClick={() => {
                       const trimmed = newCategory.trim();
-                      if (trimmed && !allCategories.includes(trimmed)) createCategoryMutation.mutate(trimmed);
+                      if (trimmed) createCategoryMutation.mutate({ name: trimmed, parent: newCategoryParent || undefined });
                     }}
                     disabled={createCategoryMutation.isPending || !newCategory.trim()}
                   >
@@ -3344,22 +3551,45 @@ const Admin = () => {
                 {allCategories.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No categories yet. Add one above.</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {allCategories.map((cat) => (
-                      <div key={cat} className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/40">
-                        <span className="text-sm font-medium">{cat}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            if (window.confirm(`Remove category "${cat}"? Products in this category will be unaffected.`)) {
-                              deleteCategoryMutation.mutate(cat);
-                            }
-                          }}
-                          disabled={deleteCategoryMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                      <div key={cat.name} className="rounded-lg bg-muted/40">
+                        <div className="flex items-center justify-between px-3 py-2">
+                          <span className="text-sm font-medium">{cat.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (window.confirm(`Remove category "${cat.name}"? Products in this category will be unaffected, and any subcategories will be removed too.`)) {
+                                deleteCategoryMutation.mutate({ name: cat.name });
+                              }
+                            }}
+                            disabled={deleteCategoryMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                        {cat.subcategories.length > 0 && (
+                          <div className="pl-6 pb-2 space-y-1">
+                            {cat.subcategories.map((sub) => (
+                              <div key={sub} className="flex items-center justify-between px-3 py-1.5 rounded-md bg-background/60">
+                                <span className="text-sm text-muted-foreground">{sub}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    if (window.confirm(`Remove subcategory "${sub}"? Products using it will be unaffected.`)) {
+                                      deleteCategoryMutation.mutate({ name: sub, parent: cat.name });
+                                    }
+                                  }}
+                                  disabled={deleteCategoryMutation.isPending}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -3370,13 +3600,13 @@ const Admin = () => {
               <Card className="p-6">
                 <h2 className="font-serif text-xl font-semibold mb-1">Category Visibility</h2>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Toggle which product categories appear in the Shop filter sidebar. Hidden categories are still browseable via search.
+                  Toggle which top-level categories appear in the Shop filter sidebar. Hidden categories are still browseable via search.
                 </p>
-                {allCategories.length === 0 ? (
+                {categoryNames.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No categories found. Add products first.</p>
                 ) : (
                   <div className="divide-y divide-border">
-                    {allCategories.map((cat) => {
+                    {categoryNames.map((cat) => {
                       const isHidden = filterConfig.hiddenCategories.includes(cat);
                       return (
                         <div key={cat} className="flex items-center justify-between py-3">

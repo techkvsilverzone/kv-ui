@@ -37,6 +37,12 @@ export interface Product {
   /** All product images (normalized srcs), ordered. Empty/absent ⇒ use `image` only. */
   images?: string[];
   category: string;
+  /** Only set for categories with children (currently Jewellery: Mens/Womens/Kids). */
+  subcategory?: string;
+  /** Optional free-text tags, also usable in shop filters. */
+  tags?: string[];
+  /** Free-text spec field (e.g. metal/purity blend) — distinct from `category`. */
+  material?: string;
   weight: string;
   purity: string;
   description: string;

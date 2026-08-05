@@ -10,6 +10,7 @@ vi.mock('@/services/product', () => ({
   productService: {
     getProducts: vi.fn(),
     getCategories: vi.fn(),
+    getTags: vi.fn(),
   },
 }));
 
@@ -38,7 +39,8 @@ const renderShop = (route = '/shop') => {
 describe('Shop page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(productService.getCategories).mockResolvedValue(['Rings']);
+    vi.mocked(productService.getCategories).mockResolvedValue([{ name: 'Rings', subcategories: [] }]);
+    vi.mocked(productService.getTags).mockResolvedValue([]);
     vi.mocked(productService.getProducts).mockResolvedValue([
       {
         id: 'p1',

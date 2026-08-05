@@ -363,10 +363,12 @@ const ProductDetail = () => {
 
             {/* Specifications */}
             <div className="grid grid-cols-2 gap-4 mb-8 p-4 bg-secondary/30 rounded-md">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Weight</p>
-                <p className="font-medium">{displayWeight}</p>
-              </div>
+              {!product.isFixedPrice && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Weight</p>
+                  <p className="font-medium">{displayWeight}</p>
+                </div>
+              )}
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Purity</p>
                 <p className="font-medium">{product.purity}</p>
