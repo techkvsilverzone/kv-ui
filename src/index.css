@@ -262,6 +262,16 @@
   animation-play-state: paused;
 }
 
+/* Hero banner carousel (react-slick) — force full-bleed height across
+   the slider's wrapper divs, which default to auto/content height. */
+.hero-slick,
+.hero-slick .slick-list,
+.hero-slick .slick-track,
+.hero-slick .slick-slide,
+.hero-slick .slick-slide > div {
+  height: 100%;
+}
+
 @keyframes sheen {
   0% { background-position: 200% center; }
   100% { background-position: -200% center; }

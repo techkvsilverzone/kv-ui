@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, Shield, Award, Headphones, ChevronDown, Loader2, RotateCcw, Coins, Gift, Flame } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import Slider from 'react-slick';
+import 'slick-carousel/slick/slick.css';
+import 'slick-carousel/slick/slick-theme.css';
 import { Button } from '@/components/ui/button';
 import heroImage from '@/assets/hero-silver.jpg';
 import savingsImage from '@/assets/savings-scheme.jpg';
@@ -34,6 +37,8 @@ const Index = () => {
     { label: 'Puja & Ritual', query: 'Wood + Silver', icon: Flame },
   ];
 
+  const bannerImages = ['/banner1.png', '/banner2.png', '/banner3.png', '/banner4.png'];
+
   return (
     <div className="min-h-screen bg-background">
       <Seo
@@ -45,12 +50,28 @@ const Index = () => {
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/70 z-10" />
-          <img
-            src={heroImage}
-            alt="KV Silver Zone Collection"
-            className="w-full h-full object-cover scale-105 animate-float"
-            style={{ animationDuration: '20s' }}
-          />
+          <Slider
+            className="hero-slick h-full w-full"
+            infinite
+            autoplay
+            autoplaySpeed={4000}
+            speed={1000}
+            fade
+            cssEase="ease-in-out"
+            arrows={false}
+            dots={false}
+            pauseOnHover={false}
+          >
+            {bannerImages.map((src) => (
+              <div key={src} className="h-full w-full">
+                <img
+                  src={src}
+                  alt="KV Silver Zone Collection"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+          </Slider>
         </div>
 
         <div className="relative container mx-auto px-4 z-20 text-center text-white">
