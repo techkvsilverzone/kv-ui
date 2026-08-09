@@ -284,7 +284,7 @@ const SilverRate = () => {
         {/* CTA */}
         <div className="text-center">
           <p className="text-muted-foreground mb-4">
-            Want to invest smartly? Start our Monthly Silver Savings Scheme.
+            Want to invest smartly? Start one of our Monthly Savings Schemes.
           </p>
           <div className="flex justify-center gap-4">
             <Button asChild>

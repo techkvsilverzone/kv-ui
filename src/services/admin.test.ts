@@ -82,4 +82,32 @@ describe('adminService', () => {
     expect(api.put).toHaveBeenCalledWith('/admin/savings/s1/payments/0', { amount: 2500 });
     expect(api.delete).toHaveBeenCalledWith('/admin/savings/s1/payments/0');
   });
+
+  it('cancels a scheme and computes a Diwali redemption payout', async () => {
+    vi.mocked(api.post).mockResolvedValue({ _id: 's1' });
+
+    await adminService.cancelSavingsScheme('s1', { giftsValueDeducted: 500, note: 'gift given' });
+    await adminService.computeSavingsRedemption('s1');
+
+    expect(api.post).toHaveBeenCalledWith('/admin/savings/s1/cancel', { giftsValueDeducted: 500, note: 'gift given' });
+    expect(api.post).toHaveBeenCalledWith('/admin/savings/s1/redemption/compute', {});
+  });
+
+  it('CRUDs scheme plans at the admin-only catalog endpoint', async () => {
+    vi.mocked(api.get).mockResolvedValue({ status: 'success', data: [{ _id: 'p1', type: 'GOLD_11_1' }] });
+    vi.mocked(api.post).mockResolvedValue({ status: 'success', data: { _id: 'p1' } });
+    vi.mocked(api.put).mockResolvedValue({ status: 'success', data: { _id: 'p1' } });
+    vi.mocked(api.delete).mockResolvedValue(undefined);
+
+    const plans = await adminService.getAllSchemePlans();
+    await adminService.createSchemePlan({ type: 'GOLD_11_1', name: 'Gold 11+1' } as never);
+    await adminService.updateSchemePlan('p1', { isActive: false });
+    await adminService.deleteSchemePlan('p1');
+
+    expect(api.get).toHaveBeenCalledWith('/admin/scheme-plans');
+    expect(plans).toEqual([{ _id: 'p1', type: 'GOLD_11_1' }]);
+    expect(api.post).toHaveBeenCalledWith('/admin/scheme-plans', { type: 'GOLD_11_1', name: 'Gold 11+1' });
+    expect(api.put).toHaveBeenCalledWith('/admin/scheme-plans/p1', { isActive: false });
+    expect(api.delete).toHaveBeenCalledWith('/admin/scheme-plans/p1');
+  });
 });

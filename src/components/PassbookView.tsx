@@ -14,6 +14,8 @@ const formatGrams = (n: number) => n.toLocaleString('en-IN', { minimumFractionDi
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
 
+const metalLabel = (scheme: SavingsEnrollment) => (scheme.metal === 'GOLD' ? 'gold' : 'silver');
+
 interface LedgerRow {
   no: number;
   date: string;
@@ -53,14 +55,152 @@ function buildLedgerRows(scheme: SavingsEnrollment): LedgerRow[] {
     });
 }
 
+const ShopHeader = () => (
+  <div className="text-center mb-4 pb-3 border-b-2 border-gray-800">
+    <h1 className="text-2xl font-bold tracking-wide">KV Silver Zone</h1>
+    <p className="text-xs text-gray-600 mt-1">
+      14, Rajaram St, Gnanamoorthy Nagar Extn, Town Planning Colony, Ambattur, Chennai 600053
+    </p>
+    <p className="text-xs text-gray-600">Mobile: (+91) 88256 49680</p>
+    <p className="text-sm font-semibold underline mt-2">Ledger Statement</p>
+  </div>
+);
+
+const CustomerDetails = ({
+  scheme,
+  userName,
+  userPhone,
+  userAddress,
+}: Required<Pick<PassbookViewProps, 'scheme'>> & Pick<PassbookViewProps, 'userName' | 'userPhone' | 'userAddress'>) => (
+  <div className="grid grid-cols-2 gap-x-8 gap-y-1 mb-4 border border-gray-300 p-3">
+    <div className="flex gap-2">
+      <span className="text-gray-500 shrink-0">Name</span>
+      <span className="font-semibold">: {userName ?? '—'}</span>
+    </div>
+    <div className="flex gap-2">
+      <span className="text-gray-500 shrink-0">Ticket No</span>
+      <span className="font-semibold">: {scheme.passbookNumber ?? 'Pending (issued after first payment)'}</span>
+    </div>
+    <div className="flex gap-2">
+      <span className="text-gray-500 shrink-0">Address</span>
+      <span className="font-semibold">: {userAddress ?? '—'}</span>
+    </div>
+    <div className="flex gap-2">
+      <span className="text-gray-500 shrink-0">CD</span>
+      <span className="font-semibold">: {formatDate(scheme.startDate)}</span>
+    </div>
+    <div className="flex gap-2">
+      <span className="text-gray-500 shrink-0">Mobile No</span>
+      <span className="font-semibold">: {userPhone ?? '—'}</span>
+    </div>
+    <div className="flex gap-2">
+      <span className="text-gray-500 shrink-0">Monthly Amount</span>
+      <span className="font-semibold">: {formatMoney(scheme.monthlyAmount)}</span>
+    </div>
+  </div>
+);
+
+/** Diwali passbook — the reward is a fixed hamper, not gram-accumulation, so it uses the
+ * card's own Month/Date/Amount layout instead of the material ledger table. */
+function DiwaliPassbook({ scheme, userName, userPhone, userAddress }: PassbookViewProps) {
+  const rows = (scheme.payments ?? [])
+    .slice()
+    .sort((a, b) => new Date(a.paidAt).getTime() - new Date(b.paidAt).getTime());
+  const mb = scheme.maturityBenefits;
+  const redemptionComputed = !!mb?.computedAt;
+
+  return (
+    <>
+      <ShopHeader />
+      <CustomerDetails scheme={scheme} userName={userName} userPhone={userPhone} userAddress={userAddress} />
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="border border-gray-400 bg-gray-50">
+              {['Month', 'Date', 'Amount', 'Method'].map((h) => (
+                <th key={h} className="border border-gray-300 px-2 py-1.5 font-semibold text-center">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="border border-gray-300 px-2 py-4 text-center text-gray-500 italic">
+                  No collections recorded yet.
+                </td>
+              </tr>
+            ) : (
+              rows.map((r, i) => (
+                <tr key={i}>
+                  <td className="border border-gray-300 px-2 py-1 text-center">{i + 1}</td>
+                  <td className="border border-gray-300 px-2 py-1 text-center">{formatDate(r.paidAt)}</td>
+                  <td className="border border-gray-300 px-2 py-1 text-right">{formatMoney(r.amount)}</td>
+                  <td className="border border-gray-300 px-2 py-1 text-center">{r.method === 'CASH' ? 'Cash' : 'Online'}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="bg-gray-50 rounded p-3 mt-4 text-sm flex flex-wrap justify-between gap-2">
+        <span className="text-gray-600">Total Paid to Date</span>
+        <span className="font-bold">₹{formatMoney(scheme.totalPaid)}</span>
+      </div>
+
+      {mb && ((mb.gifts?.length ?? 0) > 0 || !!mb.silverGrams || redemptionComputed) && (
+        <div className="mt-4 border border-gray-300 rounded p-3">
+          <h2 className="text-sm font-bold mb-2">Diwali Redemption Hamper</h2>
+          <ul className="text-sm space-y-1">
+            {redemptionComputed && !!mb.goldGrams && (
+              <li>
+                {formatGrams(mb.goldGrams)} Grams — Gold{mb.goldRatePerGram ? ` (₹${formatMoney(mb.goldRatePerGram)}/g)` : ''}, worth
+                ₹{formatMoney(mb.goldCoinValue ?? 0)}
+              </li>
+            )}
+            {!!mb.silverGrams && (
+              <li>
+                {formatGrams(mb.silverGrams)} Grams — Silver Coin
+                {redemptionComputed && mb.silverValue ? ` — worth ₹${formatMoney(mb.silverValue)}` : ''}
+              </li>
+            )}
+            {redemptionComputed && !!mb.giftsValue && <li>Gift Hamper — worth ₹{formatMoney(mb.giftsValue)}</li>}
+            {mb.gifts?.map((gift, i) => <li key={i}>{gift}</li>)}
+          </ul>
+          {!redemptionComputed && (
+            <p className="text-xs text-gray-500 mt-2 italic">
+              Gold value will be computed at redemption, once all installments are complete.
+            </p>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
 /**
  * Read-only passbook layout, matching the shop's existing paper ledger format — every
- * collection converted to silver grams at that day's rate, with a running cumulative
- * weight. Pass a `ref` when using react-to-print (the parent's "Export/Print" button).
- * Includes `@media print` styles via Tailwind's print: variant.
+ * collection converted to the scheme's metal (gold/silver) grams at that day's rate, with a
+ * running cumulative weight. Diwali schemes (fixed hamper, not gram-accumulation) render a
+ * different layout via DiwaliPassbook. Pass a `ref` when using react-to-print (the parent's
+ * "Export/Print" button). Includes `@media print` styles via Tailwind's print: variant.
  */
 const PassbookView = forwardRef<HTMLDivElement, PassbookViewProps>(
   ({ scheme, userName, userPhone, userAddress }, ref) => {
+    if (scheme.schemeType === 'DIWALI') {
+      return (
+        <div ref={ref} className="bg-white text-gray-900 p-6 max-w-4xl mx-auto print:p-4 print:shadow-none text-sm">
+          <DiwaliPassbook scheme={scheme} userName={userName} userPhone={userPhone} userAddress={userAddress} />
+          <p className="mt-4 text-xs text-gray-400 text-center print:mt-3">
+            This is a computer-generated passbook. No signature required. · KV Silver Zone
+          </p>
+        </div>
+      );
+    }
+
     const rows = buildLedgerRows(scheme);
     const finalCumulative = rows[rows.length - 1]?.cumulative ?? 0;
     const totals = rows.reduce(
@@ -78,46 +218,12 @@ const PassbookView = forwardRef<HTMLDivElement, PassbookViewProps>(
 
     const mb = scheme.maturityBenefits;
     const hasMaturityBenefits = !!mb && (!!mb.goldCoinValue || !!mb.silverGrams || (mb.gifts?.length ?? 0) > 0);
+    const cancellation = scheme.cancellation;
 
     return (
       <div ref={ref} className="bg-white text-gray-900 p-6 max-w-4xl mx-auto print:p-4 print:shadow-none text-sm">
-        {/* Shop header */}
-        <div className="text-center mb-4 pb-3 border-b-2 border-gray-800">
-          <h1 className="text-2xl font-bold tracking-wide">KV Silver Zone</h1>
-          <p className="text-xs text-gray-600 mt-1">
-            14, Rajaram St, Gnanamoorthy Nagar Extn, Town Planning Colony, Ambattur, Chennai 600053
-          </p>
-          <p className="text-xs text-gray-600">Mobile: (+91) 88256 49680</p>
-          <p className="text-sm font-semibold underline mt-2">Ledger Statement</p>
-        </div>
-
-        {/* Name / Address / Mobile — Ticket No / CD / Chit Amount */}
-        <div className="grid grid-cols-2 gap-x-8 gap-y-1 mb-4 border border-gray-300 p-3">
-          <div className="flex gap-2">
-            <span className="text-gray-500 shrink-0">Name</span>
-            <span className="font-semibold">: {userName ?? '—'}</span>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-gray-500 shrink-0">Ticket No</span>
-            <span className="font-semibold">: {scheme.passbookNumber ?? 'Pending (issued after first payment)'}</span>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-gray-500 shrink-0">Address</span>
-            <span className="font-semibold">: {userAddress ?? '—'}</span>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-gray-500 shrink-0">CD</span>
-            <span className="font-semibold">: {formatDate(scheme.startDate)}</span>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-gray-500 shrink-0">Mobile No</span>
-            <span className="font-semibold">: {userPhone ?? '—'}</span>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-gray-500 shrink-0">Chit Amount</span>
-            <span className="font-semibold">: {formatMoney(scheme.monthlyAmount)}</span>
-          </div>
-        </div>
+        <ShopHeader />
+        <CustomerDetails scheme={scheme} userName={userName} userPhone={userPhone} userAddress={userAddress} />
 
         {/* Ledger table */}
         <div className="overflow-x-auto">
@@ -180,7 +286,9 @@ const PassbookView = forwardRef<HTMLDivElement, PassbookViewProps>(
         {/* Summary */}
         <div className="bg-gray-50 rounded p-3 mt-4 text-sm flex flex-wrap justify-between gap-2">
           <span className="text-gray-600">Total Paid to Date</span>
-          <span className="font-bold">₹{formatMoney(scheme.totalPaid)} · {formatGrams(finalCumulative)} g silver</span>
+          <span className="font-bold">
+            ₹{formatMoney(scheme.totalPaid)} · {formatGrams(finalCumulative)} g {metalLabel(scheme)}
+          </span>
         </div>
 
         {/* Maturity benefits */}
@@ -192,6 +300,27 @@ const PassbookView = forwardRef<HTMLDivElement, PassbookViewProps>(
               {!!mb?.silverGrams && <li>{formatGrams(mb.silverGrams)} Grams — Silver Coin/Article</li>}
               {mb?.gifts?.map((gift, i) => <li key={i}>{gift}</li>)}
             </ul>
+          </div>
+        )}
+
+        {/* Early-exit forfeit (card rule 6) */}
+        {cancellation && (
+          <div className="mt-4 border border-gray-300 rounded p-3 text-sm">
+            <h2 className="text-sm font-bold mb-2">Scheme Cancelled — {formatDate(cancellation.cancelledAt)}</h2>
+            <div className="grid grid-cols-2 gap-y-1">
+              <span className="text-gray-600">Amount Paid</span>
+              <span className="text-right">₹{formatMoney(cancellation.amountPaidAtCancellation)}</span>
+              <span className="text-gray-600">Forfeited ({cancellation.penaltyPercent}%)</span>
+              <span className="text-right">₹{formatMoney(cancellation.penaltyAmount)}</span>
+              {cancellation.giftsValueDeducted > 0 && (
+                <>
+                  <span className="text-gray-600">Gifts Already Received</span>
+                  <span className="text-right">₹{formatMoney(cancellation.giftsValueDeducted)}</span>
+                </>
+              )}
+              <span className="text-gray-600 font-semibold">Net Redeemable (goods only)</span>
+              <span className="text-right font-semibold">₹{formatMoney(cancellation.netRedeemable)}</span>
+            </div>
           </div>
         )}
 

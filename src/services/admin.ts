@@ -4,6 +4,7 @@ import type { Product } from '../context/CartContext';
 import type { Order } from './order';
 import type { User } from '../context/AuthContext';
 import type { SavingsEnrollment, SavingsAdminUpdatePayload } from './savings';
+import type { SchemePlan, SchemePlanInput } from './schemePlan';
 
 export interface StoreConfig {
   theme: string;
@@ -59,8 +60,9 @@ export const adminService = {
     return api.delete<void>(`/admin/savings/${id}`);
   },
 
-  /** Admin-only manual/offline collection entry (cash payment, correction, legacy migration).
-   * `materialRate` optionally overrides the live silver rate. Staff cannot call this. */
+  /** Manual/offline collection entry (cash payment, correction, legacy migration). Staff and
+   * admin can both call this. `materialRate` optionally overrides the live rate for the
+   * scheme's metal. */
   recordSavingsPayment: async (
     id: string,
     payload: { amount: number; materialRate?: number },
@@ -80,6 +82,40 @@ export const adminService = {
   /** Admin-only removal of an erroneous ledger row. Staff cannot call this. */
   deleteSavingsPaymentRow: async (id: string, index: number): Promise<SavingsEnrollment> => {
     return api.delete<SavingsEnrollment>(`/admin/savings/${id}/payments/${index}`);
+  },
+
+  /** Admin-only early-exit cancellation — computes the card-rule-6 forfeit/redeemable split. */
+  cancelSavingsScheme: async (
+    id: string,
+    payload: { giftsValueDeducted?: number; note?: string },
+  ): Promise<SavingsEnrollment> => {
+    return api.post<SavingsEnrollment>(`/admin/savings/${id}/cancel`, payload);
+  },
+
+  /** Admin-only: compute a Diwali scheme's redemption payout (gold value/grams, silver value,
+   * gifts value) from today's rates — requires the scheme to have completed all installments. */
+  computeSavingsRedemption: async (id: string): Promise<SavingsEnrollment> => {
+    return api.post<SavingsEnrollment>(`/admin/savings/${id}/redemption/compute`, {});
+  },
+
+  /** Admin catalog of scheme plans (Gold 11+1, Silver 11+1, Diwali, etc). */
+  getAllSchemePlans: async (): Promise<SchemePlan[]> => {
+    const res = await api.get<{ status?: string; data?: SchemePlan[] } | SchemePlan[]>('/admin/scheme-plans');
+    return Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+  },
+
+  createSchemePlan: async (payload: SchemePlanInput): Promise<SchemePlan> => {
+    const res = await api.post<{ status?: string; data?: SchemePlan } | SchemePlan>('/admin/scheme-plans', payload);
+    return (res as { data?: SchemePlan })?.data ?? (res as SchemePlan);
+  },
+
+  updateSchemePlan: async (id: string, payload: Partial<SchemePlanInput>): Promise<SchemePlan> => {
+    const res = await api.put<{ status?: string; data?: SchemePlan } | SchemePlan>(`/admin/scheme-plans/${id}`, payload);
+    return (res as { data?: SchemePlan })?.data ?? (res as SchemePlan);
+  },
+
+  deleteSchemePlan: async (id: string): Promise<void> => {
+    await api.delete(`/admin/scheme-plans/${id}`);
   },
 
   createProduct: async (productData: Omit<Product, 'id'>): Promise<Product> => {

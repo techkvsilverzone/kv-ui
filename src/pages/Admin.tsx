@@ -83,6 +83,7 @@ import { authService } from '@/services/auth';
 import { productService } from '@/services/product';
 import { savingsService } from '@/services/savings';
 import type { SavingsEnrollment, SavingsAdminUpdatePayload } from '@/services/savings';
+import type { SchemePlan, SchemePlanInput, SchemeType } from '@/services/schemePlan';
 import { couponService, type CreateCouponPayload } from '@/services/coupon';
 import { returnsService } from '@/services/returns';
 import { API_URL } from '@/lib/api';
@@ -99,6 +100,15 @@ import { Switch } from '@/components/ui/switch';
 import type { ProductVariant, ChargeType } from '@/context/CartContext';
 import { ApiError } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
+
+/** Human-readable labels for the savings scheme catalog's `SchemeType` values. */
+const SCHEME_TYPE_LABELS: Record<string, string> = {
+  GOLD_11_1: 'Gold 11+1',
+  SILVER_11_1: 'Silver 11+1',
+  DIWALI: 'Diwali',
+  GOLD_INCOME: 'Gold Income',
+  SILVER_DEPOSIT: 'Silver Deposit',
+};
 
 /** Reconciled union of the material dropdown's previously-divergent create/edit fallback lists. */
 const MATERIAL_FALLBACK_OPTIONS = [
@@ -460,9 +470,35 @@ const Admin = () => {
   const [editingPaymentRowIndex, setEditingPaymentRowIndex] = useState<number | null>(null);
   const [paymentRowEditForm, setPaymentRowEditForm] = useState({ amount: '', materialRate: '', devidentAmount: '', devidentMaterialRate: '' });
 
-  // Record Collection dialog (admin only)
+  // Record Collection dialog (admin + staff)
   const [recordingPaymentScheme, setRecordingPaymentScheme] = useState<SavingsEnrollment | null>(null);
   const [recordPaymentForm, setRecordPaymentForm] = useState({ amount: '', materialRate: '' });
+
+  // Savings table type filter (client-side)
+  const [schemeTypeFilter, setSchemeTypeFilter] = useState('all');
+
+  // Cancel scheme dialog (admin only)
+  const [cancellingSavings, setCancellingSavings] = useState<SavingsEnrollment | null>(null);
+  const [cancelForm, setCancelForm] = useState({ giftsValueDeducted: '', note: '' });
+
+  // Scheme Plans catalog — edit dialog state (admin only)
+  const [editingSchemePlan, setEditingSchemePlan] = useState<SchemePlan | null>(null);
+  const [schemePlanForm, setSchemePlanForm] = useState({
+    name: '',
+    description: '',
+    isActive: true,
+    durationMonths: '',
+    bonusMonths: '',
+    passbookPrefix: '',
+    paymentDueDayOfMonth: '',
+    earlyExitPenaltyPercent: '',
+    monthlyAmounts: [] as string[],
+    maxConsecutiveMissedMonths: '',
+    hamperGoldCoinPurity: '',
+    hamperSilverCoinGrams: '',
+    hamperGiftsValue: '',
+    hamperGifts: [] as string[],
+  });
   const [passwordTargetUser, setPasswordTargetUser] = useState<{ id: string; name: string; email: string } | null>(null);
   const [newUserPassword, setNewUserPassword] = useState('');
 
@@ -715,6 +751,13 @@ const Admin = () => {
     meta: { errorMessage: 'Failed to load savings schemes' },
   });
 
+  const { data: allSchemePlans = [], isLoading: schemePlansLoading, isError: schemePlansError } = useQuery({
+    queryKey: ['admin-scheme-plans'],
+    queryFn: adminService.getAllSchemePlans,
+    enabled: role === 'admin',
+    meta: { errorMessage: 'Failed to load scheme plans' },
+  });
+
   const { data: allCoupons = [], isLoading: couponsLoading, isError: couponsError } = useQuery({
     queryKey: ['admin-coupons'],
     queryFn: couponService.getAllCoupons,
@@ -960,6 +1003,66 @@ const Admin = () => {
       toast({
         variant: 'destructive',
         title: 'Failed to delete ledger row',
+        description: err instanceof ApiError ? err.message : 'Please try again.',
+      });
+    },
+  });
+
+  const cancelSavingsMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { giftsValueDeducted?: number; note?: string } }) =>
+      adminService.cancelSavingsScheme(id, data),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-savings'] });
+      setCancellingSavings(null);
+      setCancelForm({ giftsValueDeducted: '', note: '' });
+      const c = updated.cancellation;
+      toast({
+        title: 'Scheme Cancelled',
+        description: c
+          ? `₹${c.penaltyAmount.toLocaleString('en-IN')} forfeited, ₹${c.netRedeemable.toLocaleString('en-IN')} redeemable in goods.`
+          : undefined,
+      });
+    },
+    onError: (err) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to cancel scheme',
+        description: err instanceof ApiError ? err.message : 'Please try again.',
+      });
+    },
+  });
+
+  const computeRedemptionMutation = useMutation({
+    mutationFn: (id: string) => adminService.computeSavingsRedemption(id),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-savings'] });
+      const mb = updated.maturityBenefits;
+      const description = mb
+        ? `${mb.goldGrams ?? 0}g gold (₹${(mb.goldCoinValue ?? 0).toLocaleString('en-IN')}), ${mb.silverGrams ?? 0}g silver, ₹${(mb.giftsValue ?? 0).toLocaleString('en-IN')} gifts`
+        : undefined;
+      toast({ title: 'Redemption Payout Computed', description });
+    },
+    onError: (err) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to compute redemption payout',
+        description: err instanceof ApiError ? err.message : 'Please try again.',
+      });
+    },
+  });
+
+  const updateSchemePlanMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<SchemePlanInput> }) =>
+      adminService.updateSchemePlan(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-scheme-plans'] });
+      setEditingSchemePlan(null);
+      toast({ title: 'Scheme Plan Updated' });
+    },
+    onError: (err) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update scheme plan',
         description: err instanceof ApiError ? err.message : 'Please try again.',
       });
     },
@@ -1370,6 +1473,43 @@ const Admin = () => {
   const filteredOrders = orderStatusFilter === 'all'
     ? allOrders
     : allOrders.filter((o) => o.status === orderStatusFilter);
+
+  const availableSchemeTypes = Array.from(new Set(allSavings.map((s) => s.schemeType).filter(Boolean)));
+  const filteredSavings = schemeTypeFilter === 'all'
+    ? allSavings
+    : allSavings.filter((s) => s.schemeType === schemeTypeFilter);
+
+  /** Diwali-only inline badge showing the computed redemption payout, if any. */
+  const redemptionBadge = (s: SavingsEnrollment) => {
+    if (s.schemeType !== 'DIWALI' || !s.maturityBenefits?.computedAt) return null;
+    const mb = s.maturityBenefits;
+    return (
+      <span className="block w-fit mt-1 text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
+        {mb.goldGrams ?? 0}g gold computed
+      </span>
+    );
+  };
+
+  /** Opens the Scheme Plans edit dialog, hydrating the form (including type-conditional Diwali fields) from the plan. */
+  const openEditSchemePlan = (plan: SchemePlan) => {
+    setEditingSchemePlan(plan);
+    setSchemePlanForm({
+      name: plan.name,
+      description: plan.description ?? '',
+      isActive: plan.isActive,
+      durationMonths: String(plan.durationMonths ?? ''),
+      bonusMonths: String(plan.bonusMonths ?? ''),
+      passbookPrefix: plan.passbookPrefix ?? '',
+      paymentDueDayOfMonth: String(plan.paymentDueDayOfMonth ?? ''),
+      earlyExitPenaltyPercent: String(plan.earlyExitPenaltyPercent ?? ''),
+      monthlyAmounts: (plan.monthlyAmounts ?? []).map(String),
+      maxConsecutiveMissedMonths: plan.maxConsecutiveMissedMonths != null ? String(plan.maxConsecutiveMissedMonths) : '',
+      hamperGoldCoinPurity: plan.hamper?.goldCoinPurity ?? '',
+      hamperSilverCoinGrams: plan.hamper?.silverCoinGrams != null ? String(plan.hamper.silverCoinGrams) : '',
+      hamperGiftsValue: plan.hamper?.giftsValue != null ? String(plan.hamper.giftsValue) : '',
+      hamperGifts: plan.hamper?.gifts ?? [],
+    });
+  };
 
   const selectedOrderDetails = allOrders.find((o) => o.id === selectedOrder);
 
@@ -2380,7 +2520,18 @@ const Admin = () => {
           {/* ═══════ SAVINGS SCHEMES ═══════ */}
           <TabsContent value="savings">
             <Card className="p-6">
-              <h2 className="font-serif text-xl font-semibold mb-6">Savings Scheme Enrollments</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="font-serif text-xl font-semibold">Savings Scheme Enrollments</h2>
+                <Select value={schemeTypeFilter} onValueChange={setSchemeTypeFilter}>
+                  <SelectTrigger className="w-44"><SelectValue placeholder="Filter type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {availableSchemeTypes.map((t) => (
+                      <SelectItem key={t} value={t}>{SCHEME_TYPE_LABELS[t] ?? t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               {savingsLoading ? (
                 <div className="flex justify-center py-10">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -2393,6 +2544,8 @@ const Admin = () => {
                     <TableRow>
                       <TableHead>Passbook No.</TableHead>
                       <TableHead>User</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Metal</TableHead>
                       <TableHead>Monthly Amount</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Total Paid</TableHead>
@@ -2403,12 +2556,14 @@ const Admin = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allSavings.map((s) => (
+                    {filteredSavings.map((s) => (
                       <TableRow key={s._id}>
                         <TableCell className="font-mono text-xs">{s.passbookNumber || '—'}</TableCell>
                         <TableCell className="font-medium">
                           {typeof s.userId === 'string' ? s.userId : s.userId?.name || s.userId?.email || '—'}
                         </TableCell>
+                        <TableCell className="text-xs">{SCHEME_TYPE_LABELS[s.schemeType] ?? s.schemeType}</TableCell>
+                        <TableCell className="text-xs">{s.metal ?? '—'}</TableCell>
                         <TableCell>{formatPrice(s.monthlyAmount)}</TableCell>
                         <TableCell>{s.duration} months</TableCell>
                         <TableCell>{formatPrice(s.totalPaid)}</TableCell>
@@ -2417,15 +2572,17 @@ const Admin = () => {
                           <span className={`text-xs px-2 py-1 rounded-full ${
                             s.status === 'Active' ? 'bg-green-100 text-green-700'
                               : s.status === 'Completed' ? 'bg-blue-100 text-blue-700'
+                              : s.status === 'Dropped' ? 'bg-orange-100 text-orange-700'
                               : 'bg-red-100 text-red-700'
                           }`}>
-                            {s.status}
+                            {s.status === 'Dropped' ? 'Dropped (Missed Payments)' : s.status}
                           </span>
+                          {redemptionBadge(s)}
                         </TableCell>
                         <TableCell>{new Date(s.startDate).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            {/* Ledger view stays available to staff (read-only there); edit/delete/record below are admin-only. */}
+                            {/* Ledger view stays available to staff (read-only there); edit/delete below are admin-only. */}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -2434,8 +2591,7 @@ const Admin = () => {
                             >
                               <History className="h-4 w-4" />
                             </Button>
-                            {role === 'admin' && (
-                              <>
+                            {(role === 'admin' || role === 'staff') && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -2447,6 +2603,9 @@ const Admin = () => {
                               >
                                 <DollarSign className="h-4 w-4" />
                               </Button>
+                            )}
+                            {role === 'admin' && (
+                              <>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -2468,6 +2627,30 @@ const Admin = () => {
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
+                              {s.status === 'Active' && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Cancel Scheme"
+                                  onClick={() => {
+                                    setCancellingSavings(s);
+                                    setCancelForm({ giftsValueDeducted: '', note: '' });
+                                  }}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {s.schemeType === 'DIWALI' && s.status === 'Completed' && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Compute Redemption Payout"
+                                  disabled={computeRedemptionMutation.isPending}
+                                  onClick={() => computeRedemptionMutation.mutate(s._id)}
+                                >
+                                  <Scale className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -2493,6 +2676,57 @@ const Admin = () => {
                 <p className="text-muted-foreground text-center py-8">No savings enrollments yet.</p>
               )}
             </Card>
+
+            {role === 'admin' && (
+              <Card className="p-6 mt-6">
+                <div className="mb-6">
+                  <h2 className="font-serif text-xl font-semibold">Scheme Plans</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    The savings scheme catalog — durations, monthly amounts, penalties, and (for Diwali) hamper &amp; settlement rules.
+                  </p>
+                </div>
+                {schemePlansLoading ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : schemePlansError ? (
+                  <ApiErrorState message="Failed to load scheme plans from API" />
+                ) : allSchemePlans.length > 0 ? (
+                  <div className="space-y-3">
+                    {[...allSchemePlans]
+                      .sort((a, b) => a.sortOrder - b.sortOrder)
+                      .map((plan) => (
+                        <div key={plan._id} className="flex items-center justify-between border rounded-lg p-4">
+                          <div>
+                            <p className="font-medium">{plan.name}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {SCHEME_TYPE_LABELS[plan.type] ?? plan.type}
+                              {plan.metal ? ` · ${plan.metal}` : ''}
+                              {' · '}₹{plan.monthlyAmounts?.[0]?.toLocaleString('en-IN') ?? '—'}/mo × {plan.durationMonths}mo
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={plan.isActive}
+                                onCheckedChange={(checked) =>
+                                  updateSchemePlanMutation.mutate({ id: plan._id, data: { isActive: checked } })
+                                }
+                              />
+                              <span className="text-xs text-muted-foreground w-14">{plan.isActive ? 'Active' : 'Inactive'}</span>
+                            </div>
+                            <Button variant="ghost" size="icon" title="Edit Plan" onClick={() => openEditSchemePlan(plan)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">No scheme plans found.</p>
+                )}
+              </Card>
+            )}
           </TabsContent>
 
           {/* Edit Passbook modal (admin only) */}
@@ -2678,7 +2912,56 @@ const Admin = () => {
                   Ledger — {viewingLedgerScheme?.passbookNumber || 'Passbook pending first payment'}
                 </DialogTitle>
               </DialogHeader>
-              {viewingLedgerScheme && (() => {
+              {viewingLedgerScheme && viewingLedgerScheme.schemeType === 'DIWALI' ? (() => {
+                const rows = (viewingLedgerScheme.payments ?? []);
+                const mb = viewingLedgerScheme.maturityBenefits;
+                return (
+                  <div className="space-y-4">
+                    {rows.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-8">No collections recorded yet.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>No</TableHead>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Amount</TableHead>
+                              <TableHead>Method</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {rows.map((r, i) => (
+                              <TableRow key={i}>
+                                <TableCell>{i + 1}</TableCell>
+                                <TableCell className="text-xs">{new Date(r.paidAt).toLocaleDateString()}</TableCell>
+                                <TableCell>{formatPrice(r.amount)}</TableCell>
+                                <TableCell className="text-xs">{r.method === 'CASH' ? 'Cash' : 'Online'}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                    <div className="border rounded-lg p-4">
+                      <p className="font-medium text-sm mb-2">Redemption Payout</p>
+                      {mb?.computedAt ? (
+                        <div className="text-sm space-y-1 text-muted-foreground">
+                          <p>{mb.goldGrams ?? 0}g gold — {formatPrice(mb.goldCoinValue ?? 0)} (₹{mb.goldRatePerGram ?? 0}/g)</p>
+                          <p>{mb.silverGrams ?? 0}g silver — {formatPrice(mb.silverValue ?? 0)}</p>
+                          <p>Gift hamper — {formatPrice(mb.giftsValue ?? 0)}</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Not yet computed — {viewingLedgerScheme.status === 'Completed'
+                            ? 'use "Compute Redemption Payout" once ready.'
+                            : 'available once all installments are collected.'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })() : viewingLedgerScheme && (() => {
                 const rows = (viewingLedgerScheme.payments ?? []);
                 let cumulative = 0;
                 const ledgerRows = rows.map((p, i) => {
@@ -2832,7 +3115,7 @@ const Admin = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Record Collection dialog (admin only) */}
+          {/* Record Collection dialog (admin + staff) */}
           <Dialog open={recordingPaymentScheme !== null} onOpenChange={(open) => { if (!open) setRecordingPaymentScheme(null); }}>
             <DialogContent className="max-w-sm">
               <DialogHeader>
@@ -2852,17 +3135,21 @@ const Admin = () => {
                     className="mt-1"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="record-payment-rate">Material Rate Override (₹/g)</Label>
-                  <Input
-                    id="record-payment-rate"
-                    type="number"
-                    value={recordPaymentForm.materialRate}
-                    onChange={(e) => setRecordPaymentForm({ ...recordPaymentForm, materialRate: e.target.value })}
-                    className="mt-1"
-                    placeholder="Leave blank to use the live silver rate"
-                  />
-                </div>
+                {recordingPaymentScheme?.schemeType !== 'DIWALI' && (
+                  <div>
+                    <Label htmlFor="record-payment-rate">
+                      {recordingPaymentScheme?.metal === 'GOLD' ? 'Gold' : 'Silver'} Rate Override (₹/g)
+                    </Label>
+                    <Input
+                      id="record-payment-rate"
+                      type="number"
+                      value={recordPaymentForm.materialRate}
+                      onChange={(e) => setRecordPaymentForm({ ...recordPaymentForm, materialRate: e.target.value })}
+                      className="mt-1"
+                      placeholder={`Leave blank to use the live ${recordingPaymentScheme?.metal === 'GOLD' ? 'gold' : 'silver'} rate`}
+                    />
+                  </div>
+                )}
                 <Button
                   onClick={() => {
                     if (!recordingPaymentScheme) return;
@@ -2877,6 +3164,333 @@ const Admin = () => {
                   disabled={recordSavingsPaymentMutation.isPending || !recordPaymentForm.amount}
                 >
                   {recordSavingsPaymentMutation.isPending ? 'Recording...' : 'Record Collection'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Cancel Scheme dialog (admin only) — computes the card-rule-6 early-exit forfeit/redeemable split server-side. */}
+          <Dialog open={cancellingSavings !== null} onOpenChange={(open) => { if (!open) setCancellingSavings(null); }}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle className="font-serif">Cancel Scheme</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <p className="text-sm text-muted-foreground">
+                  Passbook: {cancellingSavings?.passbookNumber || 'Pending — no payment recorded yet'}
+                  <br />
+                  Total Paid: {cancellingSavings ? formatPrice(cancellingSavings.totalPaid) : '—'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  A percentage of the amount paid will be forfeited per scheme rules.
+                </p>
+                <div>
+                  <Label htmlFor="cancel-gifts-value">Gifts Already Received (₹ value)</Label>
+                  <Input
+                    id="cancel-gifts-value"
+                    type="number"
+                    value={cancelForm.giftsValueDeducted}
+                    onChange={(e) => setCancelForm({ ...cancelForm, giftsValueDeducted: e.target.value })}
+                    className="mt-1"
+                    placeholder="Optional"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cancel-note">Note</Label>
+                  <Textarea
+                    id="cancel-note"
+                    value={cancelForm.note}
+                    onChange={(e) => setCancelForm({ ...cancelForm, note: e.target.value })}
+                    className="mt-1"
+                    placeholder="Optional"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setCancellingSavings(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    disabled={cancelSavingsMutation.isPending}
+                    onClick={() => {
+                      if (!cancellingSavings) return;
+                      cancelSavingsMutation.mutate({
+                        id: cancellingSavings._id,
+                        data: {
+                          giftsValueDeducted: cancelForm.giftsValueDeducted ? Number(cancelForm.giftsValueDeducted) : undefined,
+                          note: cancelForm.note || undefined,
+                        },
+                      });
+                    }}
+                  >
+                    {cancelSavingsMutation.isPending ? 'Cancelling...' : 'Confirm Cancellation'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Scheme Plan edit dialog (admin only) */}
+          <Dialog open={editingSchemePlan !== null} onOpenChange={(open) => { if (!open) setEditingSchemePlan(null); }}>
+            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="font-serif">Edit Scheme Plan</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div>
+                  <Label htmlFor="plan-name">Name</Label>
+                  <Input
+                    id="plan-name"
+                    value={schemePlanForm.name}
+                    onChange={(e) => setSchemePlanForm({ ...schemePlanForm, name: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="plan-description">Description</Label>
+                  <Textarea
+                    id="plan-description"
+                    value={schemePlanForm.description}
+                    onChange={(e) => setSchemePlanForm({ ...schemePlanForm, description: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div className="flex items-center justify-between border rounded-lg p-3">
+                  <div>
+                    <Label htmlFor="plan-active">Active</Label>
+                    <p className="text-xs text-muted-foreground">Inactive plans are hidden from new enrollments.</p>
+                  </div>
+                  <Switch
+                    id="plan-active"
+                    checked={schemePlanForm.isActive}
+                    onCheckedChange={(checked) => setSchemePlanForm({ ...schemePlanForm, isActive: checked })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="plan-duration">Duration (months)</Label>
+                    <Input
+                      id="plan-duration"
+                      type="number"
+                      value={schemePlanForm.durationMonths}
+                      onChange={(e) => setSchemePlanForm({ ...schemePlanForm, durationMonths: e.target.value })}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="plan-bonus-months">Bonus Months</Label>
+                    <Input
+                      id="plan-bonus-months"
+                      type="number"
+                      value={schemePlanForm.bonusMonths}
+                      onChange={(e) => setSchemePlanForm({ ...schemePlanForm, bonusMonths: e.target.value })}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="plan-prefix">Passbook Prefix</Label>
+                    <Input
+                      id="plan-prefix"
+                      value={schemePlanForm.passbookPrefix}
+                      onChange={(e) => setSchemePlanForm({ ...schemePlanForm, passbookPrefix: e.target.value.toUpperCase() })}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="plan-due-day">Payment Due Day</Label>
+                    <Input
+                      id="plan-due-day"
+                      type="number"
+                      min={1}
+                      max={28}
+                      value={schemePlanForm.paymentDueDayOfMonth}
+                      onChange={(e) => setSchemePlanForm({ ...schemePlanForm, paymentDueDayOfMonth: e.target.value })}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="plan-penalty">Early Exit Penalty (%)</Label>
+                  <Input
+                    id="plan-penalty"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={schemePlanForm.earlyExitPenaltyPercent}
+                    onChange={(e) => setSchemePlanForm({ ...schemePlanForm, earlyExitPenaltyPercent: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Monthly Amounts (₹)</Label>
+                  {schemePlanForm.monthlyAmounts.map((amt, i) => (
+                    <div key={i} className="flex gap-2">
+                      <Input
+                        type="number"
+                        aria-label={`Month ${i + 1} amount`}
+                        value={amt}
+                        onChange={(e) =>
+                          setSchemePlanForm({
+                            ...schemePlanForm,
+                            monthlyAmounts: schemePlanForm.monthlyAmounts.map((a, ai) => (ai === i ? e.target.value : a)),
+                          })
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          setSchemePlanForm({
+                            ...schemePlanForm,
+                            monthlyAmounts: schemePlanForm.monthlyAmounts.filter((_, ai) => ai !== i),
+                          })
+                        }
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSchemePlanForm({ ...schemePlanForm, monthlyAmounts: [...schemePlanForm.monthlyAmounts, ''] })}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Month
+                  </Button>
+                </div>
+
+                {editingSchemePlan?.type === 'DIWALI' && (
+                  <div className="border-t pt-4 space-y-4">
+                    <div>
+                      <Label htmlFor="plan-max-missed" className="text-xs text-muted-foreground">Max Consecutive Missed Months (drops the member)</Label>
+                      <Input
+                        id="plan-max-missed"
+                        type="number"
+                        value={schemePlanForm.maxConsecutiveMissedMonths}
+                        onChange={(e) => setSchemePlanForm({ ...schemePlanForm, maxConsecutiveMissedMonths: e.target.value })}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <Label className="font-medium">Redemption Hamper</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        At redemption, gold is a fixed ₹ VALUE — (total paid + 1 bonus month) minus Gifts Value minus the
+                        silver coin's value at that day's rate — converted to grams at the day's gold rate. Gifts Value and
+                        the silver coin weight are fixed per plan.
+                      </p>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <Label htmlFor="plan-hamper-gifts-value" className="text-xs text-muted-foreground">Gifts Value (₹)</Label>
+                          <Input
+                            id="plan-hamper-gifts-value"
+                            type="number"
+                            value={schemePlanForm.hamperGiftsValue}
+                            onChange={(e) => setSchemePlanForm({ ...schemePlanForm, hamperGiftsValue: e.target.value })}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="plan-hamper-gold-purity" className="text-xs text-muted-foreground">Gold Purity</Label>
+                          <Input
+                            id="plan-hamper-gold-purity"
+                            placeholder="e.g. 916"
+                            value={schemePlanForm.hamperGoldCoinPurity}
+                            onChange={(e) => setSchemePlanForm({ ...schemePlanForm, hamperGoldCoinPurity: e.target.value })}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <Label htmlFor="plan-hamper-silver-grams" className="text-xs text-muted-foreground">Silver Coin (grams)</Label>
+                        <Input
+                          id="plan-hamper-silver-grams"
+                          type="number"
+                          value={schemePlanForm.hamperSilverCoinGrams}
+                          onChange={(e) => setSchemePlanForm({ ...schemePlanForm, hamperSilverCoinGrams: e.target.value })}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        <Label className="text-xs text-muted-foreground">Gifts</Label>
+                        {schemePlanForm.hamperGifts.map((gift, i) => (
+                          <div key={i} className="flex gap-2">
+                            <Input
+                              aria-label={`Hamper gift ${i + 1}`}
+                              value={gift}
+                              placeholder="e.g. Sweets Box"
+                              onChange={(e) =>
+                                setSchemePlanForm({
+                                  ...schemePlanForm,
+                                  hamperGifts: schemePlanForm.hamperGifts.map((g, gi) => (gi === i ? e.target.value : g)),
+                                })
+                              }
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                setSchemePlanForm({
+                                  ...schemePlanForm,
+                                  hamperGifts: schemePlanForm.hamperGifts.filter((_, gi) => gi !== i),
+                                })
+                              }
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSchemePlanForm({ ...schemePlanForm, hamperGifts: [...schemePlanForm.hamperGifts, ''] })}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Gift
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => {
+                    if (!editingSchemePlan) return;
+                    const payload: Partial<SchemePlanInput> = {
+                      name: schemePlanForm.name,
+                      description: schemePlanForm.description || undefined,
+                      isActive: schemePlanForm.isActive,
+                      durationMonths: Number(schemePlanForm.durationMonths),
+                      bonusMonths: Number(schemePlanForm.bonusMonths),
+                      passbookPrefix: schemePlanForm.passbookPrefix,
+                      paymentDueDayOfMonth: Number(schemePlanForm.paymentDueDayOfMonth),
+                      earlyExitPenaltyPercent: Number(schemePlanForm.earlyExitPenaltyPercent),
+                      monthlyAmounts: schemePlanForm.monthlyAmounts.filter((a) => a !== '').map(Number),
+                    };
+                    if (editingSchemePlan.type === 'DIWALI') {
+                      payload.maxConsecutiveMissedMonths = schemePlanForm.maxConsecutiveMissedMonths
+                        ? Number(schemePlanForm.maxConsecutiveMissedMonths)
+                        : undefined;
+                      payload.hamper = {
+                        goldCoinPurity: schemePlanForm.hamperGoldCoinPurity || undefined,
+                        silverCoinGrams: schemePlanForm.hamperSilverCoinGrams ? Number(schemePlanForm.hamperSilverCoinGrams) : undefined,
+                        giftsValue: schemePlanForm.hamperGiftsValue ? Number(schemePlanForm.hamperGiftsValue) : undefined,
+                        gifts: schemePlanForm.hamperGifts,
+                      };
+                    }
+                    updateSchemePlanMutation.mutate({ id: editingSchemePlan._id, data: payload });
+                  }}
+                  disabled={updateSchemePlanMutation.isPending || !schemePlanForm.name}
+                >
+                  {updateSchemePlanMutation.isPending ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </DialogContent>

@@ -365,13 +365,17 @@ const Profile = () => {
                       className="p-4 border border-border rounded-lg"
                     >
                       <div className="flex items-center justify-between mb-3">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          scheme.status === 'Active' ? 'bg-green-100 text-green-700'
-                            : scheme.status === 'Completed' ? 'bg-blue-100 text-blue-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}>
-                          {scheme.status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{scheme.planName ?? scheme.schemeType}</span>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            scheme.status === 'Active' ? 'bg-green-100 text-green-700'
+                              : scheme.status === 'Completed' ? 'bg-blue-100 text-blue-700'
+                              : scheme.status === 'Dropped' ? 'bg-red-100 text-red-700'
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {scheme.status}
+                          </span>
+                        </div>
                         <span className="text-sm text-muted-foreground">
                           Started {new Date(scheme.startDate).toLocaleDateString()}
                         </span>
@@ -403,7 +407,7 @@ const Profile = () => {
                     Not Enrolled Yet
                   </h3>
                   <p className="text-muted-foreground mb-4">
-                    Join our Monthly Savings Scheme and earn bonus silver!
+                    Join a Monthly Savings Scheme — Gold 11+1, Silver 11+1, or Diwali!
                   </p>
                   <Button asChild>
                     <Link to="/savings-scheme">Enroll Now</Link>

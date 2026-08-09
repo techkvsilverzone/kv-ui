@@ -43,8 +43,8 @@ const campaigns: Campaign[] = [
   },
   {
     id: 'savings',
-    title: 'Savings Scheme Bonus',
-    subtitle: 'Enroll in our monthly silver savings plan and earn a bonus installment on maturity. Lock in today\'s rates.',
+    title: 'Savings Scheme Rewards',
+    subtitle: 'Enroll in our Gold 11+1, Silver 11+1, or Diwali savings scheme and lock in today\'s rates on every installment.',
     badge: 'Investment',
     bgClass: 'bg-gradient-to-br from-teal-50 to-cyan-50',
     accentClass: 'text-teal-700 border-teal-200 bg-teal-100',

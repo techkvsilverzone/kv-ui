@@ -1,8 +1,9 @@
 import { api } from '../lib/api';
+import { SchemeMetal, SchemeType } from './schemePlan';
 
 export interface SavingsEnrollmentPayload {
+  schemeType: SchemeType;
   monthlyAmount: number;
-  duration: number;
   startDate: string;
 }
 
@@ -11,25 +12,50 @@ export interface SavingsPayment {
   /** Cash actually collected this row. 0 on the auto-credited bonus/devident row. */
   amount: number;
   paidAt: string;
-  /** ₹/gram used to convert `amount` into silver — 0 on the bonus row (no real collection). */
+  /** ₹/gram used to convert `amount` into the scheme's metal — 0 on the bonus row. */
   materialRate: number;
   /** `amount / materialRate`, 3dp — 0 on the bonus row. */
   materialWeight: number;
   /** Dividend/bonus ₹ credited on this row, if any. 0 on ordinary collection rows. */
   devidentAmount: number;
-  /** ₹/gram used to convert `devidentAmount` into silver. 0 when there's no devident. */
+  /** ₹/gram used to convert `devidentAmount` into the scheme's metal. 0 when there's no devident. */
   devidentMaterialRate: number;
   /** `devidentAmount / devidentMaterialRate`, 3dp. 0 when there's no devident. */
   devidentMaterialWeight: number;
+  method?: 'ONLINE' | 'CASH';
+  dueMonthKey?: string;
 }
 
 export interface MaturityBenefits {
-  /** ₹ value of the gold coin awarded at scheme maturity. */
+  /** ₹ value of the gold portion of the payout. For DIWALI this is computed at redemption
+   * (totalPaid + 1 bonus month, minus giftsValue and the silver coin's value) — NOT set until
+   * an admin runs the redemption compute action once the scheme is Completed. */
   goldCoinValue?: number;
-  /** Grams of silver coin/article awarded at scheme maturity. */
+  /** Grams of gold `goldCoinValue` bought at `goldRatePerGram` — the actual weight handed over. */
+  goldGrams?: number;
+  goldRatePerGram?: number;
+  /** Grams of silver coin/article awarded at scheme maturity (fixed weight). */
   silverGrams?: number;
+  /** ₹ value of `silverGrams` at `silverRatePerGram`, as of redemption. */
+  silverValue?: number;
+  silverRatePerGram?: number;
+  /** ₹ cost of the fixed gift package. */
+  giftsValue?: number;
   /** Free-text extras, e.g. ["Crackers Box", "Sweets and Snacks"]. */
   gifts?: string[];
+  /** When the DIWALI redemption payout was computed. Unset until then. */
+  computedAt?: string;
+}
+
+/** Card rule 6: the early-exit forfeit/redeemable split, set once a scheme is cancelled. */
+export interface SavingsCancellation {
+  cancelledAt: string;
+  amountPaidAtCancellation: number;
+  penaltyPercent: number;
+  penaltyAmount: number;
+  giftsValueDeducted: number;
+  netRedeemable: number;
+  note?: string;
 }
 
 export interface SavingsEnrollment {
@@ -41,20 +67,30 @@ export interface SavingsEnrollment {
    */
   userId: string | { _id: string; name: string; email: string };
   /** Unique per-enrollment tracking number ("Ticket No" on the printed passbook), e.g.
-   * "2425-0000111" (financial-year prefix + sequence). One customer can hold several
-   * concurrent schemes; the passbook number is what distinguishes them. Unset until the
-   * scheme's first payment is recorded — enrollment alone does not issue a passbook. */
+   * "SLV-2425-0000111" (metal/scheme prefix + financial-year code + sequence). One customer
+   * can hold several concurrent schemes; the passbook number is what distinguishes them.
+   * Unset until the scheme's first payment is recorded. */
   passbookNumber?: string;
+  /** Which catalog product this enrollment is under — drives the ledger/passbook layout. */
+  schemeType: SchemeType;
+  planId?: string;
+  /** Which metal installments accumulate as. Unset for DIWALI (fixed hamper, not gram-based). */
+  metal?: SchemeMetal;
   planName?: string;
   monthlyAmount: number;
   duration: number;
   startDate: string;
-  status: string;
+  status: 'Active' | 'Completed' | 'Cancelled' | 'Dropped';
   totalPaid: number;
   bonusAmount: number;
   payments?: SavingsPayment[];
-  /** Admin-configurable reward shown on the passbook once the scheme matures. */
+  /** Admin-configurable reward shown on the passbook once the scheme matures. For DIWALI this
+   * is the hamper snapshotted at enrollment. */
   maturityBenefits?: MaturityBenefits;
+  cancellation?: SavingsCancellation;
+  /** Computed at read time — card rule 2: a late payment pushes this out by however many
+   * months it slipped. Never stored. */
+  maturityDate?: string;
   createdAt: string;
 }
 
@@ -62,11 +98,13 @@ export interface SavingsEnrollment {
  * The passbook number itself is never editable (it's the tracking key already handed out). */
 export interface SavingsAdminUpdatePayload {
   planName?: string;
+  schemeType?: SchemeType;
+  metal?: SchemeMetal | null;
   monthlyAmount?: number;
   duration?: number;
   bonusAmount?: number;
   totalPaid?: number;
-  status?: 'Active' | 'Completed' | 'Cancelled';
+  status?: 'Active' | 'Completed' | 'Cancelled' | 'Dropped';
   startDate?: string;
   maturityBenefits?: MaturityBenefits;
 }

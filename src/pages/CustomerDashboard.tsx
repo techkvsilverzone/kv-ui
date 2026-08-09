@@ -116,25 +116,38 @@ const SavingsTab = ({ schemes, isLoading }: { schemes: SavingsEnrollment[]; isLo
   const formatPrice = (price: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(price);
 
+  const STATUS_STYLES: Record<string, string> = {
+    Active: 'bg-green-100 text-green-700',
+    Completed: 'bg-blue-100 text-blue-700',
+    Cancelled: 'bg-muted text-muted-foreground',
+    Dropped: 'bg-red-100 text-red-700',
+  };
+  const SCHEME_TYPE_LABELS: Record<string, string> = {
+    GOLD_11_1: 'Gold 11+1',
+    SILVER_11_1: 'Silver 11+1',
+    DIWALI: 'Diwali Scheme',
+    GOLD_INCOME: 'Gold Income Scheme',
+    SILVER_DEPOSIT: 'Silver Deposit Scheme',
+  };
+
   return (
     <div className="space-y-4">
       {schemes.map((scheme) => {
         const start = new Date(scheme.startDate);
-        const maturity = new Date(start);
-        maturity.setMonth(maturity.getMonth() + scheme.duration);
+        const maturity = scheme.maturityDate ? new Date(scheme.maturityDate) : new Date(start);
+        if (!scheme.maturityDate) maturity.setMonth(maturity.getMonth() + scheme.duration);
 
         return (
           <Card key={scheme._id} className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
               <div>
+                <p className="text-xs font-medium text-foreground">
+                  {scheme.planName ?? SCHEME_TYPE_LABELS[scheme.schemeType] ?? scheme.schemeType}
+                </p>
                 <p className="text-xs text-muted-foreground mb-1">
                   {scheme.passbookNumber ? `Passbook #${scheme.passbookNumber}` : 'Passbook pending first payment'}
                 </p>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  scheme.status === 'active' ? 'bg-green-100 text-green-700' :
-                  scheme.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                  'bg-muted text-muted-foreground'
-                }`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLES[scheme.status] ?? 'bg-muted text-muted-foreground'}`}>
                   {scheme.status}
                 </span>
               </div>

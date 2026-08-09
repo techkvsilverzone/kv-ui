@@ -35,6 +35,7 @@ work happened. `01` is the earliest; the highest number is the most recent.
 | 23 | [23-products-pagination.md](23-products-pagination.md) | Product list `page`/`limit` pagination (infinite scroll) |
 | 24 | [24-product-price-calculation.md](24-product-price-calculation.md) | Silver-rate dynamic pricing (rate×weight + making + wastage; discount → GST → delivery) |
 | 25 | [25-price-update-guard-and-notification.md](25-price-update-guard-and-notification.md) | Daily 10:00 IST rate-update guard (gold rates, cron, WhatsApp alert, authoritative block flag) |
+| 26 | [26-savings-schemes.md](26-savings-schemes.md) | Multi-scheme-type savings rework: scheme plan catalog, Gold/Silver 11+1, Diwali hamper + price-band settlement, early-exit forfeit |
 
 ## API contracts → client files
 
@@ -55,6 +56,7 @@ The endpoint-contract docs map to the storefront client files that depend on the
 | Dynamic price calculation | [24-product-price-calculation.md](24-product-price-calculation.md) | `src/lib/pricing.ts`, `src/components/ProductCard.tsx`, `src/pages/ProductDetail.tsx`, `src/context/CartContext.tsx`, `src/pages/Cart.tsx`, `src/pages/Payment.tsx` |
 | Daily rate-update guard (gold rates, block flag) | [25-price-update-guard-and-notification.md](25-price-update-guard-and-notification.md) | `src/services/goldRate.ts`, `src/services/silverRate.ts`, `src/services/rateStatus.ts`, `src/lib/rateFreshness.ts`, `src/components/RateUpdateGate.tsx`, `src/pages/Admin.tsx` |
 | Multiple product images | [22-products-multiple-images.md](22-products-multiple-images.md) | `src/services/product.ts`, `src/pages/Admin.tsx`, `src/components/ProductImageCarousel.tsx`, `src/components/ProductCard.tsx`, `src/pages/ProductDetail.tsx` |
+| Savings schemes (multi-type) | [26-savings-schemes.md](26-savings-schemes.md) | `src/services/schemePlan.ts`, `src/services/savings.ts`, `src/services/admin.ts`, `src/pages/SavingsScheme.tsx`, `src/components/PassbookView.tsx`, `src/pages/Admin.tsx`, `src/pages/CustomerDashboard.tsx`, `src/pages/Profile.tsx` |
 
 > Note: docs were renumbered/flattened on 2026-06-16. Some inline cross-references inside individual
 > docs may still mention old paths (e.g. `docs/api/...` or `API_CHANGES_AND_FIXES.md`) — use this
