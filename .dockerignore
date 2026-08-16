@@ -1,0 +1,16 @@
+node_modules
+dist
+dist-ssr
+.git
+.gitignore
+.env
+.env.*
+npm-debug.log*
+README.md
+android
+.wolf
+.claude
+e2e
+playwright-report
+test-results
+*.log
