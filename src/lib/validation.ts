@@ -48,6 +48,7 @@ export const signupSchema = z
   .object({
     name: nameSchema,
     email: emailSchema,
+    phone: phoneSchema,
     password: passwordSchema,
     confirmPassword: z.string().min(1, 'Please confirm your password'),
     acceptTerms: z.literal(true, {

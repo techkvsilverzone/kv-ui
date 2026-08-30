@@ -84,6 +84,8 @@ import { productService } from '@/services/product';
 import { savingsService } from '@/services/savings';
 import type { SavingsEnrollment, SavingsAdminUpdatePayload } from '@/services/savings';
 import type { SchemePlan, SchemePlanInput, SchemeType } from '@/services/schemePlan';
+import type { UserIdProof } from '@/services/idProof';
+import { normalizeImageSrc } from '@/lib/image';
 import { couponService, type CreateCouponPayload } from '@/services/coupon';
 import { returnsService } from '@/services/returns';
 import { API_URL } from '@/lib/api';
@@ -103,11 +105,12 @@ import { Badge } from '@/components/ui/badge';
 
 /** Human-readable labels for the savings scheme catalog's `SchemeType` values. */
 const SCHEME_TYPE_LABELS: Record<string, string> = {
-  GOLD_11_1: 'Gold 11+1',
-  SILVER_11_1: 'Silver 11+1',
+  GOLD_11_1: 'Gold Purchase Plan',
+  SILVER_11_1: 'Silver Purchase Plan',
   DIWALI: 'Diwali',
   GOLD_INCOME: 'Gold Income',
   SILVER_DEPOSIT: 'Silver Deposit',
+  SILVER_SMART: 'KV Smart Purchase Plan',
 };
 
 /** Reconciled union of the material dropdown's previously-divergent create/edit fallback lists. */
@@ -493,6 +496,7 @@ const Admin = () => {
     paymentDueDayOfMonth: '',
     earlyExitPenaltyPercent: '',
     monthlyAmounts: [] as string[],
+    minPaymentAmount: '',
     maxConsecutiveMissedMonths: '',
     hamperGoldCoinPurity: '',
     hamperSilverCoinGrams: '',
@@ -758,6 +762,14 @@ const Admin = () => {
     meta: { errorMessage: 'Failed to load scheme plans' },
   });
 
+  // Item 2: KYC review queue — admin + staff, mirrors the return-video reconciliation queue.
+  const { data: allIdProofs = [], isLoading: idProofsLoading, isError: idProofsError } = useQuery({
+    queryKey: ['admin-id-proofs'],
+    queryFn: () => adminService.getIdProofs(),
+    enabled: role === 'admin' || role === 'staff',
+    meta: { errorMessage: 'Failed to load ID proof submissions' },
+  });
+
   const { data: allCoupons = [], isLoading: couponsLoading, isError: couponsError } = useQuery({
     queryKey: ['admin-coupons'],
     queryFn: couponService.getAllCoupons,
@@ -797,6 +809,9 @@ const Admin = () => {
     retry: false,
     meta: { errorMessage: 'Failed to load gold rates' },
   });
+  // Most recent rate per metal, for the Record Collection dialog's live gram estimate.
+  const latestSilverRate = [...silverRates].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.ratePerGram;
+  const latestGoldRate = [...goldRates].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.ratePerGram;
 
   // Authoritative block flag persisted by the 10:00 IST cron (B4). Source of truth for the
   // lock — the backend allows staff to read this too (adminOrStaff), since staff can hit the
@@ -959,11 +974,20 @@ const Admin = () => {
   const recordSavingsPaymentMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: { amount: number; materialRate?: number } }) =>
       adminService.recordSavingsPayment(id, data),
-    onSuccess: () => {
+    onSuccess: (updatedScheme) => {
       queryClient.invalidateQueries({ queryKey: ['admin-savings'] });
       setRecordingPaymentScheme(null);
       setRecordPaymentForm({ amount: '', materialRate: '' });
-      toast({ title: 'Collection Recorded' });
+      // The row this call just created is the most recently paid real row on the returned scheme.
+      const realPayments = (updatedScheme.payments ?? []).filter((p) => p.amount > 0);
+      const credited = realPayments.reduce<typeof realPayments[number] | undefined>(
+        (latest, row) => (!latest || new Date(row.paidAt) > new Date(latest.paidAt) ? row : latest),
+        undefined,
+      );
+      const gramNote = credited && credited.materialWeight > 0
+        ? ` — ${credited.materialWeight.toFixed(3)}g ${updatedScheme.metal === 'GOLD' ? 'Gold' : 'Silver'} at ${formatPrice(credited.materialRate)}/g.`
+        : '';
+      toast({ title: 'Collection Recorded', description: gramNote ? gramNote.replace(/^ — /, '') : undefined });
     },
     onError: (err) => {
       toast({
@@ -1046,6 +1070,22 @@ const Admin = () => {
       toast({
         variant: 'destructive',
         title: 'Failed to compute redemption payout',
+        description: err instanceof ApiError ? err.message : 'Please try again.',
+      });
+    },
+  });
+
+  const verifyIdProofMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { status: 'Verified' | 'Rejected'; rejectionReason?: string } }) =>
+      adminService.verifyIdProof(id, data),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-id-proofs'] });
+      toast({ title: updated.verificationStatus === 'Verified' ? 'ID Proof Verified' : 'ID Proof Rejected' });
+    },
+    onError: (err) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update ID proof',
         description: err instanceof ApiError ? err.message : 'Please try again.',
       });
     },
@@ -1503,6 +1543,7 @@ const Admin = () => {
       paymentDueDayOfMonth: String(plan.paymentDueDayOfMonth ?? ''),
       earlyExitPenaltyPercent: String(plan.earlyExitPenaltyPercent ?? ''),
       monthlyAmounts: (plan.monthlyAmounts ?? []).map(String),
+      minPaymentAmount: plan.minPaymentAmount != null ? String(plan.minPaymentAmount) : '',
       maxConsecutiveMissedMonths: plan.maxConsecutiveMissedMonths != null ? String(plan.maxConsecutiveMissedMonths) : '',
       hamperGoldCoinPurity: plan.hamper?.goldCoinPurity ?? '',
       hamperSilverCoinGrams: plan.hamper?.silverCoinGrams != null ? String(plan.hamper.silverCoinGrams) : '',
@@ -2519,6 +2560,82 @@ const Admin = () => {
 
           {/* ═══════ SAVINGS SCHEMES ═══════ */}
           <TabsContent value="savings">
+            {/* Item 2: KYC review queue — admin + staff. */}
+            <Card className="p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-serif text-xl font-semibold">ID Proof Verification (KYC)</h2>
+                <span className="text-xs text-muted-foreground">
+                  {allIdProofs.filter((p) => p.verificationStatus === 'Pending').length} pending
+                </span>
+              </div>
+              {idProofsLoading ? (
+                <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+              ) : idProofsError ? (
+                <ApiErrorState message="Failed to load ID proof submissions" />
+              ) : allIdProofs.filter((p) => p.verificationStatus === 'Pending').length === 0 ? (
+                <p className="text-sm text-muted-foreground">No submissions awaiting review.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Number</TableHead>
+                        <TableHead>Document</TableHead>
+                        <TableHead>Submitted</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allIdProofs
+                        .filter((p) => p.verificationStatus === 'Pending')
+                        .map((p: UserIdProof) => (
+                          <TableRow key={p._id}>
+                            <TableCell className="font-medium text-sm">
+                              {typeof p.userId === 'string' ? p.userId : `${p.userId.name} (${p.userId.email})`}
+                            </TableCell>
+                            <TableCell className="text-xs">{p.idProofType.replace('_', ' ')}</TableCell>
+                            <TableCell className="text-xs font-mono">{p.idProofNumber}</TableCell>
+                            <TableCell>
+                              <a href={normalizeImageSrc(p.imageUrl)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs">
+                                View Photo
+                              </a>
+                            </TableCell>
+                            <TableCell className="text-xs">{new Date(p.createdAt).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={verifyIdProofMutation.isPending}
+                                  onClick={() => verifyIdProofMutation.mutate({ id: p._id, data: { status: 'Verified' } })}
+                                >
+                                  Verify
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  disabled={verifyIdProofMutation.isPending}
+                                  onClick={() => {
+                                    const reason = window.prompt('Reason for rejecting this ID proof?');
+                                    if (reason === null) return;
+                                    if (!reason.trim()) { toast({ variant: 'destructive', title: 'A rejection reason is required' }); return; }
+                                    verifyIdProofMutation.mutate({ id: p._id, data: { status: 'Rejected', rejectionReason: reason.trim() } });
+                                  }}
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </Card>
+
             <Card className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-serif text-xl font-semibold">Savings Scheme Enrollments</h2>
@@ -2562,7 +2679,7 @@ const Admin = () => {
                         <TableCell className="font-medium">
                           {typeof s.userId === 'string' ? s.userId : s.userId?.name || s.userId?.email || '—'}
                         </TableCell>
-                        <TableCell className="text-xs">{SCHEME_TYPE_LABELS[s.schemeType] ?? s.schemeType}</TableCell>
+                        <TableCell className="text-xs">{s.planName || SCHEME_TYPE_LABELS[s.schemeType] || s.schemeType}</TableCell>
                         <TableCell className="text-xs">{s.metal ?? '—'}</TableCell>
                         <TableCell>{formatPrice(s.monthlyAmount)}</TableCell>
                         <TableCell>{s.duration} months</TableCell>
@@ -2702,7 +2819,10 @@ const Admin = () => {
                             <p className="text-xs text-muted-foreground mt-0.5">
                               {SCHEME_TYPE_LABELS[plan.type] ?? plan.type}
                               {plan.metal ? ` · ${plan.metal}` : ''}
-                              {' · '}₹{plan.monthlyAmounts?.[0]?.toLocaleString('en-IN') ?? '—'}/mo × {plan.durationMonths}mo
+                              {' · '}
+                              {plan.paymentMode === 'FLEXIBLE'
+                                ? `min ₹${(plan.minPaymentAmount ?? 0).toLocaleString('en-IN')}, any time × ${plan.durationMonths}mo`
+                                : `₹${plan.monthlyAmounts?.[0]?.toLocaleString('en-IN') ?? '—'}/mo × ${plan.durationMonths}mo`}
                             </p>
                           </div>
                           <div className="flex items-center gap-4">
@@ -3148,6 +3268,16 @@ const Admin = () => {
                       className="mt-1"
                       placeholder={`Leave blank to use the live ${recordingPaymentScheme?.metal === 'GOLD' ? 'gold' : 'silver'} rate`}
                     />
+                    {(() => {
+                      const rate = Number(recordPaymentForm.materialRate) || (recordingPaymentScheme?.metal === 'GOLD' ? latestGoldRate : latestSilverRate);
+                      const amount = Number(recordPaymentForm.amount);
+                      if (!rate || !amount) return null;
+                      return (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          ≈ {(amount / rate).toFixed(3)}g {recordingPaymentScheme?.metal === 'GOLD' ? 'Gold' : 'Silver'} at ₹{rate}/g
+                        </p>
+                      );
+                    })()}
                   </div>
                 )}
                 <Button
@@ -3324,46 +3454,67 @@ const Admin = () => {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Monthly Amounts (₹)</Label>
-                  {schemePlanForm.monthlyAmounts.map((amt, i) => (
-                    <div key={i} className="flex gap-2">
-                      <Input
-                        type="number"
-                        aria-label={`Month ${i + 1} amount`}
-                        value={amt}
-                        onChange={(e) =>
-                          setSchemePlanForm({
-                            ...schemePlanForm,
-                            monthlyAmounts: schemePlanForm.monthlyAmounts.map((a, ai) => (ai === i ? e.target.value : a)),
-                          })
-                        }
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          setSchemePlanForm({
-                            ...schemePlanForm,
-                            monthlyAmounts: schemePlanForm.monthlyAmounts.filter((_, ai) => ai !== i),
-                          })
-                        }
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSchemePlanForm({ ...schemePlanForm, monthlyAmounts: [...schemePlanForm.monthlyAmounts, ''] })}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Month
-                  </Button>
-                </div>
+                {editingSchemePlan?.paymentMode === 'FLEXIBLE' ? (
+                  // Item 4 (KV Smart Purchase Plan): no fixed denominations — instead an
+                  // admin-configurable floor a customer's own chosen amount must meet.
+                  <div>
+                    <Label htmlFor="schemePlanMinPayment" className="text-xs text-muted-foreground">
+                      Minimum Payment (₹)
+                    </Label>
+                    <Input
+                      id="schemePlanMinPayment"
+                      type="number"
+                      value={schemePlanForm.minPaymentAmount}
+                      onChange={(e) => setSchemePlanForm({ ...schemePlanForm, minPaymentAmount: e.target.value })}
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      The floor a customer's self-chosen payment must meet — they can pay any amount at or above this, any number
+                      of times, within the plan's duration.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Monthly Amounts (₹)</Label>
+                    {schemePlanForm.monthlyAmounts.map((amt, i) => (
+                      <div key={i} className="flex gap-2">
+                        <Input
+                          type="number"
+                          aria-label={`Month ${i + 1} amount`}
+                          value={amt}
+                          onChange={(e) =>
+                            setSchemePlanForm({
+                              ...schemePlanForm,
+                              monthlyAmounts: schemePlanForm.monthlyAmounts.map((a, ai) => (ai === i ? e.target.value : a)),
+                            })
+                          }
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setSchemePlanForm({
+                              ...schemePlanForm,
+                              monthlyAmounts: schemePlanForm.monthlyAmounts.filter((_, ai) => ai !== i),
+                            })
+                          }
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSchemePlanForm({ ...schemePlanForm, monthlyAmounts: [...schemePlanForm.monthlyAmounts, ''] })}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Month
+                    </Button>
+                  </div>
+                )}
 
                 {editingSchemePlan?.type === 'DIWALI' && (
                   <div className="border-t pt-4 space-y-4">
@@ -3473,8 +3624,15 @@ const Admin = () => {
                       passbookPrefix: schemePlanForm.passbookPrefix,
                       paymentDueDayOfMonth: Number(schemePlanForm.paymentDueDayOfMonth),
                       earlyExitPenaltyPercent: Number(schemePlanForm.earlyExitPenaltyPercent),
+                      // Item 4: sent unconditionally (not just when changed) so the backend's
+                      // "monthlyAmounts may be empty for FLEXIBLE plans" check sees paymentMode
+                      // in the SAME payload — this form never lets an admin change the mode itself.
+                      paymentMode: editingSchemePlan.paymentMode,
                       monthlyAmounts: schemePlanForm.monthlyAmounts.filter((a) => a !== '').map(Number),
                     };
+                    if (editingSchemePlan.paymentMode === 'FLEXIBLE') {
+                      payload.minPaymentAmount = schemePlanForm.minPaymentAmount ? Number(schemePlanForm.minPaymentAmount) : undefined;
+                    }
                     if (editingSchemePlan.type === 'DIWALI') {
                       payload.maxConsecutiveMissedMonths = schemePlanForm.maxConsecutiveMissedMonths
                         ? Number(schemePlanForm.maxConsecutiveMissedMonths)

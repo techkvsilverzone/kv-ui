@@ -123,11 +123,12 @@ const SavingsTab = ({ schemes, isLoading }: { schemes: SavingsEnrollment[]; isLo
     Dropped: 'bg-red-100 text-red-700',
   };
   const SCHEME_TYPE_LABELS: Record<string, string> = {
-    GOLD_11_1: 'Gold 11+1',
-    SILVER_11_1: 'Silver 11+1',
+    GOLD_11_1: 'Gold Purchase Plan',
+    SILVER_11_1: 'Silver Purchase Plan',
     DIWALI: 'Diwali Scheme',
     GOLD_INCOME: 'Gold Income Scheme',
     SILVER_DEPOSIT: 'Silver Deposit Scheme',
+    SILVER_SMART: 'KV Smart Purchase Plan',
   };
 
   return (

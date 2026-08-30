@@ -17,10 +17,11 @@ import { orderService, type Order } from '@/services/order';
 import { savingsService } from '@/services/savings';
 import { returnsService, type ReturnFaultType, type CreateReturnResponse } from '@/services/returns';
 import { validateForm, profileSchema } from '@/lib/validation';
+import type { PhoneVerificationDispatch } from '@/services/auth';
 import Seo from '@/components/Seo';
 
 const Profile = () => {
-  const { user, isAuthenticated, updateProfile, logout } = useAuth();
+  const { user, isAuthenticated, updateProfile, logout, requestPhoneVerification, verifyPhoneOtp } = useAuth();
   const { toast } = useToast();
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
@@ -31,6 +32,44 @@ const Profile = () => {
     anniversaryDate: user?.anniversaryDate ? user.anniversaryDate.slice(0, 10) : '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Item 1: phone verification — reached from Signup's "Skip for now", or a code that expired.
+  const [phoneVerifyDispatch, setPhoneVerifyDispatch] = useState<PhoneVerificationDispatch | null>(null);
+  const [isSendingPhoneCode, setIsSendingPhoneCode] = useState(false);
+  const [phoneVerifyCode, setPhoneVerifyCode] = useState('');
+  const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
+
+  const handleRequestPhoneVerification = async () => {
+    setIsSendingPhoneCode(true);
+    try {
+      const dispatch = await requestPhoneVerification();
+      if (dispatch) {
+        setPhoneVerifyDispatch(dispatch);
+      } else {
+        toast({ title: 'Could not send code', description: 'Please try again shortly.', variant: 'destructive' });
+      }
+    } finally {
+      setIsSendingPhoneCode(false);
+    }
+  };
+
+  const handleVerifyPhoneCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (phoneVerifyCode.trim().length !== 6) return;
+    setIsVerifyingPhone(true);
+    try {
+      const ok = await verifyPhoneOtp(phoneVerifyCode.trim());
+      if (ok) {
+        toast({ title: 'Phone verified', description: 'Your mobile number is now verified.' });
+        setPhoneVerifyDispatch(null);
+        setPhoneVerifyCode('');
+      } else {
+        toast({ title: 'Incorrect code', description: 'Please check the code and try again.', variant: 'destructive' });
+      }
+    } finally {
+      setIsVerifyingPhone(false);
+    }
+  };
 
   const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ['my-orders'],
@@ -231,6 +270,22 @@ const Profile = () => {
                     aria-invalid={!!errors.phone}
                   />
                   {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}
+                  {user?.phone && (
+                    user.phoneVerified ? (
+                      <p className="text-xs text-primary flex items-center gap-1 mt-1">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Verified
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleRequestPhoneVerification}
+                        disabled={isSendingPhoneCode}
+                        className="text-xs text-primary hover:underline mt-1 disabled:opacity-50"
+                      >
+                        {isSendingPhoneCode ? 'Sending code...' : 'Not verified — send verification code'}
+                      </button>
+                    )
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="dateOfBirth">Date of Birth</Label>
@@ -407,7 +462,7 @@ const Profile = () => {
                     Not Enrolled Yet
                   </h3>
                   <p className="text-muted-foreground mb-4">
-                    Join a Monthly Savings Scheme — Gold 11+1, Silver 11+1, or Diwali!
+                    Join a Monthly Savings Scheme — Gold Purchase Plan, Silver Purchase Plan, or Diwali!
                   </p>
                   <Button asChild>
                     <Link to="/savings-scheme">Enroll Now</Link>
@@ -601,6 +656,46 @@ const Profile = () => {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Item 1: phone verification, reachable if the customer skipped it at signup or the code expired. */}
+      <Dialog open={phoneVerifyDispatch !== null} onOpenChange={(open) => { if (!open) { setPhoneVerifyDispatch(null); setPhoneVerifyCode(''); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Verify Your Phone</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleVerifyPhoneCode} className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              {phoneVerifyDispatch?.channel === 'email'
+                ? `WhatsApp verification isn't active yet, so we emailed a code to ${user?.email}.`
+                : `We sent a 6-digit code to your WhatsApp at ${user?.phone}.`}
+            </p>
+            <div>
+              <Label htmlFor="profilePhoneVerifyCode">Verification Code</Label>
+              <Input
+                id="profilePhoneVerifyCode"
+                inputMode="numeric"
+                maxLength={6}
+                value={phoneVerifyCode}
+                onChange={(e) => setPhoneVerifyCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="000000"
+                className="mt-1 text-center text-lg tracking-[0.3em]"
+                autoFocus
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isVerifyingPhone || phoneVerifyCode.length !== 6}>
+              {isVerifyingPhone ? 'Verifying...' : 'Verify'}
+            </Button>
+            <button
+              type="button"
+              onClick={handleRequestPhoneVerification}
+              disabled={isSendingPhoneCode}
+              className="text-xs text-primary hover:underline disabled:opacity-50"
+            >
+              {isSendingPhoneCode ? 'Resending...' : 'Resend code'}
+            </button>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

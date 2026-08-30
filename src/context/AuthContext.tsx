@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '@/services/auth';
+import { authService, type PhoneVerificationDispatch } from '@/services/auth';
 import { UNAUTHORIZED_EVENT } from '@/lib/api';
 import { TOKEN_STORAGE_KEY, isMobileApp } from '@/lib/platform';
 
@@ -11,6 +11,8 @@ export interface User {
   email: string;
   name: string;
   phone?: string;
+  /** Item 1: verified via a WhatsApp/email OTP at signup (or a later re-verification). */
+  phoneVerified?: boolean;
   address?: string;
   city?: string;
   state?: string;
@@ -41,8 +43,13 @@ interface AuthContextType {
     email: string,
     password: string,
     name: string,
+    phone: string,
     stallEvent?: boolean,
-  ) => Promise<{ success: boolean; promoCoupon?: string }>;
+  ) => Promise<{ success: boolean; promoCoupon?: string; phoneVerification?: PhoneVerificationDispatch }>;
+  /** Item 1: (re)send the mobile-verification code — used right after signup, and from Profile
+   * if the customer dismissed the dialog or the first code expired. */
+  requestPhoneVerification: () => Promise<PhoneVerificationDispatch | null>;
+  verifyPhoneOtp: (code: string) => Promise<boolean>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<boolean>;
 }
@@ -124,24 +131,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email: string,
     password: string,
     name: string,
+    phone: string,
     stallEvent?: boolean,
-  ): Promise<{ success: boolean; promoCoupon?: string }> => {
+  ): Promise<{ success: boolean; promoCoupon?: string; phoneVerification?: PhoneVerificationDispatch }> => {
     try {
-      const { user, token, promoCoupon } = await authService.signup(
+      const { user, token, promoCoupon, phoneVerification } = await authService.signup(
         name,
         email,
         password,
-        undefined,
+        phone,
         stallEvent,
       );
       const normalizedUser = normalizeUser(user);
       setUser(normalizedUser);
       localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));
       if (token && isMobileApp()) localStorage.setItem(TOKEN_STORAGE_KEY, token);
-      return { success: true, promoCoupon };
+      return { success: true, promoCoupon, phoneVerification };
     } catch (error) {
       console.error('Signup failed', error);
       return { success: false };
+    }
+  };
+
+  const requestPhoneVerification = async (): Promise<PhoneVerificationDispatch | null> => {
+    try {
+      return await authService.requestPhoneVerification();
+    } catch (error) {
+      console.error('Requesting phone verification failed', error);
+      return null;
+    }
+  };
+
+  const verifyPhoneOtp = async (code: string): Promise<boolean> => {
+    try {
+      const { user } = await authService.verifyPhoneOtp(code);
+      const normalizedUser = normalizeUser(user);
+      setUser(normalizedUser);
+      localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));
+      return true;
+    } catch (error) {
+      console.error('Phone verification failed', error);
+      return false;
     }
   };
 
@@ -190,6 +220,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         loginWithOtp,
         signup,
+        requestPhoneVerification,
+        verifyPhoneOtp,
         logout,
         updateProfile,
       }}

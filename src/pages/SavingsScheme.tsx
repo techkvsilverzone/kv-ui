@@ -15,7 +15,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import savingsImage from '@/assets/savings-scheme.jpg';
 import { savingsService, type SavingsEnrollment } from '@/services/savings';
 import { schemePlanService, type SchemePlan, type SchemeType } from '@/services/schemePlan';
@@ -25,6 +25,18 @@ import PassbookView from '@/components/PassbookView';
 import { loadRazorpayScript } from '@/lib/razorpay';
 import { addressService } from '@/services/address';
 import { ApiError } from '@/lib/api';
+import { silverRateService } from '@/services/silverRate';
+import { goldRateService } from '@/services/goldRate';
+import { idProofService, type IdProofType } from '@/services/idProof';
+
+const formatGrams = (grams: number) => `${grams.toFixed(3)}g`;
+
+const ID_PROOF_TYPE_LABELS: Record<IdProofType, string> = {
+  AADHAAR: 'Aadhaar Card',
+  PAN: 'PAN Card',
+  VOTER_ID: 'Voter ID',
+  DRIVING_LICENSE: 'Driving License',
+};
 
 const formatPrice = (price: number) => {
   if (!Number.isFinite(price)) return '—';
@@ -54,6 +66,9 @@ const SavingsScheme = () => {
   const [passbookSearch, setPassbookSearch] = useState('');
   const [isSearchingPassbook, setIsSearchingPassbook] = useState(false);
   const [payingSchemeId, setPayingSchemeId] = useState<string | null>(null);
+  // Item 4: per-scheme amount entry for FLEXIBLE-mode (KV Smart Purchase Plan) payments, keyed
+  // by scheme id since several flexible schemes can be listed in "My Schemes" at once.
+  const [flexPayAmounts, setFlexPayAmounts] = useState<Record<string, string>>({});
   const passbookRef = useRef<HTMLDivElement>(null);
   const handlePrintPassbook = useReactToPrint({
     contentRef: passbookRef,
@@ -64,6 +79,32 @@ const SavingsScheme = () => {
     queryKey: ['scheme-plans'],
     queryFn: schemePlanService.getPlans,
   });
+
+  // Today's metal rates, purely for the "≈ X.XXXg at today's rate" estimate shown while
+  // choosing/paying an amount — the actual gram figure credited to the passbook is always
+  // computed and stored server-side (see `materialRate`/`materialWeight` on each payment row).
+  const { data: silverRates = [] } = useQuery({
+    queryKey: ['silver-rate-today'],
+    queryFn: silverRateService.getTodayRate,
+  });
+  const { data: goldRates = [] } = useQuery({
+    queryKey: ['gold-rate-today'],
+    queryFn: goldRateService.getTodayRate,
+  });
+  const todaySilverRate = silverRates[0]?.ratePerGram;
+  const todayGoldRate = goldRates[0]?.ratePerGram;
+
+  // Item 2: KYC is required once per customer before their first enrollment — any submission
+  // on file (regardless of verification status) unblocks Enroll; review happens async.
+  const queryClient = useQueryClient();
+  const { data: idProof, isLoading: idProofLoading } = useQuery({
+    queryKey: ['my-id-proof'],
+    queryFn: idProofService.getMine,
+    enabled: isAuthenticated,
+  });
+  const [showKycForm, setShowKycForm] = useState(false);
+  const [kycForm, setKycForm] = useState({ idProofType: 'AADHAAR' as IdProofType, idProofNumber: '', image: '' });
+  const [isSubmittingKyc, setIsSubmittingKyc] = useState(false);
 
   // Default to the first available plan once the catalog loads.
   useEffect(() => {
@@ -126,8 +167,15 @@ const SavingsScheme = () => {
     ? `${defaultAddress.address}, ${defaultAddress.city}, ${defaultAddress.state} - ${defaultAddress.pincode}`
     : undefined;
 
+  const todayRateForPlan = selectedPlan?.metal === 'GOLD' ? todayGoldRate : selectedPlan?.metal === 'SILVER' ? todaySilverRate : undefined;
+  const estimatedGrams = selectedAmount && todayRateForPlan ? selectedAmount / todayRateForPlan : null;
+
+  const isFlexiblePlan = selectedPlan?.paymentMode === 'FLEXIBLE';
+
   const summary = useMemo(() => {
-    if (!selectedPlan || !selectedAmount) return null;
+    // Item 4: a FLEXIBLE plan has no fixed monthly cadence to project a total from — the
+    // Calculator panel shows a different, simpler summary for it (see JSX below).
+    if (!selectedPlan || isFlexiblePlan || !selectedAmount) return null;
     const totalPaid = selectedAmount * selectedPlan.durationMonths;
     // Diwali has no ledger-credited bonus row (bonusMonths is 0 for it) but its redemption
     // payout formula still credits 1 month's worth of value — just via gold/silver/gifts
@@ -141,7 +189,7 @@ const SavingsScheme = () => {
     {
       icon: Gift,
       title: 'Choose Your Scheme',
-      description: 'Gold 11+1, Silver 11+1, or the Diwali hamper scheme — each with its own rules and rewards.',
+      description: 'Gold Purchase Plan, Silver Purchase Plan, or the Diwali hamper scheme — each with its own rules and rewards.',
     },
     {
       icon: Shield,
@@ -160,21 +208,10 @@ const SavingsScheme = () => {
     },
   ];
 
-  const handleEnroll = async () => {
-    if (!isAuthenticated) {
-      toast({
-        title: 'Login required',
-        description: 'Please login to enroll in a savings scheme.',
-        variant: 'destructive',
-      });
-      navigate('/login');
-      return;
-    }
-    if (!selectedPlan || !selectedAmount) {
-      toast({ title: 'Choose a plan', description: 'Select a scheme and monthly amount first.', variant: 'destructive' });
-      return;
-    }
-
+  /** The actual enroll API call + success handling, shared by the direct path (KYC already on
+   * file) and the post-submission path (`handleSubmitKyc`). */
+  const performEnroll = async () => {
+    if (!selectedPlan || (!isFlexiblePlan && !selectedAmount)) return;
     setIsEnrolling(true);
     try {
       const today = new Date();
@@ -182,7 +219,9 @@ const SavingsScheme = () => {
 
       await savingsService.enroll({
         schemeType: selectedPlan.type,
-        monthlyAmount: selectedAmount,
+        // FLEXIBLE plans (item 4) have no customer-chosen amount at enrollment — the server
+        // ignores this field for them and stores the plan's own minPaymentAmount instead.
+        monthlyAmount: isFlexiblePlan ? (selectedPlan.minPaymentAmount ?? 0) : (selectedAmount as number),
         startDate: today.toISOString().split('T')[0],
       });
 
@@ -202,9 +241,67 @@ const SavingsScheme = () => {
     }
   };
 
-  /** Pay this scheme's next monthly installment online via Razorpay. Amount is always the
-   * server-known scheme.monthlyAmount — the client never sends/trusts an amount. */
-  const handlePayInstallment = async (scheme: SavingsEnrollment) => {
+  const handleEnroll = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: 'Login required',
+        description: 'Please login to enroll in a savings scheme.',
+        variant: 'destructive',
+      });
+      navigate('/login');
+      return;
+    }
+    if (!selectedPlan || (!isFlexiblePlan && !selectedAmount)) {
+      toast({ title: 'Choose a plan', description: 'Select a scheme and monthly amount first.', variant: 'destructive' });
+      return;
+    }
+
+    // Item 2: KYC required once per customer before enrolling — collect it now if nothing is
+    // on file yet, rather than rejecting the enroll call and making the customer start over.
+    if (!idProof) {
+      setShowKycForm(true);
+      return;
+    }
+
+    await performEnroll();
+  };
+
+  const handleKycFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setKycForm((f) => ({ ...f, image: reader.result as string }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmitKyc = async () => {
+    if (!kycForm.idProofNumber.trim() || !kycForm.image) {
+      toast({ title: 'Missing details', description: 'Enter your ID number and upload a photo of the document.', variant: 'destructive' });
+      return;
+    }
+    setIsSubmittingKyc(true);
+    try {
+      await idProofService.submit(kycForm);
+      await queryClient.invalidateQueries({ queryKey: ['my-id-proof'] });
+      setShowKycForm(false);
+      toast({ title: 'ID proof submitted', description: 'Our team will review it shortly — you can enroll right away.' });
+      await performEnroll();
+    } catch (error) {
+      toast({
+        title: 'Submission failed',
+        description: error instanceof Error ? error.message : 'Could not submit your ID proof.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingKyc(false);
+    }
+  };
+
+  /** Pay this scheme's next installment online via Razorpay. FIXED-mode schemes always use the
+   * server-known scheme.monthlyAmount — the client never sends/trusts an amount for those.
+   * FLEXIBLE-mode schemes (item 4, KV Smart Purchase Plan) require `customAmount`, chosen by the
+   * customer and validated server-side against the plan's floor. */
+  const handlePayInstallment = async (scheme: SavingsEnrollment, customAmount?: number) => {
     setPayingSchemeId(scheme._id);
     try {
       const loaded = await loadRazorpayScript();
@@ -214,7 +311,8 @@ const SavingsScheme = () => {
         return;
       }
 
-      const order = await savingsService.createInstallmentOrder(scheme._id);
+      const order = await savingsService.createInstallmentOrder(scheme._id, customAmount);
+      const paidAmount = order.amount / 100;
 
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
@@ -237,9 +335,18 @@ const SavingsScheme = () => {
               razorpaySignature: response.razorpay_signature,
             });
             if (result.success) {
+              // Pinpoint the exact ledger row this payment created (not just "the last row") —
+              // matching on the Razorpay payment id avoids any ambiguity with an auto-credited
+              // bonus row landing in the same response.
+              const creditedRow = result.scheme.payments?.find(
+                (p) => (p as { razorpayPaymentId?: string }).razorpayPaymentId === response.razorpay_payment_id,
+              );
+              const gramNote = creditedRow && creditedRow.materialWeight > 0
+                ? ` — ${formatGrams(creditedRow.materialWeight)} ${scheme.metal === 'GOLD' ? 'Gold' : 'Silver'} credited at today's rate of ${formatPrice(creditedRow.materialRate)}/g.`
+                : '';
               toast({
                 title: 'Payment Successful!',
-                description: `₹${scheme.monthlyAmount.toLocaleString('en-IN')} recorded on your passbook.`,
+                description: `₹${paidAmount.toLocaleString('en-IN')} recorded on your passbook.${gramNote}`,
               });
               void refetchSchemes();
             }
@@ -270,7 +377,7 @@ const SavingsScheme = () => {
     <div className="min-h-screen pt-24">
       <Seo
         title="Savings Schemes"
-        description="Join KV Silver Zone's Gold 11+1, Silver 11+1, or Diwali savings schemes — save monthly and build your gold/silver collection. Flexible plans with transparent terms."
+        description="Join KV Silver Zone's Gold Purchase Plan, Silver Purchase Plan, or Diwali savings schemes — save monthly and build your gold/silver collection. Flexible plans with transparent terms."
       />
       {/* Hero */}
       <section className="bg-primary text-primary-foreground py-20">
@@ -284,7 +391,7 @@ const SavingsScheme = () => {
                 Secure Your Gold & Silver<br />Future Today
               </h1>
               <p className="text-lg opacity-80 mb-8">
-                Choose from our Gold 11+1, Silver 11+1, or Diwali savings schemes and build your
+                Choose from our Gold Purchase Plan, Silver Purchase Plan, or Diwali savings schemes and build your
                 collection systematically — pay monthly, redeem for jewellery or a festival hamper.
               </p>
               <div className="flex flex-wrap gap-4">
@@ -370,8 +477,12 @@ const SavingsScheme = () => {
                         <span className="font-medium">{plan.durationMonths} months</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">From</span>
-                        <span className="font-medium">{formatPrice(Math.min(...plan.monthlyAmounts))}/mo</span>
+                        <span className="text-muted-foreground">{plan.paymentMode === 'FLEXIBLE' ? 'Minimum' : 'From'}</span>
+                        <span className="font-medium">
+                          {plan.paymentMode === 'FLEXIBLE'
+                            ? `${formatPrice(plan.minPaymentAmount ?? 0)}, any time`
+                            : `${formatPrice(Math.min(...plan.monthlyAmounts))}/mo`}
+                        </span>
                       </div>
                       {plan.bonusMonths > 0 ? (
                         <div className="flex justify-between text-primary">
@@ -426,7 +537,16 @@ const SavingsScheme = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {mySchemes.map((scheme) => {
                   const realPaymentsCount = (scheme.payments ?? []).filter((p) => p.amount > 0).length;
-                  const canPay = scheme.status === 'Active' && realPaymentsCount < scheme.duration;
+                  const schemePlan = plans.find((p) => p.type === scheme.schemeType);
+                  const isFlexibleScheme = schemePlan?.paymentMode === 'FLEXIBLE';
+                  // Item 4: a FLEXIBLE scheme is payable any number of times within its window
+                  // (maturityDate = enrollment + duration, since it never gets pushed out — see
+                  // getMaturityDate) rather than capped by a payment count like every other scheme.
+                  const canPay = scheme.status === 'Active' && (
+                    isFlexibleScheme
+                      ? !scheme.maturityDate || new Date() <= new Date(scheme.maturityDate)
+                      : realPaymentsCount < scheme.duration
+                  );
                   const redemption =
                     scheme.schemeType === 'DIWALI' && scheme.maturityBenefits?.computedAt ? scheme.maturityBenefits : undefined;
                   const awaitingRedemption = scheme.schemeType === 'DIWALI' && scheme.status === 'Completed' && !redemption;
@@ -438,7 +558,11 @@ const SavingsScheme = () => {
                           <p className="text-xs text-muted-foreground">
                             {scheme.passbookNumber ? `Passbook #${scheme.passbookNumber}` : 'Passbook pending first payment'}
                           </p>
-                          <p className="font-semibold text-lg mt-0.5">{formatPrice(scheme.monthlyAmount)}<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
+                          <p className="font-semibold text-lg mt-0.5">
+                            {isFlexibleScheme
+                              ? <>Min {formatPrice(scheme.monthlyAmount)}<span className="text-sm font-normal text-muted-foreground"> · pay anytime</span></>
+                              : <>{formatPrice(scheme.monthlyAmount)}<span className="text-sm font-normal text-muted-foreground">/mo</span></>}
+                          </p>
                         </div>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLES[scheme.status] ?? 'bg-muted text-muted-foreground'}`}>
                           {scheme.status}
@@ -463,7 +587,31 @@ const SavingsScheme = () => {
                         )}
                       </div>
                       <div className="mt-4 space-y-2">
-                        {canPay && (
+                        {canPay && isFlexibleScheme && (
+                          <div className="flex gap-2">
+                            <Input
+                              type="number"
+                              min={scheme.monthlyAmount}
+                              placeholder={`Min ${scheme.monthlyAmount}`}
+                              value={flexPayAmounts[scheme._id] ?? ''}
+                              onChange={(e) => setFlexPayAmounts((f) => ({ ...f, [scheme._id]: e.target.value }))}
+                              className="text-sm"
+                            />
+                            <Button
+                              size="sm"
+                              className="shrink-0 gap-2"
+                              disabled={
+                                payingSchemeId === scheme._id ||
+                                !flexPayAmounts[scheme._id] ||
+                                Number(flexPayAmounts[scheme._id]) < scheme.monthlyAmount
+                              }
+                              onClick={() => handlePayInstallment(scheme, Number(flexPayAmounts[scheme._id]))}
+                            >
+                              {payingSchemeId === scheme._id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Pay'}
+                            </Button>
+                          </div>
+                        )}
+                        {canPay && !isFlexibleScheme && (
                           <Button
                             size="sm"
                             className="w-full gap-2"
@@ -536,28 +684,40 @@ const SavingsScheme = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Input */}
                 <div className="space-y-6">
-                  <div>
-                    <Label htmlFor="amount">Monthly Amount</Label>
-                    <Select
-                      value={selectedAmount ? String(selectedAmount) : undefined}
-                      onValueChange={(v) => setSelectedAmount(Number(v))}
-                      disabled={!selectedPlan}
-                    >
-                      <SelectTrigger className="mt-2" id="amount">
-                        <SelectValue placeholder="Select an amount" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-card">
-                        {(selectedPlan?.monthlyAmounts ?? []).map((amt) => (
-                          <SelectItem key={amt} value={String(amt)}>
-                            {formatPrice(amt)} / month
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Fixed denominations set by the shop — pick the one that suits you.
-                    </p>
-                  </div>
+                  {isFlexiblePlan ? (
+                    <div>
+                      <Label>Payment Amount</Label>
+                      <p className="mt-2 text-sm font-medium">
+                        Any amount, minimum {formatPrice(selectedPlan?.minPaymentAmount ?? 0)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        No fixed amount — pay as much as you like, as often as you like, once enrolled.
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <Label htmlFor="amount">Monthly Amount</Label>
+                      <Select
+                        value={selectedAmount ? String(selectedAmount) : undefined}
+                        onValueChange={(v) => setSelectedAmount(Number(v))}
+                        disabled={!selectedPlan}
+                      >
+                        <SelectTrigger className="mt-2" id="amount">
+                          <SelectValue placeholder="Select an amount" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card">
+                          {(selectedPlan?.monthlyAmounts ?? []).map((amt) => (
+                            <SelectItem key={amt} value={String(amt)}>
+                              {formatPrice(amt)} / month
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Fixed denominations set by the shop — pick the one that suits you.
+                      </p>
+                    </div>
+                  )}
 
                   <div>
                     <Label>Scheme Duration</Label>
@@ -568,46 +728,73 @@ const SavingsScheme = () => {
                 {/* Results */}
                 <div className="bg-primary text-primary-foreground rounded-xl p-6">
                   <h3 className="font-serif text-xl font-semibold mb-6">Your Savings Summary</h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="opacity-80">Monthly Payment</span>
-                      <span className="font-semibold">{selectedAmount ? formatPrice(selectedAmount) : '—'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="opacity-80">Duration</span>
-                      <span className="font-semibold">{selectedPlan?.durationMonths ?? '—'} months</span>
-                    </div>
-                    {summary && (
+                  {isFlexiblePlan ? (
+                    <div className="space-y-4">
                       <div className="flex justify-between">
-                        <span className="opacity-80">Total Paid</span>
-                        <span className="font-semibold">{formatPrice(summary.totalPaid)}</span>
+                        <span className="opacity-80">Minimum Payment</span>
+                        <span className="font-semibold">{formatPrice(selectedPlan?.minPaymentAmount ?? 0)}</span>
                       </div>
-                    )}
-                    {summary && summary.bonusAmount > 0 && (
-                      <div className="flex justify-between text-primary">
-                        <span>Bonus Month Value</span>
-                        <span className="font-semibold">+ {formatPrice(summary.bonusAmount)}</span>
+                      <div className="flex justify-between">
+                        <span className="opacity-80">Duration</span>
+                        <span className="font-semibold">{selectedPlan?.durationMonths ?? '—'} months</span>
                       </div>
-                    )}
-                    {selectedPlan?.hamper && (
-                      <div className="text-sm opacity-90 space-y-1">
-                        <p className="opacity-80">Your redemption hamper includes:</p>
-                        <ul className="list-disc list-inside space-y-0.5">
-                          <li>
-                            Gold{selectedPlan.hamper.goldCoinPurity ? ` (${selectedPlan.hamper.goldCoinPurity})` : ''} worth the
-                            remaining value — however many grams that buys at redemption
-                          </li>
-                          {!!selectedPlan.hamper.silverCoinGrams && <li>{selectedPlan.hamper.silverCoinGrams}g Silver Coin</li>}
-                          {selectedPlan.hamper.gifts?.map((g, i) => <li key={i}>{g}</li>)}
-                        </ul>
-                      </div>
-                    )}
-                    <hr className="border-primary-foreground/20" />
-                    <div className="flex justify-between text-lg">
-                      <span className="font-semibold">Total Value</span>
-                      <span className="font-bold">{summary ? formatPrice(summary.totalValue) : '—'}</span>
+                      <p className="text-sm opacity-90">
+                        Pay any amount, as often as you like, within {selectedPlan?.durationMonths ?? 11} months of enrolling —
+                        every payment converts to silver grams at that day's rate. Redeemable for silver articles or bars only.
+                      </p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex justify-between">
+                        <span className="opacity-80">Monthly Payment</span>
+                        <span className="font-semibold">{selectedAmount ? formatPrice(selectedAmount) : '—'}</span>
+                      </div>
+                      {selectedPlan?.metal && (
+                        <div className="flex justify-between text-sm">
+                          <span className="opacity-80">≈ Grams at Today's Rate</span>
+                          <span className="font-semibold">
+                            {estimatedGrams
+                              ? `${formatGrams(estimatedGrams)} ${selectedPlan.metal === 'GOLD' ? 'Gold' : 'Silver'}`
+                              : 'Rate unavailable'}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="opacity-80">Duration</span>
+                        <span className="font-semibold">{selectedPlan?.durationMonths ?? '—'} months</span>
+                      </div>
+                      {summary && (
+                        <div className="flex justify-between">
+                          <span className="opacity-80">Total Paid</span>
+                          <span className="font-semibold">{formatPrice(summary.totalPaid)}</span>
+                        </div>
+                      )}
+                      {summary && summary.bonusAmount > 0 && (
+                        <div className="flex justify-between text-primary">
+                          <span>Bonus Month Value</span>
+                          <span className="font-semibold">+ {formatPrice(summary.bonusAmount)}</span>
+                        </div>
+                      )}
+                      {selectedPlan?.hamper && (
+                        <div className="text-sm opacity-90 space-y-1">
+                          <p className="opacity-80">Your redemption hamper includes:</p>
+                          <ul className="list-disc list-inside space-y-0.5">
+                            <li>
+                              Gold{selectedPlan.hamper.goldCoinPurity ? ` (${selectedPlan.hamper.goldCoinPurity})` : ''} worth the
+                              remaining value — however many grams that buys at redemption
+                            </li>
+                            {!!selectedPlan.hamper.silverCoinGrams && <li>{selectedPlan.hamper.silverCoinGrams}g Silver Coin</li>}
+                            {selectedPlan.hamper.gifts?.map((g, i) => <li key={i}>{g}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      <hr className="border-primary-foreground/20" />
+                      <div className="flex justify-between text-lg">
+                        <span className="font-semibold">Total Value</span>
+                        <span className="font-bold">{summary ? formatPrice(summary.totalValue) : '—'}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -616,14 +803,30 @@ const SavingsScheme = () => {
                   size="lg"
                   className="bg-accent hover:bg-accent/90 text-accent-foreground btn-shine"
                   onClick={handleEnroll}
-                  disabled={isEnrolling || !selectedPlan || !selectedAmount}
+                  disabled={isEnrolling || !selectedPlan || (!isFlexiblePlan && !selectedAmount) || (isAuthenticated && idProofLoading)}
                 >
-                  {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
+                  {isEnrolling ? 'Enrolling...' : idProof ? 'Enroll Now' : 'Verify ID & Enroll'}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
                 <p className="text-sm text-muted-foreground mt-4">
                   * {selectedPlan?.metal ? `${selectedPlan.metal === 'GOLD' ? 'Gold' : 'Silver'} will be calculated based on the prevailing rate at the time of each payment.` : 'The gold portion of your Diwali hamper is a fixed ₹ value, converted to grams at the rate on the day of redemption — so it stays fair regardless of how gold moves.'}
                 </p>
+                {isAuthenticated && idProof && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    ID proof on file: {idProof.verificationStatus === 'Verified'
+                      ? '✓ Verified'
+                      : idProof.verificationStatus === 'Rejected'
+                        ? (
+                          <>
+                            Rejected{idProof.rejectionReason ? ` (${idProof.rejectionReason})` : ''} —{' '}
+                            <button type="button" onClick={() => setShowKycForm(true)} className="text-primary hover:underline">
+                              resubmit
+                            </button>
+                          </>
+                        )
+                        : 'Under review'}
+                  </p>
+                )}
               </div>
             </Card>
           </div>
@@ -641,9 +844,9 @@ const SavingsScheme = () => {
           <div className="max-w-4xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               {[
-                { step: '01', title: 'Choose', desc: 'Pick Gold 11+1, Silver 11+1, or the Diwali scheme and a monthly amount' },
+                { step: '01', title: 'Choose', desc: 'Pick the Gold Purchase Plan, Silver Purchase Plan, or the Diwali scheme and a monthly amount' },
                 { step: '02', title: 'Save', desc: 'Pay your installments monthly via Razorpay, or in cash at the shop' },
-                { step: '03', title: 'Earn', desc: 'Gold/Silver 11+1 get a bonus month; the Diwali scheme gets a festival hamper' },
+                { step: '03', title: 'Earn', desc: 'The Gold and Silver Purchase Plans get a bonus month; the Diwali scheme gets a festival hamper' },
                 { step: '04', title: 'Redeem', desc: 'Exchange your accumulated value for jewellery, coins, or the hamper — goods only, never cash' },
               ].map((item, index) => (
                 <div key={index} className="text-center">
@@ -682,7 +885,7 @@ const SavingsScheme = () => {
                 },
                 {
                   q: 'How is the bonus calculated?',
-                  a: 'Gold 11+1 and Silver 11+1 credit one bonus month\'s value (in grams, at that day\'s rate) automatically once you complete all 11 real installments. The Diwali scheme has no bonus month — instead you receive the fixed festival hamper.',
+                  a: 'The Gold Purchase Plan and Silver Purchase Plan credit one bonus month\'s value (in grams, at that day\'s rate) automatically once you complete all 11 real installments. The Diwali scheme has no bonus month — instead you receive the fixed festival hamper.',
                 },
                 {
                   q: 'Can I pay in cash instead of online?',
@@ -720,6 +923,58 @@ const SavingsScheme = () => {
               userAddress={userAddressLine}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Item 2: KYC — required once per customer before the first enrollment. */}
+      <Dialog open={showKycForm} onOpenChange={setShowKycForm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Verify Your Identity</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              A one-time ID proof is required before enrolling in a savings scheme. Our team reviews it in the
+              background — you can enroll right away.
+            </p>
+            <div>
+              <Label htmlFor="kycType">Document Type</Label>
+              <Select
+                value={kycForm.idProofType}
+                onValueChange={(v) => setKycForm((f) => ({ ...f, idProofType: v as IdProofType }))}
+              >
+                <SelectTrigger className="mt-1" id="kycType">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-card">
+                  {(Object.keys(ID_PROOF_TYPE_LABELS) as IdProofType[]).map((t) => (
+                    <SelectItem key={t} value={t}>{ID_PROOF_TYPE_LABELS[t]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="kycNumber">Document Number</Label>
+              <Input
+                id="kycNumber"
+                value={kycForm.idProofNumber}
+                onChange={(e) => setKycForm((f) => ({ ...f, idProofNumber: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="kycImage">Photo of the Document</Label>
+              <Input id="kycImage" type="file" accept="image/*" onChange={handleKycFileChange} className="mt-1" />
+              {kycForm.image && <p className="text-xs text-primary mt-1">Photo attached</p>}
+            </div>
+            <Button
+              className="w-full btn-shine"
+              onClick={handleSubmitKyc}
+              disabled={isSubmittingKyc || !kycForm.idProofNumber.trim() || !kycForm.image}
+            >
+              {isSubmittingKyc ? 'Submitting...' : 'Submit & Enroll'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

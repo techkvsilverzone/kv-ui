@@ -5,6 +5,7 @@ import type { Order } from './order';
 import type { User } from '../context/AuthContext';
 import type { SavingsEnrollment, SavingsAdminUpdatePayload } from './savings';
 import type { SchemePlan, SchemePlanInput } from './schemePlan';
+import type { UserIdProof, IdProofVerificationStatus } from './idProof';
 
 export interface StoreConfig {
   theme: string;
@@ -98,7 +99,20 @@ export const adminService = {
     return api.post<SavingsEnrollment>(`/admin/savings/${id}/redemption/compute`, {});
   },
 
-  /** Admin catalog of scheme plans (Gold 11+1, Silver 11+1, Diwali, etc). */
+  /** Item 2 — KYC review queue (admin + staff, mirrors the return-video reconciliation queue).
+   * Omit `status` to list every submission. */
+  getIdProofs: async (status?: IdProofVerificationStatus): Promise<UserIdProof[]> => {
+    return api.get<UserIdProof[]>(`/admin/id-proofs${status ? `?status=${status}` : ''}`);
+  },
+
+  verifyIdProof: async (
+    id: string,
+    payload: { status: 'Verified' | 'Rejected'; rejectionReason?: string },
+  ): Promise<UserIdProof> => {
+    return api.put<UserIdProof>(`/admin/id-proofs/${id}/verify`, payload);
+  },
+
+  /** Admin catalog of scheme plans (Gold Purchase Plan, Silver Purchase Plan, Diwali, etc). */
   getAllSchemePlans: async (): Promise<SchemePlan[]> => {
     const res = await api.get<{ status?: string; data?: SchemePlan[] } | SchemePlan[]>('/admin/scheme-plans');
     return Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];

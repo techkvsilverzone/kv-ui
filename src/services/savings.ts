@@ -135,10 +135,12 @@ export const savingsService = {
     return api.get<SavingsEnrollment>(`/savings/passbook/${encodeURIComponent(passbookNumber.trim())}`);
   },
 
-  /** Step 1 of paying this month's installment online: create a Razorpay order for the
-   * scheme's monthly amount (server-computed, never client input). */
-  createInstallmentOrder: async (schemeId: string): Promise<RazorpayOrder> => {
-    return api.post<RazorpayOrder>(`/savings/${schemeId}/pay/create-order`, {});
+  /** Step 1 of paying online. For a FIXED-mode scheme the amount is always the scheme's own
+   * monthlyAmount (server-computed, never client input) — `amount` is ignored. For a FLEXIBLE-
+   * mode scheme (item 4, KV Smart Purchase Plan) `amount` is REQUIRED and must be >= the plan's
+   * minimum. */
+  createInstallmentOrder: async (schemeId: string, amount?: number): Promise<RazorpayOrder> => {
+    return api.post<RazorpayOrder>(`/savings/${schemeId}/pay/create-order`, amount !== undefined ? { amount } : {});
   },
 
   /** Step 2: verify the Razorpay payment and record it on the ledger. */

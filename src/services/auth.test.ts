@@ -26,7 +26,7 @@ describe('authService', () => {
     expect(result).toEqual(response);
   });
 
-  it('signup posts payload including optional phone', async () => {
+  it('signup posts payload including phone', async () => {
     const response = { user: { id: 'u1', email: 'a@b.com', name: 'A', isAdmin: false }, token: 'tok' };
     vi.mocked(api.post).mockResolvedValue(response);
 

@@ -1,7 +1,11 @@
 import { api } from '../lib/api';
 
-export type SchemeType = 'GOLD_11_1' | 'SILVER_11_1' | 'DIWALI' | 'GOLD_INCOME' | 'SILVER_DEPOSIT';
+export type SchemeType = 'GOLD_11_1' | 'SILVER_11_1' | 'DIWALI' | 'GOLD_INCOME' | 'SILVER_DEPOSIT' | 'SILVER_SMART';
 export type SchemeMetal = 'GOLD' | 'SILVER';
+/** FIXED = pick one of `monthlyAmounts` at enrollment, pay it once per calendar month. FLEXIBLE
+ * = "KV Smart Purchase Plan" (item 4) — pay any amount >= `minPaymentAmount`, any number of
+ * times, any time within `durationMonths` of enrollment. */
+export type SchemePaymentMode = 'FIXED' | 'FLEXIBLE';
 
 export interface SchemeHamper {
   /** Hallmark purity of the gold portion of the payout, e.g. "916". Gold is a fixed ₹ VALUE
@@ -24,7 +28,11 @@ export interface SchemePlan {
   metal?: SchemeMetal;
   durationMonths: number;
   bonusMonths: number;
+  paymentMode: SchemePaymentMode;
+  /** FIXED plans only. */
   monthlyAmounts: number[];
+  /** FLEXIBLE plans only — admin-configurable floor for a customer's self-chosen payment. */
+  minPaymentAmount?: number;
   passbookPrefix: string;
   paymentDueDayOfMonth: number;
   earlyExitPenaltyPercent: number;

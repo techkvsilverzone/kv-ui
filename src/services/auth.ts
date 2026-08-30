@@ -6,6 +6,13 @@ export interface AuthResponse {
   token: string;
 }
 
+/** Item 1: which channel the first-time mobile-verification code went out on — set by the
+ * server based on whether WhatsApp OTP is enabled (WHATSAPP_OTP_ENABLED), else email fallback. */
+export interface PhoneVerificationDispatch {
+  message: string;
+  channel: 'whatsapp' | 'email';
+}
+
 export const authService = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
     return api.post<AuthResponse>('/auth/login', { email, password });
@@ -15,16 +22,25 @@ export const authService = {
     name: string,
     email: string,
     password: string,
-    phone?: string,
+    phone: string,
     stallEvent?: boolean,
-  ): Promise<AuthResponse & { promoCoupon?: string }> => {
-    return api.post<AuthResponse & { promoCoupon?: string }>('/auth/signup', {
+  ): Promise<AuthResponse & { promoCoupon?: string; phoneVerification?: PhoneVerificationDispatch }> => {
+    return api.post<AuthResponse & { promoCoupon?: string; phoneVerification?: PhoneVerificationDispatch }>('/auth/signup', {
       name,
       email,
       password,
       phone,
       stallEvent,
     });
+  },
+
+  /** Item 1: (re)request a mobile-verification code for the logged-in user's own phone. */
+  requestPhoneVerification: async (): Promise<PhoneVerificationDispatch> => {
+    return api.post<PhoneVerificationDispatch>('/users/me/phone/request-otp', {});
+  },
+
+  verifyPhoneOtp: async (code: string): Promise<{ user: User }> => {
+    return api.post<{ user: User }>('/users/me/phone/verify-otp', { code });
   },
 
   logout: async (): Promise<void> => {

@@ -28,6 +28,7 @@ describe('validateForm + schemas', () => {
       const r = validateForm(signupSchema, {
         name: 'Asha',
         email: 'asha@example.com',
+        phone: '9876543210',
         password: 'secret1',
         confirmPassword: 'secret1',
         acceptTerms: true,
@@ -39,12 +40,26 @@ describe('validateForm + schemas', () => {
       const r = validateForm(signupSchema, {
         name: 'Asha',
         email: 'asha@example.com',
+        phone: '9876543210',
         password: 'secret1',
         confirmPassword: 'secret2',
         acceptTerms: true,
       });
       expect(r.success).toBe(false);
       expect(r.errors.confirmPassword).toMatch(/match/i);
+    });
+
+    it('rejects an invalid phone number', () => {
+      const r = validateForm(signupSchema, {
+        name: 'Asha',
+        email: 'asha@example.com',
+        phone: '12345',
+        password: 'secret1',
+        confirmPassword: 'secret1',
+        acceptTerms: true,
+      });
+      expect(r.success).toBe(false);
+      expect(r.errors.phone).toBeTruthy();
     });
 
     it('requires accepting terms', () => {

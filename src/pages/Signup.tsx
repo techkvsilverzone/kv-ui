@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Eye, EyeOff, Mail, Lock, User, Store } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Store, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/context/AuthContext';
+import type { PhoneVerificationDispatch } from '@/services/auth';
 import { useToast } from '@/hooks/use-toast';
 import { validateForm, signupSchema } from '@/lib/validation';
 import { stallConfigService, DEFAULT_STALL_CONFIG } from '@/services/stallConfig';
@@ -16,10 +18,16 @@ import Seo from '@/components/Seo';
 const Signup = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signup } = useAuth();
+  const { signup, requestPhoneVerification, verifyPhoneOtp } = useAuth();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+
+  // Item 1: post-signup mobile verification dialog.
+  const [phoneVerification, setPhoneVerification] = useState<PhoneVerificationDispatch | null>(null);
+  const [verifyCode, setVerifyCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   // Offline stall mode: the link (?stall=1) marks this as a stall registration,
   // but it only actually applies while the admin toggle is server-side active —
@@ -33,6 +41,7 @@ const Signup = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
   });
@@ -51,10 +60,11 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
-      const { success, promoCoupon } = await signup(
+      const { success, promoCoupon, phoneVerification: dispatch } = await signup(
         formData.email,
         formData.password,
         formData.name,
+        formData.phone,
         offlineStallActive,
       );
       if (success) {
@@ -69,7 +79,14 @@ const Signup = () => {
             description: 'Welcome to KV Silver Zone.',
           });
         }
-        navigate('/');
+        // Hold on this page for the mobile-verification step rather than navigating away
+        // immediately — the customer already has a session either way, so this never blocks
+        // them from using the site if they close the dialog without verifying.
+        if (dispatch) {
+          setPhoneVerification(dispatch);
+        } else {
+          navigate('/');
+        }
       }
     } catch (error) {
       toast({
@@ -79,6 +96,38 @@ const Signup = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleVerifyPhone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (verifyCode.trim().length !== 6) return;
+    setIsVerifying(true);
+    try {
+      const ok = await verifyPhoneOtp(verifyCode.trim());
+      if (ok) {
+        toast({ title: 'Phone verified', description: 'Your mobile number is now verified.' });
+        navigate('/');
+      } else {
+        toast({ title: 'Incorrect code', description: 'Please check the code and try again.', variant: 'destructive' });
+      }
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setIsResending(true);
+    try {
+      const dispatch = await requestPhoneVerification();
+      if (dispatch) {
+        setPhoneVerification(dispatch);
+        toast({ title: 'Code resent', description: dispatch.message });
+      } else {
+        toast({ title: 'Could not resend code', description: 'Please try again shortly.', variant: 'destructive' });
+      }
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -143,6 +192,24 @@ const Signup = () => {
                   />
                 </div>
                 {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="phone">Mobile Number</Label>
+                <div className="relative mt-1">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/[^\d]/g, '').slice(0, 10) })}
+                    placeholder="10-digit mobile number"
+                    className="pl-10"
+                    aria-invalid={!!errors.phone}
+                  />
+                </div>
+                {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}
+                <p className="text-xs text-muted-foreground mt-1">We'll send a verification code here after you sign up.</p>
               </div>
 
               <div>
@@ -221,6 +288,51 @@ const Signup = () => {
           </Card>
         </div>
       </div>
+
+      {/* Item 1: mobile verification, shown right after a successful signup. */}
+      <Dialog open={phoneVerification !== null} onOpenChange={(open) => { if (!open) navigate('/'); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Verify Your Phone</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleVerifyPhone} className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              {phoneVerification?.channel === 'email'
+                ? `WhatsApp verification isn't active yet, so we emailed a code to ${formData.email}.`
+                : `We sent a 6-digit code to your WhatsApp at +91 ${formData.phone}.`}
+            </p>
+            <div>
+              <Label htmlFor="verifyCode">Verification Code</Label>
+              <Input
+                id="verifyCode"
+                inputMode="numeric"
+                maxLength={6}
+                value={verifyCode}
+                onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="000000"
+                className="mt-1 text-center text-lg tracking-[0.3em]"
+                autoFocus
+              />
+            </div>
+            <Button type="submit" className="w-full btn-shine" disabled={isVerifying || verifyCode.length !== 6}>
+              {isVerifying ? 'Verifying...' : 'Verify'}
+            </Button>
+            <div className="flex items-center justify-between text-xs">
+              <button
+                type="button"
+                onClick={handleResendCode}
+                disabled={isResending}
+                className="text-primary hover:underline disabled:opacity-50"
+              >
+                {isResending ? 'Resending...' : 'Resend code'}
+              </button>
+              <button type="button" onClick={() => navigate('/')} className="text-muted-foreground hover:underline">
+                Skip for now
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
