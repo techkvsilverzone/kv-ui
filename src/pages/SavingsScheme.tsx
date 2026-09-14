@@ -256,10 +256,18 @@ const SavingsScheme = () => {
       return;
     }
 
-    // Item 2: KYC required once per customer before enrolling — collect it now if nothing is
-    // on file yet, rather than rejecting the enroll call and making the customer start over.
-    if (!idProof) {
+    // Item 2 (tightened): KYC required once per customer before enrolling, but every enrollment
+    // attempt re-checks it and needs an admin-approved submission — so a customer can never end
+    // up enrolled, even by mistake, without a verified ID on file.
+    if (!idProof || idProof.verificationStatus === 'Rejected') {
       setShowKycForm(true);
+      return;
+    }
+    if (idProof.verificationStatus === 'Pending') {
+      toast({
+        title: 'ID verification pending',
+        description: 'Our team is reviewing your ID proof — you can enroll once it is verified.',
+      });
       return;
     }
 
@@ -284,8 +292,7 @@ const SavingsScheme = () => {
       await idProofService.submit(kycForm);
       await queryClient.invalidateQueries({ queryKey: ['my-id-proof'] });
       setShowKycForm(false);
-      toast({ title: 'ID proof submitted', description: 'Our team will review it shortly — you can enroll right away.' });
-      await performEnroll();
+      toast({ title: 'ID proof submitted', description: 'Our team will review it — you can enroll once it is verified.' });
     } catch (error) {
       toast({
         title: 'Submission failed',
@@ -803,9 +810,23 @@ const SavingsScheme = () => {
                   size="lg"
                   className="bg-accent hover:bg-accent/90 text-accent-foreground btn-shine"
                   onClick={handleEnroll}
-                  disabled={isEnrolling || !selectedPlan || (!isFlexiblePlan && !selectedAmount) || (isAuthenticated && idProofLoading)}
+                  disabled={
+                    isEnrolling ||
+                    !selectedPlan ||
+                    (!isFlexiblePlan && !selectedAmount) ||
+                    (isAuthenticated && idProofLoading) ||
+                    (isAuthenticated && idProof?.verificationStatus === 'Pending')
+                  }
                 >
-                  {isEnrolling ? 'Enrolling...' : idProof ? 'Enroll Now' : 'Verify ID & Enroll'}
+                  {isEnrolling
+                    ? 'Enrolling...'
+                    : !idProof
+                      ? 'Verify ID & Enroll'
+                      : idProof.verificationStatus === 'Verified'
+                        ? 'Enroll Now'
+                        : idProof.verificationStatus === 'Rejected'
+                          ? 'Resubmit ID & Enroll'
+                          : 'Awaiting ID Verification'}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
                 <p className="text-sm text-muted-foreground mt-4">
