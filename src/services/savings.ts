@@ -5,6 +5,8 @@ export interface SavingsEnrollmentPayload {
   schemeType: SchemeType;
   monthlyAmount: number;
   startDate: string;
+  /** Item 2 (replaced 2026-09-16, was KYC-gated): from POST /savings/enroll/request-otp. */
+  otp: string;
 }
 
 export interface SavingsPayment {
@@ -122,6 +124,11 @@ export interface RazorpayVerification {
 }
 
 export const savingsService = {
+  /** Item 2 (replaced 2026-09-16): request the confirmation code enroll() now requires. */
+  requestEnrollOtp: async (): Promise<{ message: string; channel: 'whatsapp' | 'email' }> => {
+    return api.post('/savings/enroll/request-otp', {});
+  },
+
   enroll: async (payload: SavingsEnrollmentPayload): Promise<SavingsEnrollment> => {
     return api.post<SavingsEnrollment>('/savings/enroll', payload);
   },

@@ -15,7 +15,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import savingsImage from '@/assets/savings-scheme.jpg';
 import { savingsService, type SavingsEnrollment } from '@/services/savings';
 import { schemePlanService, type SchemePlan, type SchemeType } from '@/services/schemePlan';
@@ -27,16 +27,8 @@ import { addressService } from '@/services/address';
 import { ApiError } from '@/lib/api';
 import { silverRateService } from '@/services/silverRate';
 import { goldRateService } from '@/services/goldRate';
-import { idProofService, type IdProofType } from '@/services/idProof';
 
 const formatGrams = (grams: number) => `${grams.toFixed(3)}g`;
-
-const ID_PROOF_TYPE_LABELS: Record<IdProofType, string> = {
-  AADHAAR: 'Aadhaar Card',
-  PAN: 'PAN Card',
-  VOTER_ID: 'Voter ID',
-  DRIVING_LICENSE: 'Driving License',
-};
 
 const formatPrice = (price: number) => {
   if (!Number.isFinite(price)) return '—';
@@ -94,17 +86,13 @@ const SavingsScheme = () => {
   const todaySilverRate = silverRates[0]?.ratePerGram;
   const todayGoldRate = goldRates[0]?.ratePerGram;
 
-  // Item 2: KYC is required once per customer before their first enrollment — any submission
-  // on file (regardless of verification status) unblocks Enroll; review happens async.
-  const queryClient = useQueryClient();
-  const { data: idProof, isLoading: idProofLoading } = useQuery({
-    queryKey: ['my-id-proof'],
-    queryFn: idProofService.getMine,
-    enabled: isAuthenticated,
-  });
-  const [showKycForm, setShowKycForm] = useState(false);
-  const [kycForm, setKycForm] = useState({ idProofType: 'AADHAAR' as IdProofType, idProofNumber: '', image: '' });
-  const [isSubmittingKyc, setIsSubmittingKyc] = useState(false);
+  // Item 2 (replaced 2026-09-16, was KYC-gated): every enrollment attempt requires a fresh OTP
+  // confirmation sent to the customer's phone (WhatsApp, falling back to email) instead of an
+  // admin-reviewed ID proof — instant/self-serve rather than waiting on async review.
+  const [showOtpForm, setShowOtpForm] = useState(false);
+  const [enrollOtp, setEnrollOtp] = useState('');
+  const [otpChannel, setOtpChannel] = useState<'whatsapp' | 'email' | null>(null);
+  const [isRequestingOtp, setIsRequestingOtp] = useState(false);
 
   // Default to the first available plan once the catalog loads.
   useEffect(() => {
@@ -208,9 +196,8 @@ const SavingsScheme = () => {
     },
   ];
 
-  /** The actual enroll API call + success handling, shared by the direct path (KYC already on
-   * file) and the post-submission path (`handleSubmitKyc`). */
-  const performEnroll = async () => {
+  /** The actual enroll API call + success handling, run once the OTP dialog is confirmed. */
+  const performEnroll = async (otp: string) => {
     if (!selectedPlan || (!isFlexiblePlan && !selectedAmount)) return;
     setIsEnrolling(true);
     try {
@@ -223,6 +210,7 @@ const SavingsScheme = () => {
         // ignores this field for them and stores the plan's own minPaymentAmount instead.
         monthlyAmount: isFlexiblePlan ? (selectedPlan.minPaymentAmount ?? 0) : (selectedAmount as number),
         startDate: today.toISOString().split('T')[0],
+        otp,
       });
 
       toast({
@@ -256,52 +244,33 @@ const SavingsScheme = () => {
       return;
     }
 
-    // Item 2 (tightened): KYC required once per customer before enrolling, but every enrollment
-    // attempt re-checks it and needs an admin-approved submission — so a customer can never end
-    // up enrolled, even by mistake, without a verified ID on file.
-    if (!idProof || idProof.verificationStatus === 'Rejected') {
-      setShowKycForm(true);
-      return;
-    }
-    if (idProof.verificationStatus === 'Pending') {
-      toast({
-        title: 'ID verification pending',
-        description: 'Our team is reviewing your ID proof — you can enroll once it is verified.',
-      });
-      return;
-    }
-
-    await performEnroll();
-  };
-
-  const handleKycFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setKycForm((f) => ({ ...f, image: reader.result as string }));
-    reader.readAsDataURL(file);
-  };
-
-  const handleSubmitKyc = async () => {
-    if (!kycForm.idProofNumber.trim() || !kycForm.image) {
-      toast({ title: 'Missing details', description: 'Enter your ID number and upload a photo of the document.', variant: 'destructive' });
-      return;
-    }
-    setIsSubmittingKyc(true);
+    // Item 2 (replaced 2026-09-16, was KYC-gated): every enrollment attempt sends a fresh OTP
+    // confirmation to the customer's phone rather than checking a KYC document — self-serve
+    // and instant instead of waiting on async admin review.
+    setIsRequestingOtp(true);
     try {
-      await idProofService.submit(kycForm);
-      await queryClient.invalidateQueries({ queryKey: ['my-id-proof'] });
-      setShowKycForm(false);
-      toast({ title: 'ID proof submitted', description: 'Our team will review it — you can enroll once it is verified.' });
+      const result = await savingsService.requestEnrollOtp();
+      setOtpChannel(result.channel);
+      setEnrollOtp('');
+      setShowOtpForm(true);
     } catch (error) {
       toast({
-        title: 'Submission failed',
-        description: error instanceof Error ? error.message : 'Could not submit your ID proof.',
+        title: 'Could not send confirmation code',
+        description: error instanceof Error ? error.message : 'Please try again.',
         variant: 'destructive',
       });
     } finally {
-      setIsSubmittingKyc(false);
+      setIsRequestingOtp(false);
     }
+  };
+
+  const handleConfirmEnrollOtp = async () => {
+    if (!enrollOtp.trim()) {
+      toast({ title: 'Enter the code', description: 'Enter the confirmation code sent to your phone.', variant: 'destructive' });
+      return;
+    }
+    setShowOtpForm(false);
+    await performEnroll(enrollOtp.trim());
   };
 
   /** Pay this scheme's next installment online via Razorpay. FIXED-mode schemes always use the
@@ -810,44 +779,17 @@ const SavingsScheme = () => {
                   size="lg"
                   className="bg-accent hover:bg-accent/90 text-accent-foreground btn-shine"
                   onClick={handleEnroll}
-                  disabled={
-                    isEnrolling ||
-                    !selectedPlan ||
-                    (!isFlexiblePlan && !selectedAmount) ||
-                    (isAuthenticated && idProofLoading) ||
-                    (isAuthenticated && idProof?.verificationStatus === 'Pending')
-                  }
+                  disabled={isEnrolling || isRequestingOtp || !selectedPlan || (!isFlexiblePlan && !selectedAmount)}
                 >
-                  {isEnrolling
-                    ? 'Enrolling...'
-                    : !idProof
-                      ? 'Verify ID & Enroll'
-                      : idProof.verificationStatus === 'Verified'
-                        ? 'Enroll Now'
-                        : idProof.verificationStatus === 'Rejected'
-                          ? 'Resubmit ID & Enroll'
-                          : 'Awaiting ID Verification'}
+                  {isEnrolling ? 'Enrolling...' : isRequestingOtp ? 'Sending code...' : 'Enroll Now'}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
                 <p className="text-sm text-muted-foreground mt-4">
                   * {selectedPlan?.metal ? `${selectedPlan.metal === 'GOLD' ? 'Gold' : 'Silver'} will be calculated based on the prevailing rate at the time of each payment.` : 'The gold portion of your Diwali hamper is a fixed ₹ value, converted to grams at the rate on the day of redemption — so it stays fair regardless of how gold moves.'}
                 </p>
-                {isAuthenticated && idProof && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    ID proof on file: {idProof.verificationStatus === 'Verified'
-                      ? '✓ Verified'
-                      : idProof.verificationStatus === 'Rejected'
-                        ? (
-                          <>
-                            Rejected{idProof.rejectionReason ? ` (${idProof.rejectionReason})` : ''} —{' '}
-                            <button type="button" onClick={() => setShowKycForm(true)} className="text-primary hover:underline">
-                              resubmit
-                            </button>
-                          </>
-                        )
-                        : 'Under review'}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  We'll text a confirmation code to your phone before your enrollment goes through.
+                </p>
               </div>
             </Card>
           </div>
@@ -947,53 +889,31 @@ const SavingsScheme = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Item 2: KYC — required once per customer before the first enrollment. */}
-      <Dialog open={showKycForm} onOpenChange={setShowKycForm}>
+      {/* Item 2 (replaced 2026-09-16, was KYC): confirm enrollment with the OTP just sent. */}
+      <Dialog open={showOtpForm} onOpenChange={setShowOtpForm}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-serif">Verify Your Identity</DialogTitle>
+            <DialogTitle className="font-serif">Confirm Your Enrollment</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <p className="text-sm text-muted-foreground">
-              A one-time ID proof is required before enrolling in a savings scheme. Our team reviews it in the
-              background — you can enroll right away.
+              {otpChannel === 'email'
+                ? "We've emailed you a confirmation code — enter it below to complete your enrollment."
+                : "We've sent a confirmation code to your WhatsApp — enter it below to complete your enrollment."}
             </p>
             <div>
-              <Label htmlFor="kycType">Document Type</Label>
-              <Select
-                value={kycForm.idProofType}
-                onValueChange={(v) => setKycForm((f) => ({ ...f, idProofType: v as IdProofType }))}
-              >
-                <SelectTrigger className="mt-1" id="kycType">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-card">
-                  {(Object.keys(ID_PROOF_TYPE_LABELS) as IdProofType[]).map((t) => (
-                    <SelectItem key={t} value={t}>{ID_PROOF_TYPE_LABELS[t]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="kycNumber">Document Number</Label>
+              <Label htmlFor="enrollOtp">Confirmation Code</Label>
               <Input
-                id="kycNumber"
-                value={kycForm.idProofNumber}
-                onChange={(e) => setKycForm((f) => ({ ...f, idProofNumber: e.target.value }))}
+                id="enrollOtp"
+                inputMode="numeric"
+                autoFocus
+                value={enrollOtp}
+                onChange={(e) => setEnrollOtp(e.target.value)}
                 className="mt-1"
               />
             </div>
-            <div>
-              <Label htmlFor="kycImage">Photo of the Document</Label>
-              <Input id="kycImage" type="file" accept="image/*" onChange={handleKycFileChange} className="mt-1" />
-              {kycForm.image && <p className="text-xs text-primary mt-1">Photo attached</p>}
-            </div>
-            <Button
-              className="w-full btn-shine"
-              onClick={handleSubmitKyc}
-              disabled={isSubmittingKyc || !kycForm.idProofNumber.trim() || !kycForm.image}
-            >
-              {isSubmittingKyc ? 'Submitting...' : 'Submit & Enroll'}
+            <Button className="w-full btn-shine" onClick={handleConfirmEnrollOtp} disabled={isEnrolling || !enrollOtp.trim()}>
+              {isEnrolling ? 'Enrolling...' : 'Confirm & Enroll'}
             </Button>
           </div>
         </DialogContent>
