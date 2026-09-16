@@ -64,11 +64,14 @@ export const authService = {
     return api.post<{ message: string }>('/auth/forgot-password', { email });
   },
 
-  requestOtp: async (email: string): Promise<{ message: string }> => {
-    return api.post<{ message: string }>('/auth/otp/request', { email });
+  /** Primary login method (replaces email-based OTP login 2026-09-16) — identified by mobile
+   * number, WhatsApp-first with an email fallback server-side. Password+email login (below) is
+   * still available as the secondary method. */
+  requestOtp: async (phone: string): Promise<{ message: string }> => {
+    return api.post<{ message: string }>('/auth/otp/request', { phone });
   },
 
-  verifyOtp: async (email: string, code: string): Promise<AuthResponse> => {
-    return api.post<AuthResponse>('/auth/otp/verify', { email, code });
+  verifyOtp: async (phone: string, code: string): Promise<AuthResponse> => {
+    return api.post<AuthResponse>('/auth/otp/verify', { phone, code });
   },
 };

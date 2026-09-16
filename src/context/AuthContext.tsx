@@ -38,7 +38,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  loginWithOtp: (email: string, code: string) => Promise<boolean>;
+  loginWithOtp: (phone: string, code: string) => Promise<boolean>;
   signup: (
     email: string,
     password: string,
@@ -175,9 +175,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithOtp = async (email: string, code: string): Promise<boolean> => {
+  const loginWithOtp = async (phone: string, code: string): Promise<boolean> => {
     try {
-      const { user, token } = await authService.verifyOtp(email, code);
+      const { user, token } = await authService.verifyOtp(phone, code);
       const normalizedUser = normalizeUser(user);
       setUser(normalizedUser);
       localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));

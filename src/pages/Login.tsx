@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, KeyRound, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +18,8 @@ const Login = () => {
   const redirectTo = (location.state as { from?: string } | null)?.from || '/';
   const { login, loginWithOtp } = useAuth();
   const { toast } = useToast();
-  const [mode, setMode] = useState<'password' | 'otp'>('password');
+  // Mobile + OTP is the primary sign-in method; password+email is secondary.
+  const [mode, setMode] = useState<'otp' | 'password'>('otp');
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -28,7 +29,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   // OTP mode state
-  const [otpEmail, setOtpEmail] = useState('');
+  const [otpPhone, setOtpPhone] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
@@ -71,15 +72,15 @@ const Login = () => {
   };
 
   const handleSendOtp = async () => {
-    if (!otpEmail.trim()) {
-      toast({ title: 'Email required', description: 'Enter your email to receive a code.', variant: 'destructive' });
+    if (!otpPhone.trim()) {
+      toast({ title: 'Mobile number required', description: 'Enter your mobile number to receive a code.', variant: 'destructive' });
       return;
     }
     setIsSendingOtp(true);
     try {
-      await authService.requestOtp(otpEmail.trim());
+      await authService.requestOtp(otpPhone.trim());
       setOtpSent(true);
-      toast({ title: 'Code sent', description: `Check ${otpEmail} for your login code.` });
+      toast({ title: 'Code sent', description: 'If that number is registered, a login code is on its way.' });
     } catch {
       toast({ title: 'Error', description: 'Could not send the code. Please try again.', variant: 'destructive' });
     } finally {
@@ -92,7 +93,7 @@ const Login = () => {
     if (!otpCode.trim()) return;
     setIsLoading(true);
     try {
-      const success = await loginWithOtp(otpEmail.trim(), otpCode.trim());
+      const success = await loginWithOtp(otpPhone.trim(), otpCode.trim());
       if (success) {
         toast({ title: 'Welcome back!', description: 'You have successfully logged in.' });
         navigate(redirectTo, { replace: true });
@@ -122,14 +123,78 @@ const Login = () => {
               </p>
             </div>
 
-            <Tabs value={mode} onValueChange={(v) => setMode(v as 'password' | 'otp')} className="mb-6">
+            <Tabs value={mode} onValueChange={(v) => setMode(v as 'otp' | 'password')} className="mb-6">
               <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="otp">Mobile + OTP</TabsTrigger>
                 <TabsTrigger value="password">Password</TabsTrigger>
-                <TabsTrigger value="otp">OTP Login</TabsTrigger>
               </TabsList>
             </Tabs>
 
-            {mode === 'password' ? (
+            {mode === 'otp' ? (
+              <form onSubmit={handleVerifyOtp} className="space-y-6">
+                <div>
+                  <Label htmlFor="otpPhone">Mobile Number</Label>
+                  <div className="relative mt-1">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="otpPhone"
+                      type="tel"
+                      value={otpPhone}
+                      onChange={(e) => {
+                        setOtpPhone(e.target.value.replace(/[^\d]/g, '').slice(0, 10));
+                        setOtpSent(false);
+                      }}
+                      placeholder="10-digit mobile number"
+                      className="pl-10"
+                      disabled={otpSent}
+                    />
+                  </div>
+                </div>
+
+                {!otpSent ? (
+                  <Button
+                    type="button"
+                    className="w-full btn-shine"
+                    onClick={handleSendOtp}
+                    disabled={isSendingOtp || !otpPhone.trim()}
+                  >
+                    {isSendingOtp ? 'Sending code...' : 'Send Login Code'}
+                  </Button>
+                ) : (
+                  <>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="otpCode">Login Code</Label>
+                        <button
+                          type="button"
+                          onClick={handleSendOtp}
+                          disabled={isSendingOtp}
+                          className="text-sm text-primary hover:underline"
+                        >
+                          Resend code
+                        </button>
+                      </div>
+                      <div className="relative mt-1">
+                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                          id="otpCode"
+                          inputMode="numeric"
+                          maxLength={6}
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                          placeholder="6-digit code"
+                          className="pl-10 tracking-widest"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Sent to +91 {otpPhone}</p>
+                    </div>
+                    <Button type="submit" className="w-full btn-shine" disabled={isLoading || otpCode.length !== 6}>
+                      {isLoading ? 'Verifying...' : 'Verify & Sign In'}
+                    </Button>
+                  </>
+                )}
+              </form>
+            ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <Label htmlFor="email">Email Address</Label>
@@ -183,70 +248,6 @@ const Login = () => {
                 <Button type="submit" className="w-full btn-shine" disabled={isLoading}>
                   {isLoading ? 'Signing in...' : 'Sign In'}
                 </Button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-6">
-                <div>
-                  <Label htmlFor="otpEmail">Email Address</Label>
-                  <div className="relative mt-1">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      id="otpEmail"
-                      type="email"
-                      value={otpEmail}
-                      onChange={(e) => {
-                        setOtpEmail(e.target.value);
-                        setOtpSent(false);
-                      }}
-                      placeholder="your@email.com"
-                      className="pl-10"
-                      disabled={otpSent}
-                    />
-                  </div>
-                </div>
-
-                {!otpSent ? (
-                  <Button
-                    type="button"
-                    className="w-full btn-shine"
-                    onClick={handleSendOtp}
-                    disabled={isSendingOtp || !otpEmail.trim()}
-                  >
-                    {isSendingOtp ? 'Sending code...' : 'Send Login Code'}
-                  </Button>
-                ) : (
-                  <>
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="otpCode">Login Code</Label>
-                        <button
-                          type="button"
-                          onClick={handleSendOtp}
-                          disabled={isSendingOtp}
-                          className="text-sm text-primary hover:underline"
-                        >
-                          Resend code
-                        </button>
-                      </div>
-                      <div className="relative mt-1">
-                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                          id="otpCode"
-                          inputMode="numeric"
-                          maxLength={6}
-                          value={otpCode}
-                          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                          placeholder="6-digit code"
-                          className="pl-10 tracking-widest"
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">Sent to {otpEmail}</p>
-                    </div>
-                    <Button type="submit" className="w-full btn-shine" disabled={isLoading || otpCode.length !== 6}>
-                      {isLoading ? 'Verifying...' : 'Verify & Sign In'}
-                    </Button>
-                  </>
-                )}
               </form>
             )}
 

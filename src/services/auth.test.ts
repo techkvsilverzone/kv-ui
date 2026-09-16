@@ -54,6 +54,19 @@ describe('authService', () => {
     expect(updated).toEqual({ ...user, name: 'B' });
   });
 
+  it('requests and verifies login OTP by mobile number (primary login method)', async () => {
+    vi.mocked(api.post).mockResolvedValueOnce({ message: 'sent' });
+    const response = { user: { id: 'u1', email: 'a@b.com', name: 'A', isAdmin: false }, token: 'tok' };
+    vi.mocked(api.post).mockResolvedValueOnce(response);
+
+    await authService.requestOtp('9876543210');
+    const result = await authService.verifyOtp('9876543210', '123456');
+
+    expect(api.post).toHaveBeenNthCalledWith(1, '/auth/otp/request', { phone: '9876543210' });
+    expect(api.post).toHaveBeenNthCalledWith(2, '/auth/otp/verify', { phone: '9876543210', code: '123456' });
+    expect(result).toEqual(response);
+  });
+
   it('changes password with user specific endpoint', async () => {
     const response = { message: 'Password updated' };
     vi.mocked(api.put).mockResolvedValue(response);
