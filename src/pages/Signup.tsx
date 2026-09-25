@@ -41,7 +41,7 @@ const Signup = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
+    phone: searchParams.get('phone') ?? '',
     password: '',
     confirmPassword: '',
   });

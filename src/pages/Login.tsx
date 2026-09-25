@@ -8,6 +8,8 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
+import { ApiError } from '@/lib/api';
 import { validateForm, loginSchema } from '@/lib/validation';
 import { authService } from '@/services/auth';
 import Seo from '@/components/Seo';
@@ -80,9 +82,22 @@ const Login = () => {
     try {
       await authService.requestOtp(otpPhone.trim());
       setOtpSent(true);
-      toast({ title: 'Code sent', description: 'If that number is registered, a login code is on its way.' });
-    } catch {
-      toast({ title: 'Error', description: 'Could not send the code. Please try again.', variant: 'destructive' });
+      toast({ title: 'Code sent', description: 'A login code is on its way to your mobile number.' });
+    } catch (error) {
+      if (error instanceof ApiError && error.statusCode === 404) {
+        toast({
+          title: 'Number not registered',
+          description: error.message,
+          variant: 'destructive',
+          action: (
+            <ToastAction altText="Sign up" onClick={() => navigate(`/signup?phone=${encodeURIComponent(otpPhone.trim())}`)}>
+              Sign up
+            </ToastAction>
+          ),
+        });
+      } else {
+        toast({ title: 'Error', description: 'Could not send the code. Please try again.', variant: 'destructive' });
+      }
     } finally {
       setIsSendingOtp(false);
     }
