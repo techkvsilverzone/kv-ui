@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService, type PhoneVerificationDispatch } from '@/services/auth';
-import { UNAUTHORIZED_EVENT } from '@/lib/api';
+import { UNAUTHORIZED_EVENT, ApiError } from '@/lib/api';
 import { TOKEN_STORAGE_KEY, isMobileApp } from '@/lib/platform';
 
 export type UserRole = 'admin' | 'staff' | 'customer';
@@ -45,7 +45,7 @@ interface AuthContextType {
     name: string,
     phone: string,
     stallEvent?: boolean,
-  ) => Promise<{ success: boolean; promoCoupon?: string; phoneVerification?: PhoneVerificationDispatch }>;
+  ) => Promise<{ success: boolean; error?: string; promoCoupon?: string; phoneVerification?: PhoneVerificationDispatch }>;
   /** Item 1: (re)send the mobile-verification code — used right after signup, and from Profile
    * if the customer dismissed the dialog or the first code expired. */
   requestPhoneVerification: () => Promise<PhoneVerificationDispatch | null>;
@@ -133,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     name: string,
     phone: string,
     stallEvent?: boolean,
-  ): Promise<{ success: boolean; promoCoupon?: string; phoneVerification?: PhoneVerificationDispatch }> => {
+  ): Promise<{ success: boolean; error?: string; promoCoupon?: string; phoneVerification?: PhoneVerificationDispatch }> => {
     try {
       const { user, token, promoCoupon, phoneVerification } = await authService.signup(
         name,
@@ -149,7 +149,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true, promoCoupon, phoneVerification };
     } catch (error) {
       console.error('Signup failed', error);
-      return { success: false };
+      // The API's message is user-facing (e.g. "An account with this email already exists").
+      return { success: false, error: error instanceof ApiError ? error.message : undefined };
     }
   };
 

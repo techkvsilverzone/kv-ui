@@ -60,7 +60,7 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
-      const { success, promoCoupon, phoneVerification: dispatch } = await signup(
+      const { success, error, promoCoupon, phoneVerification: dispatch } = await signup(
         formData.email,
         formData.password,
         formData.name,
@@ -87,8 +87,14 @@ const Signup = () => {
         } else {
           navigate('/');
         }
+      } else {
+        toast({
+          title: 'Could not create account',
+          description: error ?? 'Something went wrong. Please try again.',
+          variant: 'destructive',
+        });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Something went wrong. Please try again.',
