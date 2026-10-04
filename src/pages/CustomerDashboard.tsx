@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { orderService, type Order } from '@/services/order';
 import { savingsService, type SavingsEnrollment } from '@/services/savings';
+import { schemePlanService } from '@/services/schemePlan';
+import { summarizeScheme } from '@/lib/savingsSummary';
 
 const statusColors: Record<string, string> = {
   Pending: 'bg-yellow-100 text-yellow-700',
@@ -93,6 +95,8 @@ const OrdersTab = ({ orders, isLoading }: { orders: Order[]; isLoading: boolean 
 };
 
 const SavingsTab = ({ schemes, isLoading }: { schemes: SavingsEnrollment[]; isLoading: boolean }) => {
+  const { data: plans = [] } = useQuery({ queryKey: ['scheme-plans'], queryFn: schemePlanService.getPlans });
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-16">
@@ -137,6 +141,8 @@ const SavingsTab = ({ schemes, isLoading }: { schemes: SavingsEnrollment[]; isLo
         const start = new Date(scheme.startDate);
         const maturity = scheme.maturityDate ? new Date(scheme.maturityDate) : new Date(start);
         if (!scheme.maturityDate) maturity.setMonth(maturity.getMonth() + scheme.duration);
+        const isFlexible = plans.find((p) => p.type === scheme.schemeType)?.paymentMode === 'FLEXIBLE';
+        const summary = summarizeScheme(scheme);
 
         return (
           <Card key={scheme._id} className="p-5">
@@ -167,10 +173,22 @@ const SavingsTab = ({ schemes, isLoading }: { schemes: SavingsEnrollment[]; isLo
                 <p className="text-xs text-muted-foreground">Monthly</p>
                 <p className="font-semibold">{formatPrice(scheme.monthlyAmount)}</p>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Duration</p>
-                <p className="font-semibold">{scheme.duration} months</p>
-              </div>
+              {isFlexible ? (
+                <div>
+                  <p className="text-xs text-muted-foreground">Duration</p>
+                  <p className="font-semibold">{scheme.duration} months</p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-xs text-muted-foreground">Months paid</p>
+                  <p className="font-semibold">
+                    {summary.paidMonths} of {summary.totalMonths}
+                    {summary.pendingMonths > 0 && (
+                      <span className="font-normal text-muted-foreground"> · {summary.pendingMonths} pending</span>
+                    )}
+                  </p>
+                </div>
+              )}
               <div>
                 <p className="text-xs text-muted-foreground">Started</p>
                 <p className="font-semibold">{formatDate(scheme.startDate)}</p>
@@ -183,7 +201,14 @@ const SavingsTab = ({ schemes, isLoading }: { schemes: SavingsEnrollment[]; isLo
 
             <div className="mt-4 pt-3 border-t border-border flex justify-between text-sm">
               <span className="text-muted-foreground">Total Paid</span>
-              <span className="font-semibold">{formatPrice(scheme.totalPaid)}</span>
+              <span className="font-semibold">
+                {formatPrice(scheme.totalPaid)}
+                {summary.hasGrams && (
+                  <span className="font-normal text-muted-foreground">
+                    {' '}· {summary.totalGrams.toFixed(3)} g {scheme.metal === 'GOLD' ? 'gold' : 'silver'}
+                  </span>
+                )}
+              </span>
             </div>
           </Card>
         );

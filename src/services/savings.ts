@@ -10,6 +10,8 @@ export interface SavingsEnrollmentPayload {
 }
 
 export interface SavingsPayment {
+  /** Payment row id — shown to the customer as the receipt number. */
+  id?: string;
   month: number;
   /** Cash actually collected this row. 0 on the auto-credited bonus/devident row. */
   amount: number;
@@ -25,6 +27,7 @@ export interface SavingsPayment {
   /** `devidentAmount / devidentMaterialRate`, 3dp. 0 when there's no devident. */
   devidentMaterialWeight: number;
   method?: 'ONLINE' | 'CASH';
+  razorpayPaymentId?: string | null;
   dueMonthKey?: string;
 }
 

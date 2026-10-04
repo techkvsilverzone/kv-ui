@@ -22,6 +22,8 @@ import { schemePlanService, type SchemePlan, type SchemeType } from '@/services/
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PassbookView from '@/components/PassbookView';
+import SchemeDetailsView from '@/components/SchemeDetailsView';
+import { summarizeScheme } from '@/lib/savingsSummary';
 import { loadRazorpayScript } from '@/lib/razorpay';
 import { addressService } from '@/services/address';
 import { ApiError } from '@/lib/api';
@@ -71,6 +73,8 @@ const SavingsScheme = () => {
     queryKey: ['scheme-plans'],
     queryFn: schemePlanService.getPlans,
   });
+  const isFlexibleType = (type: SchemeType) => plans.find((p) => p.type === type)?.paymentMode === 'FLEXIBLE';
+  const selectedIsFlexible = !!selectedScheme && isFlexibleType(selectedScheme.schemeType);
 
   // Today's metal rates, purely for the "≈ X.XXXg at today's rate" estimate shown while
   // choosing/paying an amount — the actual gram figure credited to the passbook is always
@@ -320,10 +324,21 @@ const SavingsScheme = () => {
               const gramNote = creditedRow && creditedRow.materialWeight > 0
                 ? ` — ${formatGrams(creditedRow.materialWeight)} ${scheme.metal === 'GOLD' ? 'Gold' : 'Silver'} credited at today's rate of ${formatPrice(creditedRow.materialRate)}/g.`
                 : '';
-              toast({
-                title: 'Payment Successful!',
-                description: `₹${paidAmount.toLocaleString('en-IN')} recorded on your passbook.${gramNote}`,
-              });
+              if (isFlexibleType(scheme.schemeType)) {
+                toast({
+                  title: 'Payment Successful!',
+                  description: `₹${paidAmount.toLocaleString('en-IN')} recorded on your passbook.${gramNote}`,
+                });
+              } else {
+                const after = summarizeScheme(result.scheme);
+                const gramsNote = after.hasGrams && creditedRow
+                  ? ` ${formatGrams(creditedRow.materialWeight)} added at ${formatPrice(creditedRow.materialRate)}/g · total now ${formatGrams(after.totalGrams)}.`
+                  : '';
+                toast({
+                  title: `Month ${after.paidMonths} of ${after.totalMonths} paid`,
+                  description: `₹${paidAmount.toLocaleString('en-IN')} received.${gramsNote} ${after.pendingMonths} month${after.pendingMonths === 1 ? '' : 's'} pending.`,
+                });
+              }
               void refetchSchemes();
             }
           } catch {
@@ -513,8 +528,8 @@ const SavingsScheme = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {mySchemes.map((scheme) => {
                   const realPaymentsCount = (scheme.payments ?? []).filter((p) => p.amount > 0).length;
-                  const schemePlan = plans.find((p) => p.type === scheme.schemeType);
-                  const isFlexibleScheme = schemePlan?.paymentMode === 'FLEXIBLE';
+                  const isFlexibleScheme = isFlexibleType(scheme.schemeType);
+                  const summary = summarizeScheme(scheme);
                   // Item 4: a FLEXIBLE scheme is payable any number of times within its window
                   // (maturityDate = enrollment + duration, since it never gets pushed out — see
                   // getMaturityDate) rather than capped by a payment count like every other scheme.
@@ -545,14 +560,32 @@ const SavingsScheme = () => {
                         </span>
                       </div>
                       <div className="text-sm text-muted-foreground space-y-1">
-                        <div className="flex justify-between">
-                          <span>Duration</span>
-                          <span className="font-medium text-foreground">{scheme.duration} months</span>
-                        </div>
+                        {isFlexibleScheme ? (
+                          <div className="flex justify-between">
+                            <span>Duration</span>
+                            <span className="font-medium text-foreground">{scheme.duration} months</span>
+                          </div>
+                        ) : (
+                          <div className="flex justify-between">
+                            <span>Months paid</span>
+                            <span className="font-medium text-foreground">
+                              {summary.paidMonths} of {summary.totalMonths}
+                              {summary.pendingMonths > 0 && (
+                                <span className="font-normal text-muted-foreground"> · {summary.pendingMonths} pending</span>
+                              )}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span>Total Paid</span>
                           <span className="font-medium text-foreground">{formatPrice(scheme.totalPaid)}</span>
                         </div>
+                        {summary.hasGrams && (
+                          <div className="flex justify-between">
+                            <span>{scheme.metal === 'GOLD' ? 'Gold' : 'Silver'} accumulated</span>
+                            <span className="font-medium text-foreground">{formatGrams(summary.totalGrams)}</span>
+                          </div>
+                        )}
                         {scheme.maturityDate && (
                           <div className="flex justify-between">
                             <span>Matures</span>
@@ -597,7 +630,7 @@ const SavingsScheme = () => {
                             {payingSchemeId === scheme._id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
-                              `Pay This Month (${formatPrice(scheme.monthlyAmount)})`
+                              `Pay Month ${summary.nextMonth ?? realPaymentsCount + 1} of ${scheme.duration} (${formatPrice(scheme.monthlyAmount)})`
                             )}
                           </Button>
                         )}
@@ -621,7 +654,7 @@ const SavingsScheme = () => {
                         {scheme.passbookNumber ? (
                           <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => setSelectedScheme(scheme)}>
                             <BookOpen className="h-3.5 w-3.5" />
-                            View Passbook
+                            {isFlexibleScheme ? 'View Passbook' : 'View Payment History'}
                           </Button>
                         ) : (
                           <p className="text-xs text-muted-foreground text-center">
@@ -870,21 +903,42 @@ const SavingsScheme = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between gap-4">
-              <span>Savings Passbook</span>
+              <span>{selectedIsFlexible ? 'Savings Passbook' : 'My Plan Details'}</span>
               <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handlePrintPassbook()}>
                 <Printer className="h-3.5 w-3.5" />
-                Export / Print
+                {selectedIsFlexible ? 'Export / Print' : 'Print passbook'}
               </Button>
             </DialogTitle>
           </DialogHeader>
-          {selectedScheme && (
-            <PassbookView
-              ref={passbookRef}
+          {selectedScheme && !selectedIsFlexible && (
+            <SchemeDetailsView
               scheme={selectedScheme}
               userName={user?.name}
               userPhone={user?.phone}
-              userAddress={userAddressLine}
+              paying={payingSchemeId === selectedScheme._id}
+              onPay={
+                mySchemes.some((s) => s._id === selectedScheme._id)
+                  ? () => {
+                      // Close first: Razorpay's checkout can't take focus under the dialog's focus trap.
+                      const scheme = selectedScheme;
+                      setSelectedScheme(null);
+                      void handlePayInstallment(scheme);
+                    }
+                  : undefined
+              }
             />
+          )}
+          {selectedScheme && (
+            // KV Smart Purchase Plan keeps the ledger as its main view; fixed plans only print it.
+            <div className={selectedIsFlexible ? undefined : 'hidden'}>
+              <PassbookView
+                ref={passbookRef}
+                scheme={selectedScheme}
+                userName={user?.name}
+                userPhone={user?.phone}
+                userAddress={userAddressLine}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>

@@ -55,14 +55,14 @@ function buildLedgerRows(scheme: SavingsEnrollment): LedgerRow[] {
     });
 }
 
-const ShopHeader = () => (
+export const ShopHeader = ({ title = 'Ledger Statement' }: { title?: string }) => (
   <div className="text-center mb-4 pb-3 border-b-2 border-gray-800">
     <h1 className="text-2xl font-bold tracking-wide">KV Silver Zone</h1>
     <p className="text-xs text-gray-600 mt-1">
       14, Rajaram St, Gnanamoorthy Nagar Extn, Town Planning Colony, Ambattur, Chennai 600053
     </p>
     <p className="text-xs text-gray-600">Mobile: (+91) 88256 49680</p>
-    <p className="text-sm font-semibold underline mt-2">Ledger Statement</p>
+    <p className="text-sm font-semibold underline mt-2">{title}</p>
   </div>
 );
 
