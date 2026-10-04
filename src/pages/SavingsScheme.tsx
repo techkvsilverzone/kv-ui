@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Check, Calculator, Calendar, Gift, Shield, BookOpen, Loader2, Search, Printer, Coins } from 'lucide-react';
-import { useReactToPrint } from 'react-to-print';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, Check, Calculator, Calendar, Gift, Shield, BookOpen, Loader2, Search, Coins } from 'lucide-react';
 import Seo from '@/components/Seo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,16 +16,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import savingsImage from '@/assets/savings-scheme.jpg';
-import { savingsService, type SavingsEnrollment } from '@/services/savings';
+import { savingsService } from '@/services/savings';
 import { schemePlanService, type SchemePlan, type SchemeType } from '@/services/schemePlan';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import PassbookView from '@/components/PassbookView';
-import SchemeDetailsView from '@/components/SchemeDetailsView';
+import { useInstallmentPayment } from '@/hooks/useInstallmentPayment';
 import { summarizeScheme } from '@/lib/savingsSummary';
-import { loadRazorpayScript } from '@/lib/razorpay';
-import { addressService } from '@/services/address';
-import { ApiError } from '@/lib/api';
 import { silverRateService } from '@/services/silverRate';
 import { goldRateService } from '@/services/goldRate';
 
@@ -56,25 +51,16 @@ const SavingsScheme = () => {
   const [selectedType, setSelectedType] = useState<SchemeType | null>(null);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [isEnrolling, setIsEnrolling] = useState(false);
-  const [selectedScheme, setSelectedScheme] = useState<SavingsEnrollment | null>(null);
   const [passbookSearch, setPassbookSearch] = useState('');
-  const [isSearchingPassbook, setIsSearchingPassbook] = useState(false);
-  const [payingSchemeId, setPayingSchemeId] = useState<string | null>(null);
   // Item 4: per-scheme amount entry for FLEXIBLE-mode (KV Smart Purchase Plan) payments, keyed
   // by scheme id since several flexible schemes can be listed in "My Schemes" at once.
   const [flexPayAmounts, setFlexPayAmounts] = useState<Record<string, string>>({});
-  const passbookRef = useRef<HTMLDivElement>(null);
-  const handlePrintPassbook = useReactToPrint({
-    contentRef: passbookRef,
-    documentTitle: `KV-Silver-Zone-Passbook-${selectedScheme?.passbookNumber ?? ''}`,
-  });
 
   const { data: plans = [], isLoading: plansLoading } = useQuery({
     queryKey: ['scheme-plans'],
     queryFn: schemePlanService.getPlans,
   });
   const isFlexibleType = (type: SchemeType) => plans.find((p) => p.type === type)?.paymentMode === 'FLEXIBLE';
-  const selectedIsFlexible = !!selectedScheme && isFlexibleType(selectedScheme.schemeType);
 
   // Today's metal rates, purely for the "≈ X.XXXg at today's rate" estimate shown while
   // choosing/paying an amount — the actual gram figure credited to the passbook is always
@@ -113,31 +99,15 @@ const SavingsScheme = () => {
     document.getElementById('calculator')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleTrackPassbook = async (value?: string) => {
-    const query = value ?? passbookSearch;
-    if (!query.trim()) return;
-    setIsSearchingPassbook(true);
-    try {
-      const scheme = await savingsService.getByPassbookNumber(query);
-      setSelectedScheme(scheme);
-    } catch {
-      toast({
-        title: 'Not found',
-        description: 'No savings scheme matches that passbook number.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSearchingPassbook(false);
-    }
+  const openPassbook = (passbookNumber: string, replace = false) => {
+    if (!passbookNumber.trim()) return;
+    navigate(`/savings-scheme/passbook/${encodeURIComponent(passbookNumber.trim())}`, { replace });
   };
 
-  // Deep-link from CustomerDashboard's "Passbook" button (?passbook=PB-...).
+  // Old deep links (?passbook=PB-...) now land on the passbook's own page.
   useEffect(() => {
     const fromQuery = searchParams.get('passbook');
-    if (fromQuery) {
-      setPassbookSearch(fromQuery);
-      void handleTrackPassbook(fromQuery);
-    }
+    if (fromQuery) openPassbook(fromQuery, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -146,18 +116,11 @@ const SavingsScheme = () => {
     queryFn: savingsService.getMySchemes,
     enabled: isAuthenticated,
   });
-
-  // Default saved address, shown on the passbook header — mirrors the same
-  // find(isDefault) ?? [0] fallback Payment.tsx already uses.
-  const { data: myAddresses = [] } = useQuery({
-    queryKey: ['my-addresses'],
-    queryFn: addressService.getAddresses,
-    enabled: isAuthenticated,
+  const { pay: handlePayInstallment, payingSchemeId } = useInstallmentPayment({
+    isFlexible: (s) => isFlexibleType(s.schemeType),
+    onPaid: () => void refetchSchemes(),
   });
-  const defaultAddress = myAddresses.find((a) => a.isDefault) ?? myAddresses[0];
-  const userAddressLine = defaultAddress
-    ? `${defaultAddress.address}, ${defaultAddress.city}, ${defaultAddress.state} - ${defaultAddress.pincode}`
-    : undefined;
+
 
   const todayRateForPlan = selectedPlan?.metal === 'GOLD' ? todayGoldRate : selectedPlan?.metal === 'SILVER' ? todaySilverRate : undefined;
   const estimatedGrams = selectedAmount && todayRateForPlan ? selectedAmount / todayRateForPlan : null;
@@ -275,93 +238,6 @@ const SavingsScheme = () => {
     }
     setShowOtpForm(false);
     await performEnroll(enrollOtp.trim());
-  };
-
-  /** Pay this scheme's next installment online via Razorpay. FIXED-mode schemes always use the
-   * server-known scheme.monthlyAmount — the client never sends/trusts an amount for those.
-   * FLEXIBLE-mode schemes (item 4, KV Smart Purchase Plan) require `customAmount`, chosen by the
-   * customer and validated server-side against the plan's floor. */
-  const handlePayInstallment = async (scheme: SavingsEnrollment, customAmount?: number) => {
-    setPayingSchemeId(scheme._id);
-    try {
-      const loaded = await loadRazorpayScript();
-      if (!loaded) {
-        toast({ title: 'Payment Error', description: 'Failed to load payment gateway.', variant: 'destructive' });
-        setPayingSchemeId(null);
-        return;
-      }
-
-      const order = await savingsService.createInstallmentOrder(scheme._id, customAmount);
-      const paidAmount = order.amount / 100;
-
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: order.amount,
-        currency: order.currency,
-        name: 'KV Silver Zone',
-        description: `Savings installment - ${scheme.planName || 'Savings Scheme'}`,
-        order_id: order.id,
-        prefill: {
-          name: user?.name || '',
-          email: user?.email || '',
-          contact: user?.phone || '',
-        },
-        theme: { color: '#1a1a1a' },
-        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-          try {
-            const result = await savingsService.verifyInstallmentPayment(scheme._id, {
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-            });
-            if (result.success) {
-              // Pinpoint the exact ledger row this payment created (not just "the last row") —
-              // matching on the Razorpay payment id avoids any ambiguity with an auto-credited
-              // bonus row landing in the same response.
-              const creditedRow = result.scheme.payments?.find(
-                (p) => (p as { razorpayPaymentId?: string }).razorpayPaymentId === response.razorpay_payment_id,
-              );
-              const gramNote = creditedRow && creditedRow.materialWeight > 0
-                ? ` — ${formatGrams(creditedRow.materialWeight)} ${scheme.metal === 'GOLD' ? 'Gold' : 'Silver'} credited at today's rate of ${formatPrice(creditedRow.materialRate)}/g.`
-                : '';
-              if (isFlexibleType(scheme.schemeType)) {
-                toast({
-                  title: 'Payment Successful!',
-                  description: `₹${paidAmount.toLocaleString('en-IN')} recorded on your passbook.${gramNote}`,
-                });
-              } else {
-                const after = summarizeScheme(result.scheme);
-                const gramsNote = after.hasGrams && creditedRow
-                  ? ` ${formatGrams(creditedRow.materialWeight)} added at ${formatPrice(creditedRow.materialRate)}/g · total now ${formatGrams(after.totalGrams)}.`
-                  : '';
-                toast({
-                  title: `Month ${after.paidMonths} of ${after.totalMonths} paid`,
-                  description: `₹${paidAmount.toLocaleString('en-IN')} received.${gramsNote} ${after.pendingMonths} month${after.pendingMonths === 1 ? '' : 's'} pending.`,
-                });
-              }
-              void refetchSchemes();
-            }
-          } catch {
-            toast({ title: 'Verification Failed', description: 'Payment verification failed. Contact support.', variant: 'destructive' });
-          } finally {
-            setPayingSchemeId(null);
-          }
-        },
-        modal: {
-          ondismiss: () => setPayingSchemeId(null),
-        },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (error) {
-      toast({
-        title: 'Payment failed',
-        description: error instanceof ApiError ? error.message : 'Could not initiate payment.',
-        variant: 'destructive',
-      });
-      setPayingSchemeId(null);
-    }
   };
 
   return (
@@ -509,11 +385,11 @@ const SavingsScheme = () => {
                   placeholder="Track by passbook number"
                   value={passbookSearch}
                   onChange={(e) => setPassbookSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleTrackPassbook()}
+                  onKeyDown={(e) => e.key === 'Enter' && openPassbook(passbookSearch)}
                   className="text-sm"
                 />
-                <Button variant="outline" size="sm" onClick={() => handleTrackPassbook()} disabled={isSearchingPassbook} className="gap-1.5 shrink-0">
-                  {isSearchingPassbook ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                <Button variant="outline" size="sm" onClick={() => openPassbook(passbookSearch)} className="gap-1.5 shrink-0">
+                  <Search className="h-3.5 w-3.5" />
                   Track
                 </Button>
               </div>
@@ -652,7 +528,7 @@ const SavingsScheme = () => {
                           </p>
                         )}
                         {scheme.passbookNumber ? (
-                          <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => setSelectedScheme(scheme)}>
+                          <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => openPassbook(scheme.passbookNumber!)}>
                             <BookOpen className="h-3.5 w-3.5" />
                             {isFlexibleScheme ? 'View Passbook' : 'View Payment History'}
                           </Button>
@@ -898,50 +774,6 @@ const SavingsScheme = () => {
         </div>
       </section>
 
-      {/* Passbook viewer (own schemes, or looked up by passbook number) */}
-      <Dialog open={!!selectedScheme} onOpenChange={(open) => !open && setSelectedScheme(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between gap-4">
-              <span>{selectedIsFlexible ? 'Savings Passbook' : 'My Plan Details'}</span>
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handlePrintPassbook()}>
-                <Printer className="h-3.5 w-3.5" />
-                {selectedIsFlexible ? 'Export / Print' : 'Print passbook'}
-              </Button>
-            </DialogTitle>
-          </DialogHeader>
-          {selectedScheme && !selectedIsFlexible && (
-            <SchemeDetailsView
-              scheme={selectedScheme}
-              userName={user?.name}
-              userPhone={user?.phone}
-              paying={payingSchemeId === selectedScheme._id}
-              onPay={
-                mySchemes.some((s) => s._id === selectedScheme._id)
-                  ? () => {
-                      // Close first: Razorpay's checkout can't take focus under the dialog's focus trap.
-                      const scheme = selectedScheme;
-                      setSelectedScheme(null);
-                      void handlePayInstallment(scheme);
-                    }
-                  : undefined
-              }
-            />
-          )}
-          {selectedScheme && (
-            // KV Smart Purchase Plan keeps the ledger as its main view; fixed plans only print it.
-            <div className={selectedIsFlexible ? undefined : 'hidden'}>
-              <PassbookView
-                ref={passbookRef}
-                scheme={selectedScheme}
-                userName={user?.name}
-                userPhone={user?.phone}
-                userAddress={userAddressLine}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Item 2 (replaced 2026-09-16, was KYC): confirm enrollment with the OTP just sent. */}
       <Dialog open={showOtpForm} onOpenChange={setShowOtpForm}>

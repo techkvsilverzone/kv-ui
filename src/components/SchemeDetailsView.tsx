@@ -88,8 +88,14 @@ export default function SchemeDetailsView({ scheme, userName, userPhone, onPay, 
             <p className="font-semibold">{scheme.planName ?? scheme.schemeType}</p>
             <p className="text-xs text-muted-foreground">
               {scheme.passbookNumber ? `Passbook #${scheme.passbookNumber}` : 'Passbook issued after first payment'}
-              {userName ? ` · ${userName}` : ''}
             </p>
+            {(userName || userPhone) && (
+              <p className="mt-1 text-sm">
+                {userName && <span className="font-medium">{userName}</span>}
+                {userName && userPhone && <span className="text-muted-foreground"> · </span>}
+                {userPhone && <span className="text-muted-foreground">Mobile +91 {userPhone}</span>}
+              </p>
+            )}
           </div>
           <span className="rounded-full bg-background px-2 py-0.5 text-xs font-medium">{scheme.status}</span>
         </div>

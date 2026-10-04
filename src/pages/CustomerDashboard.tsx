@@ -160,7 +160,7 @@ const SavingsTab = ({ schemes, isLoading }: { schemes: SavingsEnrollment[]; isLo
               </div>
               {scheme.passbookNumber && (
                 <Button variant="outline" size="sm" asChild>
-                  <Link to={`/savings-scheme?passbook=${encodeURIComponent(scheme.passbookNumber)}`}>
+                  <Link to={`/savings-scheme/passbook/${encodeURIComponent(scheme.passbookNumber)}`}>
                     <BookOpen className="h-3.5 w-3.5 mr-1.5" />
                     Passbook
                   </Link>

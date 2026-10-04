@@ -66,11 +66,11 @@ export interface SavingsCancellation {
 export interface SavingsEnrollment {
   _id: string;
   /**
-   * The owning customer. Populated as `{ _id, name, email }` on admin listings
-   * (`GET /admin/savings`); a bare id string everywhere else (enroll/my-schemes/passbook
-   * lookup never populate it — the caller already knows it's their own).
+   * The owning customer. Populated as `{ _id, name, email, phone }` on admin listings
+   * (`GET /admin/savings`) and the passbook lookup (`GET /savings/passbook/:no`, so staff see
+   * the customer rather than themselves); a bare id string on enroll/my-schemes.
    */
-  userId: string | { _id: string; name: string; email: string };
+  userId: string | { _id: string; name: string; email: string; phone?: string | null };
   /** Unique per-enrollment tracking number ("Ticket No" on the printed passbook), e.g.
    * "SLV-2425-0000111" (metal/scheme prefix + financial-year code + sequence). One customer
    * can hold several concurrent schemes; the passbook number is what distinguishes them.

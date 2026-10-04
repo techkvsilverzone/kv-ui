@@ -14,6 +14,7 @@ import Marquee from "@/components/Marquee";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
 import SavingsScheme from "./pages/SavingsScheme";
+import SavingsPlanDetails from "./pages/SavingsPlanDetails";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Login from "./pages/Login";
@@ -101,6 +102,7 @@ const AppContent = () => {
           <Route path="/" element={<Index />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/savings-scheme" element={<SavingsScheme />} />
+          <Route path="/savings-scheme/passbook/:passbookNumber" element={<RequireAuth><SavingsPlanDetails /></RequireAuth>} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
