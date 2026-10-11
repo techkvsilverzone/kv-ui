@@ -247,14 +247,14 @@ const SavingsScheme = () => {
         description="Join KV Silver Zone's Gold Purchase Plan, Silver Purchase Plan, or Diwali savings schemes — save monthly and build your gold/silver collection. Flexible plans with transparent terms."
       />
       {/* Hero */}
-      <section className="bg-primary text-primary-foreground py-20">
+      <section className="bg-primary text-primary-foreground py-10 lg:py-12">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             <div>
               <span className="inline-block px-4 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-medium mb-6">
                 💰 Monthly Savings Schemes
               </span>
-              <h1 className="font-serif text-4xl md:text-5xl font-bold mb-6">
+              <h1 className="font-serif text-4xl md:text-5xl font-bold mb-6 text-primary-foreground">
                 Secure Your Gold & Silver<br />Future Today
               </h1>
               <p className="text-lg opacity-80 mb-8">
@@ -273,7 +273,8 @@ const SavingsScheme = () => {
               </div>
             </div>
             <div className="relative hidden lg:block">
-              <div className="aspect-square rounded-2xl overflow-hidden shadow-elegant animate-float">
+              {/* Sized by viewport height (site header + banner padding ≈ 19rem) so the whole image is visible without scrolling. */}
+              <div className="mx-auto aspect-square h-[min(26rem,calc(100vh-19rem))] rounded-2xl overflow-hidden shadow-elegant animate-float">
                 <img
                   src={savingsImage}
                   alt="Savings Scheme"
@@ -285,98 +286,9 @@ const SavingsScheme = () => {
         </div>
       </section>
 
-      {/* Benefits */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="font-serif text-4xl font-bold text-foreground">
-              Why Choose Our Schemes?
-            </h2>
-            <p className="text-muted-foreground mt-2">
-              Maximize your savings with exclusive benefits
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {benefits.map((benefit, index) => (
-              <Card key={index} className="p-6 text-center card-hover">
-                <div className="w-16 h-16 mx-auto rounded-full bg-accent/10 flex items-center justify-center mb-4">
-                  <benefit.icon className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="font-serif text-xl font-semibold mb-2">{benefit.title}</h3>
-                <p className="text-sm text-muted-foreground">{benefit.description}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Plan picker */}
-      <section id="plans" className="py-20 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="font-serif text-4xl font-bold text-foreground">Our Schemes</h2>
-            <p className="text-muted-foreground mt-2">Pick the scheme that suits you — each redeems differently</p>
-          </div>
-          {plansLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : plans.length === 0 ? (
-            <p className="text-center text-muted-foreground">No schemes are open for enrollment right now — check back soon.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {plans.map((plan) => {
-                const isSelected = plan.type === selectedType;
-                return (
-                  <Card
-                    key={plan._id}
-                    className={`p-6 flex flex-col gap-3 cursor-pointer transition-shadow ${isSelected ? 'ring-2 ring-primary shadow-elegant' : 'card-hover'}`}
-                    onClick={() => handleSelectPlan(plan)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Coins className="h-5 w-5 text-accent" />
-                      <h3 className="font-serif text-xl font-semibold">{plan.name}</h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground flex-1">{plan.description}</p>
-                    <div className="text-sm space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Duration</span>
-                        <span className="font-medium">{plan.durationMonths} months</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{plan.paymentMode === 'FLEXIBLE' ? 'Minimum' : 'From'}</span>
-                        <span className="font-medium">
-                          {plan.paymentMode === 'FLEXIBLE'
-                            ? `${formatPrice(plan.minPaymentAmount ?? 0)}, any time`
-                            : `${formatPrice(Math.min(...plan.monthlyAmounts))}/mo`}
-                        </span>
-                      </div>
-                      {plan.bonusMonths > 0 ? (
-                        <div className="flex justify-between text-primary">
-                          <span>Bonus</span>
-                          <span className="font-medium">+{plan.bonusMonths} month value</span>
-                        </div>
-                      ) : plan.hamper ? (
-                        <div className="flex justify-between text-primary">
-                          <span>Reward</span>
-                          <span className="font-medium">Diwali hamper</span>
-                        </div>
-                      ) : null}
-                    </div>
-                    <Button variant={isSelected ? 'default' : 'outline'} size="sm" className="mt-2 w-full">
-                      {isSelected ? 'Selected' : 'Select'}
-                    </Button>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-
       {/* My Active Schemes */}
       {isAuthenticated && (
-        <section className="py-12 bg-muted/30">
+        <section className="py-12">
           <div className="container mx-auto px-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
               <h2 className="font-serif text-2xl font-bold text-foreground">My Schemes</h2>
@@ -552,8 +464,72 @@ const SavingsScheme = () => {
         </section>
       )}
 
+      {/* Plan picker */}
+      <section id="plans" className="py-20 bg-muted/50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="font-serif text-4xl font-bold text-foreground">Our Schemes</h2>
+            <p className="text-muted-foreground mt-2">Pick the scheme that suits you — each redeems differently</p>
+          </div>
+          {plansLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : plans.length === 0 ? (
+            <p className="text-center text-muted-foreground">No schemes are open for enrollment right now — check back soon.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {plans.map((plan) => {
+                const isSelected = plan.type === selectedType;
+                return (
+                  <Card
+                    key={plan._id}
+                    className={`p-6 flex flex-col gap-3 cursor-pointer transition-shadow ${isSelected ? 'ring-2 ring-primary shadow-elegant' : 'card-hover'}`}
+                    onClick={() => handleSelectPlan(plan)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Coins className="h-5 w-5 text-accent" />
+                      <h3 className="font-serif text-xl font-semibold">{plan.name}</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground flex-1">{plan.description}</p>
+                    <div className="text-sm space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Duration</span>
+                        <span className="font-medium">{plan.durationMonths} months</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">{plan.paymentMode === 'FLEXIBLE' ? 'Minimum' : 'From'}</span>
+                        <span className="font-medium">
+                          {plan.paymentMode === 'FLEXIBLE'
+                            ? `${formatPrice(plan.minPaymentAmount ?? 0)}, any time`
+                            : `${formatPrice(Math.min(...plan.monthlyAmounts))}/mo`}
+                        </span>
+                      </div>
+                      {plan.bonusMonths > 0 ? (
+                        <div className="flex justify-between text-primary">
+                          <span>Bonus</span>
+                          <span className="font-medium">+{plan.bonusMonths} month value</span>
+                        </div>
+                      ) : plan.hamper ? (
+                        <div className="flex justify-between text-primary">
+                          <span>Reward</span>
+                          <span className="font-medium">Diwali hamper</span>
+                        </div>
+                      ) : null}
+                    </div>
+                    <Button variant={isSelected ? 'default' : 'outline'} size="sm" className="mt-2 w-full">
+                      {isSelected ? 'Selected' : 'Select'}
+                    </Button>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Calculator */}
-      <section id="calculator" className="py-20 bg-muted/50">
+      <section id="calculator" className="py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
@@ -701,6 +677,31 @@ const SavingsScheme = () => {
                 </p>
               </div>
             </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits */}
+      <section className="py-20 bg-muted/50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="font-serif text-4xl font-bold text-foreground">
+              Why Choose Our Schemes?
+            </h2>
+            <p className="text-muted-foreground mt-2">
+              Maximize your savings with exclusive benefits
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {benefits.map((benefit, index) => (
+              <Card key={index} className="p-6 text-center card-hover">
+                <div className="w-16 h-16 mx-auto rounded-full bg-accent/10 flex items-center justify-center mb-4">
+                  <benefit.icon className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="font-serif text-xl font-semibold mb-2">{benefit.title}</h3>
+                <p className="text-sm text-muted-foreground">{benefit.description}</p>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
