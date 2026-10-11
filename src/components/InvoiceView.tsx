@@ -28,8 +28,11 @@ const InvoiceView = forwardRef<HTMLDivElement, InvoiceViewProps>(
     });
 
     const subtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const tax = order.tax ?? subtotal * 0.03;
-    const gstPercent = subtotal > 0 ? Math.round((tax / subtotal) * 1000) / 10 : 3;
+    const discount = order.couponDiscount ?? 0;
+    const tax = order.tax ?? (subtotal - discount) * 0.03;
+    const taxable = subtotal - discount;
+    const gstPercent = taxable > 0 ? Math.round((tax / taxable) * 1000) / 10 : 3;
+    const isInStore = order.channel === 'OFFLINE';
     // Server-generated sequential invoice number; falls back to the order id for
     // orders created before invoice numbering shipped.
     const invoiceNumber = order.invoiceNumber ?? (order.id ?? order._id ?? '').slice(-10).toUpperCase();
@@ -60,17 +63,28 @@ const InvoiceView = forwardRef<HTMLDivElement, InvoiceViewProps>(
         <div className="grid grid-cols-2 gap-6 mb-8 text-sm">
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Bill To</p>
-            <p className="font-semibold">{customerName ?? `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`}</p>
+            <p className="font-semibold">{customerName ?? `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`.trim()}</p>
             {customerEmail && <p className="text-gray-600">{customerEmail}</p>}
-            <p className="text-gray-600">{order.shippingAddress.phone}</p>
+            {order.shippingAddress.phone && <p className="text-gray-600">{order.shippingAddress.phone}</p>}
+            {isInStore && order.shippingAddress.address && <p className="text-gray-600">{order.shippingAddress.address}</p>}
           </div>
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Ship To</p>
-            <p className="text-gray-700 leading-relaxed">
-              {order.shippingAddress.address},<br />
-              {order.shippingAddress.city}, {order.shippingAddress.state} – {order.shippingAddress.pincode}
-            </p>
-          </div>
+          {isInStore ? (
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Sold At</p>
+              <p className="text-gray-700 leading-relaxed">
+                {order.saleLocation || 'In-store'}
+                {order.soldBy?.name && <><br />Billed by {order.soldBy.name}</>}
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Ship To</p>
+              <p className="text-gray-700 leading-relaxed">
+                {order.shippingAddress.address},<br />
+                {order.shippingAddress.city}, {order.shippingAddress.state} – {order.shippingAddress.pincode}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Line Items */}
@@ -104,6 +118,12 @@ const InvoiceView = forwardRef<HTMLDivElement, InvoiceViewProps>(
               <span className="text-gray-600">Subtotal</span>
               <span>{formatPrice(subtotal)}</span>
             </div>
+            {discount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Discount{order.couponCode ? ` (${order.couponCode})` : ''}</span>
+                <span>−{formatPrice(discount)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-600">GST ({gstPercent}%)</span>
               <span>{formatPrice(tax)}</span>
@@ -117,7 +137,10 @@ const InvoiceView = forwardRef<HTMLDivElement, InvoiceViewProps>(
 
         {/* Payment Info */}
         <div className="text-sm text-gray-600 mb-6">
-          <span className="font-medium">Payment Method: </span>{order.paymentMethod}
+          <span className="font-medium">Payment Method: </span>
+          {({ cash: 'Cash', upi: 'UPI', card: 'Card', razorpay: 'Online (Razorpay)', cod: 'Cash on delivery' } as Record<string, string>)[
+            order.paymentMethod?.toLowerCase()
+          ] ?? order.paymentMethod}
         </div>
 
         {/* Footer */}

@@ -33,6 +33,7 @@ import {
   History,
   ChevronsUpDown,
   Search as SearchIcon,
+  Store,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -92,6 +93,8 @@ import { API_URL } from '@/lib/api';
 import { silverRateService, type UpdateSilverRatePayload } from '@/services/silverRate';
 import { goldRateService } from '@/services/goldRate';
 import { RateUpdateGate } from '@/components/RateUpdateGate';
+import OfflineSalePanel from '@/components/admin/OfflineSalePanel';
+import PrintInvoiceButton from '@/components/admin/PrintInvoiceButton';
 import { computeRateBlock, resolveRateBlock, latestRateDate } from '@/lib/rateFreshness';
 import { rateStatusService } from '@/services/rateStatus';
 import { inventoryService } from '@/services/inventory';
@@ -420,7 +423,7 @@ const ChargeInput = ({
 
 /** Every admin tab's route segment — 'theme' is additionally gated to non-staff at render time. */
 const ADMIN_TABS = [
-  'dashboard', 'products', 'orders', 'customers', 'savings', 'coupons',
+  'dashboard', 'products', 'orders', 'in-store-sale', 'customers', 'savings', 'coupons',
   'returns', 'silver-rates', 'shipping', 'filters', 'inventory', 'theme',
 ] as const;
 type AdminTab = (typeof ADMIN_TABS)[number];
@@ -440,6 +443,7 @@ const Admin = () => {
   const activeTab: AdminTab = isTabAccessible ? (requestedTab as AdminTab) : 'dashboard';
   const [searchQuery, setSearchQuery] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [orderChannelFilter, setOrderChannelFilter] = useState<'all' | 'ONLINE' | 'OFFLINE'>('all');
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddCoupon, setShowAddCoupon] = useState(false);
@@ -1510,9 +1514,11 @@ const Admin = () => {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredOrders = orderStatusFilter === 'all'
-    ? allOrders
-    : allOrders.filter((o) => o.status === orderStatusFilter);
+  const filteredOrders = allOrders.filter(
+    (o) =>
+      (orderStatusFilter === 'all' || o.status === orderStatusFilter) &&
+      (orderChannelFilter === 'all' || o.channel === orderChannelFilter),
+  );
 
   const availableSchemeTypes = Array.from(new Set(allSavings.map((s) => s.schemeType).filter(Boolean)));
   const filteredSavings = schemeTypeFilter === 'all'
@@ -1731,6 +1737,10 @@ const Admin = () => {
             <TabsTrigger value="orders" className="gap-2">
               <ShoppingCart className="h-4 w-4" />
               Orders
+            </TabsTrigger>
+            <TabsTrigger value="in-store-sale" className="gap-2">
+              <Store className="h-4 w-4" />
+              In-store Sale
             </TabsTrigger>
             <TabsTrigger value="customers" className="gap-2">
               <Users className="h-4 w-4" />
@@ -2258,16 +2268,26 @@ const Admin = () => {
             <Card className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-serif text-xl font-semibold">All Orders</h2>
-                <Select value={orderStatusFilter} onValueChange={setOrderStatusFilter}>
-                  <SelectTrigger className="w-40"><SelectValue placeholder="Filter status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Shipped">Shipped</SelectItem>
-                    <SelectItem value="Delivered">Delivered</SelectItem>
-                    <SelectItem value="Cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={orderChannelFilter} onValueChange={(v) => setOrderChannelFilter(v as typeof orderChannelFilter)}>
+                    <SelectTrigger className="w-36" aria-label="Filter by channel"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All channels</SelectItem>
+                      <SelectItem value="ONLINE">Online</SelectItem>
+                      <SelectItem value="OFFLINE">In-store</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={orderStatusFilter} onValueChange={setOrderStatusFilter}>
+                    <SelectTrigger className="w-40"><SelectValue placeholder="Filter status" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Shipped">Shipped</SelectItem>
+                      <SelectItem value="Delivered">Delivered</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               {ordersLoading ? (
                 <div className="flex justify-center py-10">
@@ -2290,7 +2310,12 @@ const Admin = () => {
                   <TableBody>
                     {filteredOrders.map((order) => (
                       <TableRow key={order.id}>
-                        <TableCell className="font-medium">#{order.id.slice(-6)}</TableCell>
+                        <TableCell className="font-medium">
+                          {order.invoiceNumber || `#${order.id.slice(-6)}`}
+                          {order.channel === 'OFFLINE' && (
+                            <span className="ml-2 rounded-full bg-accent/20 px-2 py-0.5 text-xs font-medium text-primary">In-store</span>
+                          )}
+                        </TableCell>
                         <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell>{order.items.length} item(s)</TableCell>
                         <TableCell>
@@ -2333,18 +2358,36 @@ const Admin = () => {
                               </DialogTrigger>
                               <DialogContent className="max-w-lg">
                                 <DialogHeader>
-                                  <DialogTitle className="font-serif">Order #{order.id.slice(-6)}</DialogTitle>
+                                  <DialogTitle className="font-serif flex items-center justify-between gap-3 pr-6">
+                                    <span>{order.invoiceNumber || `Order #${order.id.slice(-6)}`}</span>
+                                    <PrintInvoiceButton order={order} />
+                                  </DialogTitle>
                                 </DialogHeader>
                                 <div className="space-y-4">
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">Shipping Address</p>
-                                    <p className="text-sm">
-                                      {order.shippingAddress.firstName} {order.shippingAddress.lastName}<br />
-                                      {order.shippingAddress.address}<br />
-                                      {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}<br />
-                                      Phone: {order.shippingAddress.phone}
-                                    </p>
-                                  </div>
+                                  {order.channel === 'OFFLINE' ? (
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">In-store sale</p>
+                                      <p className="text-sm">
+                                        {order.saleLocation || 'In-store'}
+                                        {order.soldBy?.name && <> · billed by {order.soldBy.name}</>}
+                                        <br />
+                                        Paid by {order.paymentMethod.toUpperCase()}
+                                        <br />
+                                        Customer: {order.shippingAddress.firstName || 'Walk-in customer'}
+                                        {order.shippingAddress.phone && <> · {order.shippingAddress.phone}</>}
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">Shipping Address</p>
+                                      <p className="text-sm">
+                                        {order.shippingAddress.firstName} {order.shippingAddress.lastName}<br />
+                                        {order.shippingAddress.address}<br />
+                                        {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}<br />
+                                        Phone: {order.shippingAddress.phone}
+                                      </p>
+                                    </div>
+                                  )}
                                   <div>
                                     <p className="text-sm text-muted-foreground mb-2">Items</p>
                                     {order.items.map((item, idx) => (
@@ -2384,6 +2427,10 @@ const Admin = () => {
                 </Table>
               )}
             </Card>
+          </TabsContent>
+
+          <TabsContent value="in-store-sale">
+            <OfflineSalePanel products={allProducts} />
           </TabsContent>
 
           {/* ═══════ CUSTOMERS ═══════ */}

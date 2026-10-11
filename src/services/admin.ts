@@ -1,11 +1,39 @@
 import { api } from '../lib/api';
 import { ApiError } from '../lib/api';
 import type { Product } from '../context/CartContext';
-import type { Order } from './order';
+import { normalizeOrder, type Order } from './order';
 import type { User } from '../context/AuthContext';
 import type { SavingsEnrollment, SavingsAdminUpdatePayload } from './savings';
 import type { SchemePlan, SchemePlanInput } from './schemePlan';
 import type { UserIdProof, IdProofVerificationStatus } from './idProof';
+
+export interface OfflineSaleItem {
+  product: string;
+  quantity: number;
+  /** Chosen size variant's weight, when the product has variants. */
+  variantWeight?: string;
+}
+
+export interface OfflineSaleQuotePayload {
+  items: OfflineSaleItem[];
+  couponCode?: string;
+}
+
+export interface OfflineSalePayload extends OfflineSaleQuotePayload {
+  paymentMethod: 'cash' | 'upi' | 'card';
+  saleLocation?: string;
+  customer?: { name?: string; phone?: string; address?: string };
+}
+
+export interface OfflineSaleQuote {
+  items: { product: string; name: string; quantity: number; weight: number; unitPrice: number; totalPrice: number }[];
+  subtotal: number;
+  discount: number;
+  couponCode: string | null;
+  gstPercent: number;
+  taxAmount: number;
+  grandTotal: number;
+}
 
 export interface StoreConfig {
   theme: string;
@@ -27,14 +55,10 @@ export interface AdminStats {
   };
 }
 
-const normalizeOrder = (order: Order): Order => ({
-  ...order,
-  id: order.id || order._id,
-});
-
 export const adminService = {
   getStats: async (): Promise<AdminStats> => {
-    return api.get<AdminStats>('/admin/stats');
+    const stats = await api.get<AdminStats>('/admin/stats');
+    return { ...stats, recentOrders: (stats.recentOrders ?? []).map(normalizeOrder) };
   },
 
   getAllUsers: async (): Promise<User[]> => {
@@ -145,7 +169,17 @@ export const adminService = {
   },
 
   updateOrderStatus: async (id: string, status: string): Promise<Order> => {
-    return api.put<Order>(`/admin/orders/${id}/status`, { status });
+    return normalizeOrder(await api.put<Order>(`/admin/orders/${id}/status`, { status }));
+  },
+
+  /** Server-priced totals for the In-store Sale screen (live rate, coupon, GST, no delivery). Saves nothing. */
+  quoteOfflineSale: async (payload: OfflineSaleQuotePayload): Promise<OfflineSaleQuote> => {
+    return api.post<OfflineSaleQuote>('/admin/offline-sales/quote', payload);
+  },
+
+  /** Records an in-store / stall sale (admin or staff): reduces stock and returns the invoiced order. */
+  createOfflineSale: async (payload: OfflineSalePayload): Promise<Order> => {
+    return normalizeOrder(await api.post<Order>('/admin/offline-sales', payload));
   },
 
   deleteOrder: async (id: string): Promise<void> => {
