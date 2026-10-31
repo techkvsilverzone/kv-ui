@@ -5,6 +5,7 @@ import {
   computeProductPricing,
   computeOrderSummary,
   parseGrams,
+  resolvePurityFraction,
 } from './pricing';
 import type { SilverRate } from '../services/silverRate';
 
@@ -78,12 +79,12 @@ describe('computeProductPricing', () => {
       },
       rates,
     );
-    // metal = 10 × 90 = 900; making = 12% of 900 = 108; wastage = 100 → 1108
+    // Server formula: metal = 10 × 90 × 0.925 = 832.5; making = 12% = 99.9; wastage = 100 → 1032.4
     expect(result.computed).toBe(true);
-    expect(result.metalValue).toBe(900);
-    expect(result.makingCharge).toBe(108);
+    expect(result.metalValue).toBe(832.5);
+    expect(result.makingCharge).toBe(99.9);
     expect(result.wastage).toBe(100);
-    expect(result.preGstPrice).toBe(1108);
+    expect(result.preGstPrice).toBe(1032.4);
   });
 
   it('uses a gram override (selected variant weight) over the product weight', () => {
@@ -100,7 +101,7 @@ describe('computeProductPricing', () => {
       20,
     );
     expect(result.grams).toBe(20);
-    expect(result.preGstPrice).toBe(1800); // 20 × 90, 0% making
+    expect(result.preGstPrice).toBe(1665); // 20 × 90 × 0.925, 0% making
   });
 
   it('keeps the listed price for a legacy product with rate + weight but no charges configured', () => {
@@ -169,5 +170,43 @@ describe('computeOrderSummary', () => {
   it('defaults discount and delivery to zero', () => {
     const s = computeOrderSummary({ subtotal: 1000, gstPercent: 3 });
     expect(s.total).toBe(1030);
+  });
+});
+
+// The same cases as kv-api src/tests/pricing.service.test.ts, so website and server can't drift.
+describe('computeProductPricing matches the server (PricingService.computeUnitPrice)', () => {
+  const at100 = [rate({ purity: '925', ratePerGram: 100 })];
+  const base = { price: 650, isFixedPrice: false, weight: '', weightInGrams: 10, purity: '925' };
+
+  it('live = weight × rate × purity + making %', () => {
+    expect(computeProductPricing({ ...base, makingChargePercent: 10 }, at100).preGstPrice).toBe(1017.5);
+  });
+  it('making per gram', () => {
+    expect(computeProductPricing({ ...base, makingChargePerGram: 50 }, at100).preGstPrice).toBe(1425);
+  });
+  it('no charge at all → listed price (Wooden Aarathi), even when the API price is the old live figure', () => {
+    const r = computeProductPricing(
+      { ...base, price: 965.03, listedPrice: 650, weightInGrams: 4.2, purity: '999', makingCharges: null,
+        makingChargePercent: null, makingChargePerGram: null, pricing: { ratePerGram: 230, purityFraction: 0.999 } },
+      [],
+    );
+    expect(r.computed).toBe(false);
+    expect(r.preGstPrice).toBe(650);
+  });
+  it('an explicit 0 legacy charge prices live with the server rate and rounding', () => {
+    const r = computeProductPricing(
+      { ...base, weightInGrams: 4.2, purity: '999', makingCharges: 0, pricing: { ratePerGram: 230, purityFraction: 0.999 } },
+      [],
+    );
+    expect(r.preGstPrice).toBe(965.03);
+  });
+  it("the server's rate wins over today's rates; fixed price ignores both", () => {
+    expect(computeProductPricing({ ...base, makingChargePercent: 0, pricing: { ratePerGram: 200 } }, at100).preGstPrice).toBe(1850);
+    expect(computeProductPricing({ ...base, isFixedPrice: true, makingChargePercent: 10 }, at100).preGstPrice).toBe(650);
+  });
+  it('purity defaults: silver 0.925, other materials 1', () => {
+    expect(resolvePurityFraction(null, 'Silver')).toBe(0.925);
+    expect(resolvePurityFraction('', 'Wood')).toBe(1);
+    expect(resolvePurityFraction('92.5')).toBe(0.925);
   });
 });

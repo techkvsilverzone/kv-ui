@@ -44,40 +44,74 @@ export const matchSilverRate = (rates: SilverRate[], purity?: string): SilverRat
 };
 
 /** Resolves a making-charge / wastage config into a ₹ amount against the given metal-value base. */
+/** Server `resolveChargeAmount`: a percentage of the metal value, or flat rupees. */
 export const resolveChargeAmount = (charge: ProductCharge | undefined, base: number): number => {
-  if (!charge || !Number.isFinite(charge.value) || charge.value < 0) return 0;
+  if (!charge || !Number.isFinite(charge.value) || charge.value <= 0) return 0;
   return charge.type === 'amount' ? charge.value : (base * charge.value) / 100;
+};
+
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+/**
+ * Server `resolvePurityFraction`: "925" → 0.925, "92.5" → 0.925, "999" → 0.999;
+ * absent → 0.925 for silver materials, else 1.
+ */
+export const resolvePurityFraction = (purity?: string | null, material?: string | null): number => {
+  // Karat notation ("22K") is out of 24.
+  const karat = String(purity ?? '').match(/(\d{1,2}(?:\.\d+)?)\s*k(?:t|arat)?\b/i);
+  if (karat && Number(karat[1]) > 0 && Number(karat[1]) <= 24) return Number(karat[1]) / 24;
+  const digits = String(purity ?? '').match(/[\d.]+/);
+  if (digits) {
+    const value = Number(digits[0]);
+    if (Number.isFinite(value) && value > 0) {
+      const fraction = value > 1 ? (value >= 100 ? value / 1000 : value / 100) : value;
+      return Math.min(Math.max(fraction, 0), 1);
+    }
+  }
+  return /silver/i.test(String(material ?? '')) ? 0.925 : 1;
 };
 
 export interface ProductPriceBreakdown {
   /** Whether the product is sold at a flat price (no dynamic metal-rate calc). */
   isFixedPrice: boolean;
-  /** True when `preGstPrice` was derived from a live silver-rate calc (vs a fallback to `product.price`). */
+  /** True when priced live from the metal rate (the server's "live" basis). */
   computed: boolean;
-  /** Silver rate per gram used for the calc (dynamic + computed only). */
   ratePerGram: number | null;
-  /** Weight in grams used for the calc (dynamic + computed only). */
   grams: number | null;
-  /** Metal value = `ratePerGram × grams` (dynamic + computed only). */
+  /** Metal value = grams × rate × purity (live only). */
   metalValue: number | null;
-  /** Resolved making charge in ₹ (dynamic + computed only). */
+  /** Resolved making charge in ₹ (live only). */
   makingCharge: number | null;
-  /** Resolved wastage in ₹ (dynamic + computed only). */
+  /** Resolved wastage in ₹ (live only). */
   wastage: number | null;
-  /** Pre-GST price shown in Collections / Product Detail. */
+  /** Pre-GST price shown in Collections / Product Detail — what checkout charges. */
   preGstPrice: number;
 }
 
 type PricingInput = Pick<
   Product,
-  'price' | 'isFixedPrice' | 'weight' | 'weightInGrams' | 'purity' | 'makingCharge' | 'wastage'
+  | 'price'
+  | 'listedPrice'
+  | 'isFixedPrice'
+  | 'weight'
+  | 'weightInGrams'
+  | 'purity'
+  | 'material'
+  | 'makingCharge'
+  | 'wastage'
+  | 'makingCharges'
+  | 'makingChargePercent'
+  | 'makingChargePerGram'
+  | 'pricing'
 >;
 
 /**
- * Computes a product's pre-GST display price.
- *   Dynamic: metalValue (rate × grams) + making charge + wastage.
- *   Fixed-price: the flat `product.price`.
- * Falls back to `product.price` when a dynamic product lacks a usable rate or weight.
+ * A port of kv-api `PricingService.computeUnitPrice`, so the price shown is the price
+ * charged. Fixed-price → listed price. Otherwise live only when a rate, a weight and a
+ * charge input exist (new `{type,value}` charge or a non-null legacy field):
+ * weight × rate × purity + making + wastage. Anything else → the listed price.
+ * The rate and purity come from the product's own `pricing` (what the server used);
+ * `rates` (today's rates) is only a fallback when the product carries none.
  *
  * @param gramsOverride weight to use instead of the product's own (e.g. a selected size variant).
  */
@@ -86,6 +120,7 @@ export const computeProductPricing = (
   rates: SilverRate[] = [],
   gramsOverride?: number | null,
 ): ProductPriceBreakdown => {
+  const listed = round2(product.listedPrice ?? product.price ?? 0);
   const fallback: ProductPriceBreakdown = {
     isFixedPrice: !!product.isFixedPrice,
     computed: false,
@@ -94,22 +129,28 @@ export const computeProductPricing = (
     metalValue: null,
     makingCharge: null,
     wastage: null,
-    preGstPrice: product.price ?? 0,
+    preGstPrice: listed,
   };
-
   if (product.isFixedPrice) return fallback;
 
-  // Mirror the backend guard: only go "live" on rate × weight when the product is genuinely a
-  // dynamically-priced item — i.e. it has a making charge or wastage configured. Legacy products
-  // with neither keep their listed price (bare metal value would be below cost). This keeps the
-  // displayed price in lockstep with the server-charged amount. See docs/24-product-price-calculation.md.
-  const hasConfiguredCharge = !!product.makingCharge || !!product.wastage;
-  const grams = gramsOverride ?? product.weightInGrams ?? parseGrams(product.weight) ?? null;
-  const ratePerGram = matchSilverRate(rates, product.purity)?.ratePerGram ?? null;
-  if (!grams || !ratePerGram || !hasConfiguredCharge) return fallback;
+  const grams =
+    (gramsOverride && gramsOverride > 0 ? gramsOverride : null) ??
+    product.weightInGrams ??
+    parseGrams(product.weight) ??
+    0;
+  const ratePerGram = product.pricing?.ratePerGram ?? matchSilverRate(rates, product.purity)?.ratePerGram ?? null;
+  const hasNewCharge = !!product.makingCharge || !!product.wastage;
+  const hasLegacy =
+    product.makingChargePerGram != null || product.makingChargePercent != null || product.makingCharges != null;
+  if (!ratePerGram || ratePerGram <= 0 || grams <= 0 || !(hasNewCharge || hasLegacy)) return fallback;
 
-  const metalValue = grams * ratePerGram;
-  const makingCharge = resolveChargeAmount(product.makingCharge, metalValue);
+  const purity = product.pricing?.purityFraction ?? resolvePurityFraction(product.purity, product.material);
+  const metalValue = grams * ratePerGram * purity;
+  let making = 0;
+  if (product.makingCharge) making = resolveChargeAmount(product.makingCharge, metalValue);
+  else if (product.makingChargePerGram != null) making = product.makingChargePerGram * grams;
+  else if (product.makingChargePercent != null) making = metalValue * (product.makingChargePercent / 100);
+  else making = product.makingCharges ?? 0;
   const wastage = resolveChargeAmount(product.wastage, metalValue);
 
   return {
@@ -117,10 +158,10 @@ export const computeProductPricing = (
     computed: true,
     ratePerGram,
     grams,
-    metalValue,
-    makingCharge,
-    wastage,
-    preGstPrice: metalValue + makingCharge + wastage,
+    metalValue: round2(metalValue),
+    makingCharge: round2(making),
+    wastage: round2(wastage),
+    preGstPrice: round2(metalValue + making + wastage),
   };
 };
 

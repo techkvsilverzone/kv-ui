@@ -5,6 +5,8 @@ import type { ApiCartItem } from '@/services/cart';
 import { cartService } from '@/services/cart';
 import { pricingConfigService, DEFAULT_PRICING_CONFIG } from '@/services/pricingConfig';
 import { normalizeImageSrc } from '@/lib/image';
+import { productService } from '@/services/product';
+import { computeProductPricing, parseGrams } from '@/lib/pricing';
 
 /**
  * A size/weight variant of a product (think dress sizes S–XXL).
@@ -64,11 +66,18 @@ export interface Product {
   makingCharge?: ProductCharge;
   /** Admin-configured wastage (percentage or flat amount). Feeds the price calc (next phase). */
   wastage?: ProductCharge;
+  /** The admin's listed price — the static fallback in the server's pricing. */
+  listedPrice?: number;
+  /** Legacy making-charge fields; null/undefined = not set. */
+  makingCharges?: number | null;
+  makingChargePercent?: number | null;
+  makingChargePerGram?: number | null;
   /** Server-computed price breakdown for display. */
   pricing?: {
     metalValue?: number;
     makingCharge?: number;
-    ratePerGram?: number;
+    ratePerGram?: number | null;
+    purityFraction?: number;
     basis?: string;
   };
 }
@@ -169,6 +178,34 @@ const mapServerCartItem = (item: ApiCartItem, fallbackMap: Record<string, CartIt
   };
 };
 
+
+/**
+ * Re-prices cart lines against the current catalogue with the server's formula (at
+ * each line's chosen weight), so the cart shows what checkout charges. A signed-in
+ * cart comes back with raw listed prices; a stored guest cart keeps add-time prices.
+ * Vouchers and lines whose product can't be fetched are left as they are.
+ */
+export const repriceCartItems = async (items: CartItem[]): Promise<CartItem[]> => {
+  const ids = [...new Set(items.filter((i) => !i.isGiftVoucher).map((i) => i.id))];
+  if (ids.length === 0) return items;
+  const fresh = new Map<string, Product>();
+  await Promise.all(
+    ids.map(async (id) => {
+      try {
+        fresh.set(id, await productService.getProductById(id));
+      } catch {
+        /* keep the stored line */
+      }
+    }),
+  );
+  return items.map((item) => {
+    const p = fresh.get(item.id);
+    if (!p || item.isGiftVoucher) return item;
+    const price = computeProductPricing(p, [], parseGrams(item.weight) ?? undefined).preGstPrice;
+    return { ...item, price, inStock: p.inStock, stockAvailable: p.stockAvailable };
+  });
+};
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
   const [items, setItems] = useState<CartItem[]>(() => getStoredCart());
@@ -215,8 +252,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const syncCart = async () => {
       if (!isAuthenticated) {
-        setItems(getStoredCart());
+        const stored = getStoredCart();
+        setItems(stored);
         setIsCartSyncing(false);
+        if (stored.length > 0) setItems(await repriceCartItems(stored));
         return;
       }
 
@@ -237,6 +276,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .filter((cartItem): cartItem is CartItem => cartItem !== null);
 
         setItems(mappedItems);
+        setItems(await repriceCartItems(mappedItems));
       } catch (error) {
         console.error('Failed to sync cart', error);
       } finally {

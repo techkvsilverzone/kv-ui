@@ -26,10 +26,15 @@ interface ApiProduct extends Partial<Omit<Product, 'id' | 'images'>> {
   isFixedPrice?: boolean;
   makingCharge?: ProductCharge;
   wastage?: ProductCharge;
+  listedPrice?: number;
+  makingCharges?: number | null;
+  makingChargePercent?: number | null;
+  makingChargePerGram?: number | null;
   pricing?: {
     metalValue?: number;
     makingCharge?: number;
-    ratePerGram?: number;
+    ratePerGram?: number | null;
+    purityFraction?: number;
     basis?: string;
   };
 }
@@ -158,6 +163,10 @@ const normalizeProduct = (product: ApiProduct): Product => ({
   makingCharge: normalizeCharge(product.makingCharge),
   wastage: normalizeCharge(product.wastage),
   pricing: product.pricing,
+  listedPrice: typeof product.listedPrice === 'number' ? product.listedPrice : undefined,
+  makingCharges: product.makingCharges ?? null,
+  makingChargePercent: product.makingChargePercent ?? null,
+  makingChargePerGram: product.makingChargePerGram ?? null,
   isNew: product.isNewItem ?? product.isNew,
   isSale: product.isSale,
   isGiftVoucher: product.isGiftVoucher,
