@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, ShoppingCart, User, Search, ChevronDown, Heart } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Menu, X, ShoppingCart, User, Search, ChevronDown, Heart, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -12,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { IS_MOBILE_BUILD } from '@/lib/platform';
+import { notificationService } from '@/services/notification';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -21,6 +23,15 @@ const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const isAdminPath = location.pathname.startsWith('/admin');
+  const { data: notificationData } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: notificationService.list,
+    enabled: isAuthenticated && !isAdminPath,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+  const unreadCount = isAuthenticated ? notificationData?.unreadCount ?? 0 : 0;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -134,6 +145,19 @@ const Navbar = () => {
                   </Button>
                 </Link>
 
+                {isAuthenticated && (
+                  <Link to="/notifications" aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}>
+                    <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary transition-colors" aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}>
+                      <Bell className="h-6 w-6" strokeWidth={1.5} />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] min-w-[1.15rem] h-[1.15rem] px-1 rounded-full flex items-center justify-center font-semibold shadow-sm ring-2 ring-background">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
+                    </Button>
+                  </Link>
+                )}
+
                 <Link to="/cart" aria-label={`Cart, ${totalItems} item${totalItems === 1 ? '' : 's'}`}>
                   <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary transition-colors" aria-label={`Cart, ${totalItems} item${totalItems === 1 ? '' : 's'}`}>
                     <ShoppingCart className="h-6 w-6" strokeWidth={1.5} />
@@ -168,6 +192,9 @@ const Navbar = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="text-foreground focus:bg-muted/50 focus:text-foreground cursor-pointer">
                     <Link to="/wishlist">My Wishlist</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="text-foreground focus:bg-muted/50 focus:text-foreground cursor-pointer">
+                    <Link to="/notifications">Notifications{unreadCount > 0 ? ` (${unreadCount})` : ''}</Link>
                   </DropdownMenuItem>
                   {user?.isAdmin && !IS_MOBILE_BUILD && (
                     <>

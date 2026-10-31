@@ -15,7 +15,15 @@ export interface Order {
   invoiceNumber?: string;
   items: OrderItem[];
   totalAmount: number;
+  /** Item total before coupon/GST (falls back to the line-item sum for older orders). */
+  subtotal: number;
+  /** GST amount; `tax` is the older alias of the same value. */
+  taxAmount: number;
   tax: number;
+  deliveryFee: number;
+  giftWrap?: boolean;
+  giftMessage?: string | null;
+  giftWrapFee: number;
   status: 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled';
   shippingAddress: {
     firstName: string;
@@ -64,18 +72,29 @@ export interface CreateOrderPayload {
  */
 export const normalizeOrder = (raw: any): Order => {
   const sa = raw?.shippingAddress ?? {};
+  const items: OrderItem[] = (raw.items ?? []).map((item: any) => ({
+    ...item,
+    product: item.product ?? item.productId ?? '',
+    name: item.name ?? item.productName ?? '',
+    price: Number(item.price ?? item.unitPrice ?? 0),
+    quantity: Number(item.quantity ?? 0),
+    image: item.image ?? '',
+  }));
+  const taxAmount = Number(raw.taxAmount ?? raw.tax ?? 0);
   return {
     ...raw,
     id: raw.id || raw._id,
     channel: raw.channel === 'OFFLINE' ? 'OFFLINE' : 'ONLINE',
-    items: (raw.items ?? []).map((item: any) => ({
-      ...item,
-      product: item.product ?? item.productId ?? '',
-      name: item.name ?? item.productName ?? '',
-      price: Number(item.price ?? item.unitPrice ?? 0),
-      quantity: Number(item.quantity ?? 0),
-      image: item.image ?? '',
-    })),
+    items,
+    subtotal: Number(raw.subtotal) || items.reduce((sum, i) => sum + i.price * i.quantity, 0),
+    couponDiscount: Number(raw.couponDiscount ?? 0),
+    taxAmount,
+    tax: taxAmount,
+    deliveryFee: Number(raw.deliveryFee ?? 0),
+    giftWrap: raw.giftWrap === true,
+    giftMessage: raw.giftMessage ?? null,
+    giftWrapFee: Number(raw.giftWrapFee ?? 0),
+    totalAmount: Number(raw.totalAmount ?? 0),
     shippingAddress: {
       firstName: sa.firstName ?? sa.name ?? '',
       lastName: sa.lastName ?? '',

@@ -30,4 +30,20 @@ describe('normalizeOrder', () => {
     expect(order.items[0]).toMatchObject({ name: 'Anklet', price: 500, image: 'a.jpg' });
     expect(order.shippingAddress).toMatchObject({ firstName: 'Asha', lastName: 'R', address: '1 Main St', city: 'Chennai' });
   });
+
+  it('maps the server-priced totals, falling back to the item sum for older orders', () => {
+    const order = normalizeOrder({
+      _id: '10',
+      items: [{ productName: 'Chain', unitPrice: '1000', quantity: 2 }],
+      subtotal: '2000', couponDiscount: '200', taxAmount: '54', deliveryFee: '150',
+      giftWrap: true, giftMessage: 'Happy birthday', giftWrapFee: '99', totalAmount: '2103',
+    });
+    expect(order).toMatchObject({
+      subtotal: 2000, couponDiscount: 200, taxAmount: 54, tax: 54, deliveryFee: 150,
+      giftWrap: true, giftMessage: 'Happy birthday', giftWrapFee: 99, totalAmount: 2103,
+    });
+
+    const legacy = normalizeOrder({ _id: '11', items: [{ name: 'Ring', price: 500, quantity: 3 }], tax: 45, totalAmount: 1545 });
+    expect(legacy).toMatchObject({ subtotal: 1500, taxAmount: 45, deliveryFee: 0, giftWrapFee: 0, giftWrap: false });
+  });
 });

@@ -48,24 +48,16 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const success = await login(formData.email, formData.password);
-      if (success) {
-        toast({
-          title: 'Welcome back!',
-          description: 'You have successfully logged in.',
-        });
-        navigate(redirectTo, { replace: true });
-      } else {
-        toast({
-          title: 'Login failed',
-          description: 'Invalid email or password.',
-          variant: 'destructive',
-        });
-      }
+      await login(formData.email, formData.password);
+      toast({
+        title: 'Welcome back!',
+        description: 'You have successfully logged in.',
+      });
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Something went wrong. Please try again.',
+        title: 'Login failed',
+        description: error instanceof ApiError ? error.message : 'Something went wrong. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -201,7 +193,19 @@ const Login = () => {
                           className="pl-10 tracking-widest"
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">Sent to +91 {otpPhone}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Sent to +91 {otpPhone} ·{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOtpSent(false);
+                            setOtpCode('');
+                          }}
+                          className="text-primary hover:underline"
+                        >
+                          Use a different number
+                        </button>
+                      </p>
                     </div>
                     <Button type="submit" className="w-full btn-shine" disabled={isLoading || otpCode.length !== 6}>
                       {isLoading ? 'Verifying...' : 'Verify & Sign In'}

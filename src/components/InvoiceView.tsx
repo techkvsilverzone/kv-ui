@@ -27,9 +27,9 @@ const InvoiceView = forwardRef<HTMLDivElement, InvoiceViewProps>(
       staleTime: 10 * 60_000,
     });
 
-    const subtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = order.subtotal;
     const discount = order.couponDiscount ?? 0;
-    const tax = order.tax ?? (subtotal - discount) * 0.03;
+    const tax = order.taxAmount;
     const taxable = subtotal - discount;
     const gstPercent = taxable > 0 ? Math.round((tax / taxable) * 1000) / 10 : 3;
     const isInStore = order.channel === 'OFFLINE';
@@ -128,6 +128,18 @@ const InvoiceView = forwardRef<HTMLDivElement, InvoiceViewProps>(
               <span className="text-gray-600">GST ({gstPercent}%)</span>
               <span>{formatPrice(tax)}</span>
             </div>
+            {order.deliveryFee > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Delivery</span>
+                <span>{formatPrice(order.deliveryFee)}</span>
+              </div>
+            )}
+            {order.giftWrapFee > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Gift wrapping</span>
+                <span>{formatPrice(order.giftWrapFee)}</span>
+              </div>
+            )}
             <div className="flex justify-between font-bold text-base border-t border-gray-300 pt-2 mt-2">
               <span>Total</span>
               <span>{formatPrice(order.totalAmount)}</span>

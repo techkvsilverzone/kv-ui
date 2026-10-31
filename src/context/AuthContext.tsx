@@ -37,7 +37,8 @@ export const getUserRole = (user: User): UserRole => {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  /** Throws the ApiError on failure so the caller can show the server's message. */
+  login: (email: string, password: string) => Promise<void>;
   loginWithOtp: (phone: string, code: string) => Promise<boolean>;
   signup: (
     email: string,
@@ -108,23 +109,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      // Web: server sets the httpOnly auth cookie and the token is unused — never
-      // persist it to localStorage there, since JS-readable storage is an XSS target
-      // and the cookie already carries the session. Mobile (Capacitor): the token is
-      // persisted and sent as a Bearer header by the API layer, since the WebView
-      // can't rely on the cookie.
-      const { user, token } = await authService.login(email, password);
-      const normalizedUser = normalizeUser(user);
-      setUser(normalizedUser);
-      localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));
-      if (token && isMobileApp()) localStorage.setItem(TOKEN_STORAGE_KEY, token);
-      return true;
-    } catch (error) {
-      console.error('Login failed', error);
-      return false;
-    }
+  const login = async (email: string, password: string): Promise<void> => {
+    // Web: server sets the httpOnly auth cookie and the token is unused — never
+    // persist it to localStorage there, since JS-readable storage is an XSS target
+    // and the cookie already carries the session. Mobile (Capacitor): the token is
+    // persisted and sent as a Bearer header by the API layer, since the WebView
+    // can't rely on the cookie.
+    const { user, token } = await authService.login(email, password);
+    const normalizedUser = normalizeUser(user);
+    setUser(normalizedUser);
+    localStorage.setItem('kv-silver-user', JSON.stringify(normalizedUser));
+    if (token && isMobileApp()) localStorage.setItem(TOKEN_STORAGE_KEY, token);
   };
 
   const signup = async (

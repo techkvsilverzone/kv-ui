@@ -20,6 +20,8 @@ vi.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ user: { email: 'asha@example.com', name: 'Asha' } }),
 }));
 
+vi.mock('@/lib/razorpay', () => ({ loadRazorpayScript: vi.fn().mockResolvedValue(true) }));
+
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 
 vi.mock('@/services/payment', () => ({
@@ -84,5 +86,28 @@ describe('Payment (checkout) page', () => {
     // Guard: createRazorpayOrder must never be called with an `amount` field.
     renderPayment();
     expect(paymentService.createRazorpayOrder).not.toHaveBeenCalled();
+  });
+
+  it('shows the server breakdown for confirmation, then opens Razorpay for that order', async () => {
+    const open = vi.fn();
+    const Razorpay = vi.fn(() => ({ open }));
+    Object.assign(window, { Razorpay });
+    vi.mocked(paymentService.createRazorpayOrder).mockResolvedValue({
+      id: 'order_1', amount: 123400, currency: 'INR', receipt: 'r', status: 'created',
+      breakdown: { subtotal: 1000, discount: 0, gstPercent: 3, taxAmount: 30, deliveryFee: 150, giftWrap: false, giftWrapFee: 0, grandTotal: 1234 },
+    });
+    renderPayment();
+
+    const fill = { firstName: 'Asha', lastName: 'Rao', address: '12 Mount Road', city: 'Chennai', state: 'Tamil Nadu', pincode: '600001', phone: '9876543210' };
+    Object.entries(fill).forEach(([id, value]) => fireEvent.change(document.getElementById(id)!, { target: { id, value } }));
+    fireEvent.click(screen.getByRole('button', { name: /pay/i }));
+
+    const confirm = await screen.findByRole('button', { name: /pay ₹1,234/i });
+    expect(screen.getByText(/GST \(3%\)/, { selector: 'div[role="alertdialog"] span' })).toBeInTheDocument();
+    expect(Razorpay).not.toHaveBeenCalled();
+
+    fireEvent.click(confirm);
+    expect(Razorpay).toHaveBeenCalledWith(expect.objectContaining({ order_id: 'order_1', amount: 123400 }));
+    expect(open).toHaveBeenCalled();
   });
 });

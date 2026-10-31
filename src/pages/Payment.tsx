@@ -7,10 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { paymentService } from '@/services/payment';
+import { paymentService, type RazorpayOrder } from '@/services/payment';
 import { couponService } from '@/services/coupon';
 import { pricingConfigService, DEFAULT_PRICING_CONFIG } from '@/services/pricingConfig';
 import {
@@ -19,7 +29,8 @@ import {
   getDeliveryCharge,
 } from '@/services/deliveryConfig';
 import { addressService, type Address } from '@/services/address';
-import { computeOrderSummary } from '@/lib/pricing';
+import { computeOrderSummary, GIFT_WRAP_FEE } from '@/lib/pricing';
+import { ApiError } from '@/lib/api';
 import { validateForm, shippingAddressSchema } from '@/lib/validation';
 import { loadRazorpayScript } from '@/lib/razorpay';
 import Seo from '@/components/Seo';
@@ -52,7 +63,7 @@ const loadSavedAddress = (): ShippingAddress | null => {
 const Payment = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { totalPrice, taxableTotal, clearCart, items } = useCart();
+  const { totalPrice, taxableTotal, clearCart, items, giftWrap, giftMessage } = useCart();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -65,6 +76,8 @@ const Payment = () => {
   const [saveAddress, setSaveAddress] = useState(true);
   const [addressTouched, setAddressTouched] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Server quote from create-order, shown for confirmation before Razorpay opens.
+  const [quote, setQuote] = useState<RazorpayOrder | null>(null);
 
   // Account-bound address book (server). Falls back to the localStorage prefill for guests.
   const { data: savedAddresses = [] } = useQuery({
@@ -163,7 +176,8 @@ const Payment = () => {
     deliveryCharge,
   });
   const subtotal = summary.subtotal;
-  const totalWithTax = summary.total;
+  const totalWithTax = summary.total + (giftWrap ? GIFT_WRAP_FEE : 0);
+  const giftFields = giftWrap ? { giftWrap: true, giftMessage: giftMessage.trim().slice(0, 200) || undefined } : {};
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -180,8 +194,12 @@ const Payment = () => {
       } else {
         toast({ title: 'Invalid Coupon', description: result.message, variant: 'destructive' });
       }
-    } catch {
-      toast({ title: 'Coupon Error', description: 'Unable to apply coupon.', variant: 'destructive' });
+    } catch (error) {
+      toast({
+        title: 'Coupon Error',
+        description: error instanceof ApiError ? error.message : 'Unable to apply coupon.',
+        variant: 'destructive',
+      });
     } finally {
       setIsCouponLoading(false);
     }
@@ -193,7 +211,8 @@ const Payment = () => {
     setCouponCode('');
   };
 
-  const handleRazorpayPayment = async () => {
+  // Step 1: get the server-priced quote; the confirm dialog shows it before any charge.
+  const requestQuote = async () => {
     const loaded = await loadRazorpayScript();
     if (!loaded) {
       toast({ title: 'Payment Error', description: 'Failed to load payment gateway.', variant: 'destructive' });
@@ -217,8 +236,22 @@ const Payment = () => {
         // Full address (not just pincode) so the initial order amount already
         // includes the zone delivery charge — must match what /verify recomputes.
         shippingAddress: address,
+        ...giftFields,
       });
+      setQuote(razorpayOrder);
+    } catch (error) {
+      toast({
+        title: 'Payment Failed',
+        description: error instanceof ApiError ? error.message : 'Could not initiate payment.',
+        variant: 'destructive',
+      });
+    }
+  };
 
+  // Step 2: the customer confirmed the server total — open Razorpay for that order.
+  const openCheckout = (razorpayOrder: RazorpayOrder) => {
+    setIsProcessing(true);
+    try {
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: razorpayOrder.amount,
@@ -252,8 +285,9 @@ const Payment = () => {
                 })),
                 shippingAddress: address,
                 paymentMethod: 'razorpay',
-                totalAmount: totalWithTax,
+                totalAmount: razorpayOrder.breakdown?.grandTotal ?? razorpayOrder.amount / 100,
                 couponCode: appliedCoupon || undefined,
+                ...giftFields,
               },
             });
 
@@ -296,8 +330,12 @@ const Payment = () => {
     setErrors({});
 
     setIsProcessing(true);
-    await handleRazorpayPayment();
+    await requestQuote();
+    setIsProcessing(false);
   };
+
+  const breakdown = quote?.breakdown;
+  const quoteTotal = breakdown?.grandTotal ?? (quote ? quote.amount / 100 : 0);
 
   if (items.length === 0) {
     navigate('/cart');
@@ -479,11 +517,18 @@ const Payment = () => {
                     <span className="text-muted-foreground">Calculated at checkout</span>
                   )}
                 </div>
+                {giftWrap && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Gift Wrapping</span>
+                    <span>{formatPrice(GIFT_WRAP_FEE)}</span>
+                  </div>
+                )}
                 <hr />
                 <div className="flex justify-between text-lg font-semibold">
-                  <span>Total</span>
+                  <span>Estimated total</span>
                   <span className="text-primary">{formatPrice(totalWithTax)}</span>
                 </div>
+                <p className="text-xs text-muted-foreground">The final amount is confirmed before you pay.</p>
               </div>
 
               <Button
@@ -496,7 +541,7 @@ const Payment = () => {
                   'Processing...'
                 ) : (
                   <>
-                    Pay {formatPrice(totalWithTax)}
+                    Review & Pay · est. {formatPrice(totalWithTax)}
                     <CheckCircle className="ml-2 h-5 w-5" />
                   </>
                 )}
@@ -510,6 +555,54 @@ const Payment = () => {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={!!quote} onOpenChange={(open) => !open && setQuote(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif">Confirm your order</AlertDialogTitle>
+            <AlertDialogDescription>Final amount, priced at today's silver rate.</AlertDialogDescription>
+          </AlertDialogHeader>
+          {breakdown && (
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Subtotal (before GST)</span>
+                <span>{formatPrice(breakdown.subtotal ?? 0)}</span>
+              </div>
+              {(breakdown.discount ?? 0) > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Coupon Discount{breakdown.couponCode ? ` (${breakdown.couponCode})` : ''}</span>
+                  <span>-{formatPrice(breakdown.discount ?? 0)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">GST{breakdown.gstPercent != null ? ` (${breakdown.gstPercent}%)` : ''}</span>
+                <span>{formatPrice(breakdown.taxAmount ?? 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Delivery</span>
+                {(breakdown.deliveryFee ?? 0) > 0 ? <span>{formatPrice(breakdown.deliveryFee ?? 0)}</span> : <span className="text-green-600">Free</span>}
+              </div>
+              {(breakdown.giftWrapFee ?? 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Gift Wrapping</span>
+                  <span>{formatPrice(breakdown.giftWrapFee ?? 0)}</span>
+                </div>
+              )}
+              <hr />
+              <div className="flex justify-between text-base font-semibold">
+                <span>Total</span>
+                <span className="text-primary">{formatPrice(quoteTotal)}</span>
+              </div>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Back</AlertDialogCancel>
+            <AlertDialogAction onClick={() => quote && openCheckout(quote)}>
+              Pay {formatPrice(quoteTotal)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -156,6 +156,9 @@ export interface OrderSummary {
  *
  * Display only — the server stays authoritative for the charged amount at checkout.
  */
+/** Flat gift-wrap fee the server adds after GST — display estimate only; checkout shows the server's figure. */
+export const GIFT_WRAP_FEE = 99;
+
 export const computeOrderSummary = ({
   subtotal,
   taxableSubtotal,

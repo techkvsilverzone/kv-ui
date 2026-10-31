@@ -1,17 +1,17 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Loader2, Gift, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { useCart } from '@/context/CartContext';
+import { GIFT_WRAP_FEE } from '@/lib/pricing';
 
-const GIFT_WRAP_FEE = 99;
 
 const Cart = () => {
-  const { items, updateQuantity, removeFromCart, totalPrice, taxAmount, totalWithTax, clearCart, isCartSyncing, isItemUpdating } = useCart();
-  const [giftWrap, setGiftWrap] = useState(false);
-  const [giftMessage, setGiftMessage] = useState('');
+  const {
+    items, updateQuantity, removeFromCart, totalPrice, taxAmount, totalWithTax, clearCart, isCartSyncing, isItemUpdating,
+    giftWrap, setGiftWrap, giftMessage, setGiftMessage,
+  } = useCart();
 
   const hasOutOfStock = items.some((item) => !item.inStock);
 

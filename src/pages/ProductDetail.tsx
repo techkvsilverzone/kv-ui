@@ -26,11 +26,13 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { productService } from '@/services/product';
+import { deliveryService } from '@/services/delivery';
 import { wishlistService } from '@/services/wishlist';
 import { reviewService, type Review } from '@/services/review';
 import { silverRateService } from '@/services/silverRate';
 import { pricingConfigService, DEFAULT_PRICING_CONFIG } from '@/services/pricingConfig';
 import { computeProductPricing, parseGrams } from '@/lib/pricing';
+import { ApiError } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
 import ProductImageCarousel from '@/components/ProductImageCarousel';
 import Seo from '@/components/Seo';
@@ -47,7 +49,7 @@ const ProductDetail = () => {
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', comment: '' });
   const [pincode, setPincode] = useState('');
-  const [pincodeResult, setPincodeResult] = useState<'available' | 'unavailable' | null>(null);
+  const [pincodeResult, setPincodeResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [pincodeChecking, setPincodeChecking] = useState(false);
   const { addProduct: addRecentlyViewed } = useRecentlyViewed();
 
@@ -138,10 +140,26 @@ const ProductDetail = () => {
     if (pincode.length !== 6) return;
     setPincodeChecking(true);
     setPincodeResult(null);
-    await new Promise((r) => setTimeout(r, 800));
-    // All valid Indian 6-digit pincodes are serviceable
-    setPincodeResult('available');
-    setPincodeChecking(false);
+    try {
+      const res = await deliveryService.checkPincode(pincode);
+      if (!res.available) {
+        setPincodeResult({ ok: false, text: res.reason || 'Delivery not available to this pincode' });
+      } else if (!res.verified) {
+        setPincodeResult({ ok: true, text: 'Delivery available — arrives in 5–7 business days' });
+      } else {
+        const place = [res.city, res.state].filter(Boolean).join(', ');
+        const days = (res.estimatedDays || '5-7').replace('-', '–');
+        const fee = typeof res.deliveryFee === 'number' ? ` · Delivery charge: ${formatPrice(res.deliveryFee)}` : '';
+        setPincodeResult({
+          ok: true,
+          text: `Delivery available${place ? ` to ${place}` : ''} — arrives in ${days} business days${fee}`,
+        });
+      }
+    } catch (error) {
+      setPincodeResult({ ok: false, text: error instanceof ApiError ? error.message : "Couldn't check this pincode. Please try again." });
+    } finally {
+      setPincodeChecking(false);
+    }
   };
 
   const handleAddToCart = () => {
@@ -425,12 +443,9 @@ const ProductDetail = () => {
                 </Button>
               </div>
               {pincodeResult && (
-                <p className={`text-xs mt-2 flex items-center gap-1.5 ${pincodeResult === 'available' ? 'text-green-600' : 'text-destructive'}`}>
-                  {pincodeResult === 'available' ? (
-                    <><CheckCircle2 className="h-3.5 w-3.5" /> Delivery available — arrives in 5–7 business days</>
-                  ) : (
-                    <><XCircle className="h-3.5 w-3.5" /> Delivery not available to this pincode</>
-                  )}
+                <p className={`text-xs mt-2 flex items-center gap-1.5 ${pincodeResult.ok ? 'text-green-600' : 'text-destructive'}`}>
+                  {pincodeResult.ok ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> : <XCircle className="h-3.5 w-3.5 shrink-0" />}
+                  {pincodeResult.text}
                 </p>
               )}
             </div>

@@ -37,6 +37,7 @@ import TermsConditions from "./pages/TermsConditions";
 import FAQ from "./pages/FAQ";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import GiftVouchers from "./pages/GiftVouchers";
+import Notifications from "./pages/Notifications";
 import { storeConfigService } from "@/services/storeConfig";
 import ScrollToTop from "@/components/ScrollToTop";
 import RequireAuth from "@/components/RequireAuth";
@@ -114,6 +115,7 @@ const AppContent = () => {
           <Route path="/change-password" element={<RequireAuth><ChangePassword /></RequireAuth>} />
           <Route path="/wishlist" element={<RequireAuth><Wishlist /></RequireAuth>} />
           <Route path="/dashboard" element={<RequireAuth><CustomerDashboard /></RequireAuth>} />
+          <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
           {!IS_MOBILE_BUILD && Admin && (
             <Route
               path="/admin/*"

@@ -64,6 +64,11 @@ export const authService = {
     return api.post<{ message: string }>('/auth/forgot-password', { email });
   },
 
+  /** Redeems the 6-digit code emailed by forgotPassword. */
+  resetPassword: async (email: string, code: string, newPassword: string): Promise<{ message?: string }> => {
+    return api.post<{ message?: string }>('/auth/reset-password', { email, code, newPassword });
+  },
+
   /** Primary login method (replaces email-based OTP login 2026-09-16) — identified by mobile
    * number, WhatsApp-first with an email fallback server-side. Password+email login (below) is
    * still available as the secondary method. */

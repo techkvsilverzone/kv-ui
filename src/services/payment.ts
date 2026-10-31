@@ -12,6 +12,9 @@ export interface RazorpayOrderPayload {
   }>;
   couponCode?: string;
   pincode?: string;
+  /** Server adds a flat gift-wrap fee (after GST) when true. */
+  giftWrap?: boolean;
+  giftMessage?: string;
   /** Full shipping address — drives the zone delivery charge. Send this (not just pincode) so the
    * create-order amount already includes delivery, matching what /payments/verify recomputes. */
   shippingAddress?: {
@@ -30,7 +33,10 @@ export interface RazorpayOrderBreakdown {
   taxAmount?: number;
   discount?: number;
   couponCode?: string | null;
+  gstPercent?: number;
   deliveryFee?: number;
+  giftWrap?: boolean;
+  giftWrapFee?: number;
   grandTotal?: number;
 }
 
@@ -72,6 +78,9 @@ export interface PaymentVerificationPayload {
     paymentMethod: string;
     totalAmount: number;
     couponCode?: string;
+    giftWrap?: boolean;
+    /** Max 200 chars; ignored by the server unless giftWrap is true. */
+    giftMessage?: string;
   };
 }
 

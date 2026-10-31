@@ -76,4 +76,14 @@ describe('authService', () => {
     expect(api.put).toHaveBeenCalledWith('/users/u1/password', { newPassword: 'new-secret' });
     expect(result).toEqual(response);
   });
+
+  it('requests a reset code and redeems it with the new password', async () => {
+    vi.mocked(api.post).mockResolvedValue({ message: 'ok' });
+
+    await authService.forgotPassword('a@b.com');
+    await authService.resetPassword('a@b.com', '123456', 'secret1');
+
+    expect(api.post).toHaveBeenNthCalledWith(1, '/auth/forgot-password', { email: 'a@b.com' });
+    expect(api.post).toHaveBeenNthCalledWith(2, '/auth/reset-password', { email: 'a@b.com', code: '123456', newPassword: 'secret1' });
+  });
 });

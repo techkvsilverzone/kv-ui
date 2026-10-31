@@ -92,11 +92,26 @@ interface CartContextType {
   taxableTotal: number;
   taxAmount: number;
   totalWithTax: number;
+  /** Gift-wrap choice from the Cart page, sent to checkout (the server prices the fee). */
+  giftWrap: boolean;
+  setGiftWrap: (value: boolean | ((prev: boolean) => boolean)) => void;
+  giftMessage: string;
+  setGiftMessage: (value: string) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const CART_STORAGE_KEY = 'kv-silver-cart';
+const GIFT_WRAP_STORAGE_KEY = 'kv-silver-gift-wrap';
+
+const getStoredGiftWrap = (): { giftWrap: boolean; giftMessage: string } => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(GIFT_WRAP_STORAGE_KEY) || '{}');
+    return { giftWrap: parsed?.giftWrap === true, giftMessage: String(parsed?.giftMessage ?? '').slice(0, 200) };
+  } catch {
+    return { giftWrap: false, giftMessage: '' };
+  }
+};
 
 const getStoredCart = (): CartItem[] => {
   try {
@@ -159,6 +174,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [items, setItems] = useState<CartItem[]>(() => getStoredCart());
   const [isCartSyncing, setIsCartSyncing] = useState(false);
   const [pendingProductIds, setPendingProductIds] = useState<string[]>([]);
+  const [giftWrap, setGiftWrap] = useState(() => getStoredGiftWrap().giftWrap);
+  const [giftMessage, setGiftMessage] = useState(() => getStoredGiftWrap().giftMessage);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(GIFT_WRAP_STORAGE_KEY, JSON.stringify({ giftWrap, giftMessage }));
+    } catch (error) {
+      console.warn('Failed to persist gift wrap choice in localStorage.', error);
+    }
+  }, [giftWrap, giftMessage]);
 
   const setItemPending = (productId: string, pending: boolean) => {
     setPendingProductIds((prevIds) => {
@@ -286,6 +311,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearCart = () => {
     const existingItems = [...items];
     setItems([]);
+    setGiftWrap(false);
+    setGiftMessage('');
 
     if (isAuthenticated && existingItems.length > 0) {
       existingItems.forEach((item) => setItemPending(item.id, true));
@@ -337,6 +364,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         taxableTotal,
         taxAmount,
         totalWithTax,
+        giftWrap,
+        setGiftWrap,
+        giftMessage,
+        setGiftMessage,
       }}
     >
       {children}

@@ -81,6 +81,9 @@ const OrderTracking = () => {
   }
 
   const currentStatusIndex = getStatusIndex(order.status);
+  const discount = order.couponDiscount ?? 0;
+  const taxable = order.subtotal - discount;
+  const gstPercent = taxable > 0 ? Math.round((order.taxAmount / taxable) * 1000) / 10 : null;
   const isCancelled = order.status === 'Cancelled';
 
   return (
@@ -172,16 +175,32 @@ const OrderTracking = () => {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>{formatPrice(order.totalAmount / 1.05)}</span>
+                  <span>{formatPrice(order.subtotal)}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Coupon discount{order.couponCode ? ` (${order.couponCode})` : ''}</span>
+                    <span className="text-green-600">−{formatPrice(discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">GST{gstPercent !== null ? ` (${gstPercent}%)` : ''}</span>
+                  <span>{formatPrice(order.taxAmount)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax (GST 5%)</span>
-                  <span>{formatPrice(order.totalAmount - order.totalAmount / 1.05)}</span>
+                  <span className="text-muted-foreground">Delivery</span>
+                  {order.deliveryFee > 0 ? (
+                    <span>{formatPrice(order.deliveryFee)}</span>
+                  ) : (
+                    <span className="text-green-600">Free</span>
+                  )}
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Shipping</span>
-                  <span className="text-green-600">Free</span>
-                </div>
+                {order.giftWrapFee > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Gift wrapping</span>
+                    <span>{formatPrice(order.giftWrapFee)}</span>
+                  </div>
+                )}
                 <hr />
                 <div className="flex justify-between text-lg font-semibold">
                   <span>Total</span>
