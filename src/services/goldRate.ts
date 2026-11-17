@@ -35,6 +35,8 @@ const normalizeRate = (r: ApiGoldRate): GoldRate => ({
 export interface UpdateGoldRatePayload {
   ratePerGram: number;
   purity: string;
+  /** YYYY-MM-DD to back-fill a past day; omitted = today. */
+  date?: string;
 }
 
 export const goldRateService = {

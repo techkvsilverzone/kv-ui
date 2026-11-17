@@ -52,25 +52,6 @@ export const resolveChargeAmount = (charge: ProductCharge | undefined, base: num
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 
-/**
- * Server `resolvePurityFraction`: "925" → 0.925, "92.5" → 0.925, "999" → 0.999;
- * absent → 0.925 for silver materials, else 1.
- */
-export const resolvePurityFraction = (purity?: string | null, material?: string | null): number => {
-  // Karat notation ("22K") is out of 24.
-  const karat = String(purity ?? '').match(/(\d{1,2}(?:\.\d+)?)\s*k(?:t|arat)?\b/i);
-  if (karat && Number(karat[1]) > 0 && Number(karat[1]) <= 24) return Number(karat[1]) / 24;
-  const digits = String(purity ?? '').match(/[\d.]+/);
-  if (digits) {
-    const value = Number(digits[0]);
-    if (Number.isFinite(value) && value > 0) {
-      const fraction = value > 1 ? (value >= 100 ? value / 1000 : value / 100) : value;
-      return Math.min(Math.max(fraction, 0), 1);
-    }
-  }
-  return /silver/i.test(String(material ?? '')) ? 0.925 : 1;
-};
-
 export interface ProductPriceBreakdown {
   /** Whether the product is sold at a flat price (no dynamic metal-rate calc). */
   isFixedPrice: boolean;
@@ -78,7 +59,7 @@ export interface ProductPriceBreakdown {
   computed: boolean;
   ratePerGram: number | null;
   grams: number | null;
-  /** Metal value = grams × rate × purity (live only). */
+  /** Metal value = grams × rate (live only). */
   metalValue: number | null;
   /** Resolved making charge in ₹ (live only). */
   makingCharge: number | null;
@@ -109,8 +90,8 @@ type PricingInput = Pick<
  * A port of kv-api `PricingService.computeUnitPrice`, so the price shown is the price
  * charged. Fixed-price → listed price. Otherwise live only when a rate, a weight and a
  * charge input exist (new `{type,value}` charge or a non-null legacy field):
- * weight × rate × purity + making + wastage. Anything else → the listed price.
- * The rate and purity come from the product's own `pricing` (what the server used);
+ * weight × rate + making + wastage. Anything else → the listed price.
+ * The rate comes from the product's own `pricing` (what the server used);
  * `rates` (today's rates) is only a fallback when the product carries none.
  *
  * @param gramsOverride weight to use instead of the product's own (e.g. a selected size variant).
@@ -144,8 +125,7 @@ export const computeProductPricing = (
     product.makingChargePerGram != null || product.makingChargePercent != null || product.makingCharges != null;
   if (!ratePerGram || ratePerGram <= 0 || grams <= 0 || !(hasNewCharge || hasLegacy)) return fallback;
 
-  const purity = product.pricing?.purityFraction ?? resolvePurityFraction(product.purity, product.material);
-  const metalValue = grams * ratePerGram * purity;
+  const metalValue = grams * ratePerGram;
   let making = 0;
   if (product.makingCharge) making = resolveChargeAmount(product.makingCharge, metalValue);
   else if (product.makingChargePerGram != null) making = product.makingChargePerGram * grams;

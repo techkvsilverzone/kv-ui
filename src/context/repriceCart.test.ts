@@ -21,8 +21,8 @@ const line = (over: Partial<CartItem>): CartItem =>
 describe('repriceCartItems', () => {
   it('re-prices product lines at their chosen weight with the server formula', async () => {
     const [base, variant] = await repriceCartItems([line({}), line({ id: 'p2', weight: '20 g' })]);
-    expect(base.price).toBe(1017.5); // 10 × 100 × 0.925 + 10%
-    expect(variant.price).toBe(2035); // 20 g variant
+    expect(base.price).toBe(1100); // 10 × 100 + 10%
+    expect(variant.price).toBe(2200); // 20 g variant
     expect(base.stockAvailable).toBe(4);
   });
 

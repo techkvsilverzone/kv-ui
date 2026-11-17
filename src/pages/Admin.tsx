@@ -224,7 +224,7 @@ const VariantsEditor = ({
           <div key={index} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-center">
             <Input
               aria-label={`Size label ${index + 1}`}
-              placeholder="Size (e.g. S)"
+              placeholder="Size (optional)"
               value={variant.label}
               disabled={disabled}
               onChange={(e) => update(index, { label: e.target.value })}
@@ -534,8 +534,9 @@ const Admin = () => {
   });
 
   // Silver rate form state
+  const istToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
   const [rateForm, setRateForm] = useState<UpdateSilverRatePayload>({
-    ratePerGram: 0, purity: 'Silver',
+    ratePerGram: 0, purity: 'Silver', date: istToday(),
   });
 
   // Shipping config state
@@ -4000,7 +4001,7 @@ const Admin = () => {
                 <h2 className="font-serif text-xl font-semibold">Metal Rate Management</h2>
                 <Dialog open={showUpdateRate} onOpenChange={setShowUpdateRate}>
                   <DialogTrigger asChild>
-                    <Button><Plus className="h-4 w-4 mr-2" />Update Today's Rate</Button>
+                    <Button onClick={() => setRateForm((f) => ({ ...f, date: istToday() }))}><Plus className="h-4 w-4 mr-2" />Update Rate</Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
@@ -4018,10 +4019,22 @@ const Admin = () => {
                         </Select>
                       </div>
                       <div>
+                        <Label htmlFor="rate-date">Date</Label>
+                        <Input
+                          id="rate-date"
+                          type="date"
+                          max={istToday()}
+                          value={rateForm.date ?? istToday()}
+                          onChange={(e) => setRateForm({ ...rateForm, date: e.target.value })}
+                          className="mt-1"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Pick an earlier date to add or correct a past day's rate.</p>
+                      </div>
+                      <div>
                         <Label htmlFor="rate-gram">Rate per Gram (₹)</Label>
                         <Input id="rate-gram" type="number" value={rateForm.ratePerGram || ''} onChange={(e) => setRateForm({ ...rateForm, ratePerGram: Number(e.target.value) })} className="mt-1" />
                       </div>
-                      <Button onClick={() => updateRateMutation.mutate(rateForm)} disabled={updateRateMutation.isPending || !rateForm.ratePerGram}>
+                      <Button onClick={() => updateRateMutation.mutate(rateForm)} disabled={updateRateMutation.isPending || !rateForm.ratePerGram || !rateForm.date}>
                         {updateRateMutation.isPending ? 'Updating...' : 'Update Rate'}
                       </Button>
                     </div>

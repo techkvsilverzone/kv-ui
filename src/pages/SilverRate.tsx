@@ -139,7 +139,7 @@ const SilverRate = () => {
             Today's Metal Rates
           </h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Live Silver and Gold 22K prices at KV Silver Zone. Our rates are updated daily based on market rates from the India Bullion and Jewellers Association (IBJA).
+            Live Silver and Gold 22K prices at KV Silver Zone. Our rates are updated daily based on market rates from The Jewellers and Diamond Traders Association - Madras.
           </p>
           <div className="w-24 h-px bg-primary/20 mt-6 mx-auto"></div>
         </div>

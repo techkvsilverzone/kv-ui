@@ -29,6 +29,8 @@ const normalizeRate = (r: ApiSilverRate): SilverRate => ({
 export interface UpdateSilverRatePayload {
   ratePerGram: number;
   purity: string;
+  /** YYYY-MM-DD to back-fill a past day; omitted = today. */
+  date?: string;
 }
 
 export const silverRateService = {
