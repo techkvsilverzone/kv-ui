@@ -33,6 +33,8 @@ export interface SchemePlan {
   monthlyAmounts: number[];
   /** FLEXIBLE plans only — admin-configurable floor for a customer's self-chosen payment. */
   minPaymentAmount?: number;
+  /** FLEXIBLE plans: interest % (extra metal) for a payment made in scheme month 1, 2, … */
+  monthlyInterestPercent?: number[];
   passbookPrefix: string;
   paymentDueDayOfMonth: number;
   earlyExitPenaltyPercent: number;

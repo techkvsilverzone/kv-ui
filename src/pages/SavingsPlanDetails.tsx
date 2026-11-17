@@ -110,6 +110,13 @@ const SavingsPlanDetails = () => {
                 userAddress={addressLine}
               />
             </div>
+            {isFlexible && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Devident = monthly interest: each payment earns the % for the scheme month it was paid in (month 1–2: 7%,
+                3–4: 6%, 5: 5%, 6–7: 4%, 8–9: 3%, 10: 2%, 11: 1%) as extra silver. It is paid when the plan completes its
+                11 months and forfeited if the plan is closed early.
+              </p>
+            )}
           </>
         )}
       </div>

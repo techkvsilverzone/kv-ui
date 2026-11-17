@@ -510,6 +510,22 @@ const SavingsScheme = () => {
                           <span>Bonus</span>
                           <span className="font-medium">+{plan.bonusMonths} month value</span>
                         </div>
+                      ) : plan.monthlyInterestPercent?.length ? (
+                        <div className="text-primary">
+                          <div className="flex justify-between">
+                            <span>Interest</span>
+                            <span className="font-medium">Up to {Math.max(...plan.monthlyInterestPercent)}% extra silver</span>
+                          </div>
+                          <div className="mt-2 grid grid-cols-6 gap-1 text-center text-xs text-foreground">
+                            {plan.monthlyInterestPercent.map((pct, i) => (
+                              <div key={i} className="rounded bg-muted px-1 py-1">
+                                <div className="text-muted-foreground">M{i + 1}</div>
+                                <div className="font-semibold">{pct}%</div>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">Rate by the month you pay in; paid on completing the plan.</p>
+                        </div>
                       ) : plan.hamper ? (
                         <div className="flex justify-between text-primary">
                           <span>Reward</span>
