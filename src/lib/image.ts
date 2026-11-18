@@ -53,3 +53,36 @@ export const normalizeImageSrc = (image?: unknown): string => {
   // 5. Bare relative path e.g. uploads/image.jpg
   return `${API_ORIGIN}/${trimmed}`;
 };
+
+const readAsDataUrl = (file: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
+/**
+ * Shrinks a picked photo before upload (phone photos are several MB; the server re-encodes to
+ * WebP anyway). Longest side ≤ 1280 px, JPEG 0.8 ≈ 150–300 KB. Falls back to the original file
+ * when the browser can't decode it or the result isn't smaller.
+ */
+export async function compressImage(file: File, maxSide = 1280, quality = 0.8): Promise<string> {
+  const original = await readAsDataUrl(file);
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return original;
+    ctx.fillStyle = '#fff'; // JPEG has no transparency; avoid black behind PNG cut-outs
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const out = canvas.toDataURL('image/jpeg', quality);
+    return out.length < original.length ? out : original;
+  } catch {
+    return original;
+  }
+}

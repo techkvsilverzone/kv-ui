@@ -14,7 +14,7 @@ This project uses OpenWolf for context management. Read and follow .wolf/OPENWOL
 
 ```bash
 # Development
-npm run dev          # Start dev server at http://localhost:5173
+npm run dev          # Start dev server at http://localhost:8080
 
 # Build
 npm run build        # Production build

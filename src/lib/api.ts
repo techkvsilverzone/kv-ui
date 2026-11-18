@@ -4,11 +4,23 @@ export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/ap
 const UNAUTHORIZED_EVENT = 'kv-auth-unauthorized';
 
 class ApiError extends Error {
-  constructor(public statusCode: number, message: string) {
+  /** `field` names the input at fault when the server knows it (e.g. 'weight'). */
+  constructor(public statusCode: number, message: string, public field?: string) {
     super(message);
     this.name = 'ApiError';
   }
 }
+
+/** What to tell the user when the response isn't the API's own JSON error (proxy pages, outages). */
+export const fallbackErrorMessage = (status: number): string => {
+  if (status === 413) return 'This is too large to upload. Use smaller photos (or fewer at once) and try again.';
+  if (status === 401) return 'Your session has expired. Please sign in again.';
+  if (status === 403) return "You don't have permission to do this.";
+  if (status === 404) return 'Not found. It may have been removed. Refresh and try again.';
+  if (status === 429) return 'Too many attempts. Please wait a minute and try again.';
+  if (status >= 500) return 'The server is having trouble right now. Please try again in a minute.';
+  return `Request failed (error ${status}). Please try again.`;
+};
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
@@ -28,21 +40,37 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   // Auth is carried by an httpOnly cookie set by the server; `credentials: 'include'`
   // ensures the cookie is sent on every request (including cross-origin).
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-    credentials: 'include',
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+      credentials: 'include',
+    });
+  } catch {
+    // fetch only throws when no readable response arrived. A proxy's "too large" page has no CORS
+    // headers, so a big upload rejected by nginx also lands here; the body size tells them apart.
+    if (typeof options.body === 'string' && options.body.length > 1_000_000) {
+      throw new ApiError(413, fallbackErrorMessage(413));
+    }
+    throw new ApiError(
+      0,
+      navigator.onLine === false
+        ? "You're offline. Check your internet connection and try again."
+        : "Couldn't reach the server. Check your connection and try again in a minute.",
+    );
+  }
 
   if (!response.ok) {
     if (response.status === 401) {
       window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
     }
 
-    const errorData = await response.json().catch(() => ({ message: 'An unexpected error occurred' }));
+    const errorData = await response.json().catch(() => ({}));
     throw new ApiError(
       response.status,
-      errorData.message || errorData.error?.message || response.statusText,
+      errorData.message || errorData.error?.message || fallbackErrorMessage(response.status),
+      typeof errorData.field === 'string' ? errorData.field : undefined,
     );
   }
 

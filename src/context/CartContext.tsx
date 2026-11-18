@@ -7,6 +7,17 @@ import { pricingConfigService, DEFAULT_PRICING_CONFIG } from '@/services/pricing
 import { normalizeImageSrc } from '@/lib/image';
 import { productService } from '@/services/product';
 import { computeProductPricing, parseGrams } from '@/lib/pricing';
+import { toast } from '@/hooks/use-toast';
+
+/** The cart on screen (this device) stays right; only the account copy failed, so say exactly that. */
+const cartSyncFailed = (what: string, error: unknown) => {
+  console.error(what, error);
+  toast({
+    variant: 'destructive',
+    title: "Couldn't update the cart in your account",
+    description: `${error instanceof Error && error.message ? `${error.message} ` : ''}Your cart on this device is unchanged.`,
+  });
+};
 
 /**
  * A size/weight variant of a product (think dress sizes S–XXL).
@@ -278,7 +289,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setItems(mappedItems);
         setItems(await repriceCartItems(mappedItems));
       } catch (error) {
-        console.error('Failed to sync cart', error);
+        cartSyncFailed('Failed to sync cart', error);
       } finally {
         setIsCartSyncing(false);
       }
@@ -307,7 +318,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isAuthenticated) {
       setItemPending(product.id, true);
       void cartService.addOrUpdateItem(product.id, nextQuantity).catch((error) => {
-        console.error('Failed to add item to cart', error);
+        cartSyncFailed('Failed to add item to cart', error);
       }).finally(() => {
         setItemPending(product.id, false);
       });
@@ -320,7 +331,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isAuthenticated) {
       setItemPending(productId, true);
       void cartService.removeItem(productId).catch((error) => {
-        console.error('Failed to remove item from cart', error);
+        cartSyncFailed('Failed to remove item from cart', error);
       }).finally(() => {
         setItemPending(productId, false);
       });
@@ -341,7 +352,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isAuthenticated) {
       setItemPending(productId, true);
       void cartService.addOrUpdateItem(productId, quantity).catch((error) => {
-        console.error('Failed to update cart quantity', error);
+        cartSyncFailed('Failed to update cart quantity', error);
       }).finally(() => {
         setItemPending(productId, false);
       });

@@ -3,7 +3,8 @@ import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 import { useLocation, BrowserRouter, Routes, Route } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { CartProvider } from "@/context/CartContext";
@@ -58,6 +59,17 @@ const queryClient = new QueryClient({
       staleTime: 30_000,
     },
   },
+  // No save may fail silently: any mutation without its own onError shows the server's reason.
+  mutationCache: new MutationCache({
+    onError: (error, _vars, _ctx, mutation) => {
+      if (mutation.options.onError) return;
+      toast({
+        variant: 'destructive',
+        title: "Couldn't save your changes",
+        description: error instanceof Error && error.message ? error.message : 'Please try again.',
+      });
+    },
+  }),
   queryCache: new QueryCache({
     onError: (error: unknown, query) => {
       const message = (query.meta?.errorMessage as string) ?? 'Something went wrong';

@@ -104,6 +104,8 @@ import { invoiceConfigService, DEFAULT_INVOICE_CONFIG } from '@/services/invoice
 import { Switch } from '@/components/ui/switch';
 import type { ProductVariant, ChargeType } from '@/context/CartContext';
 import { ApiError } from '@/lib/api';
+import { compressImage } from '@/lib/image';
+import { productFormErrors, validateCharge, type ProductFieldErrors, type ProductFormValues } from '@/lib/productForm';
 import { Badge } from '@/components/ui/badge';
 
 /** Human-readable labels for the savings scheme catalog's `SchemeType` values. */
@@ -272,6 +274,13 @@ const VariantsEditor = ({
   );
 };
 
+/** Red message under a form field; also the scroll target for the first problem. */
+const FieldError = ({ msg }: { msg?: string }) =>
+  msg ? <p data-field-error role="alert" className="text-xs text-destructive mt-1">{msg}</p> : null;
+
+const scrollToFirstError = () =>
+  requestAnimationFrame(() => document.querySelector('[data-field-error]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+
 /**
  * Multi-image uploader for a product. Reads selected files to base64, shows thumbnails with
  * remove + "make primary" controls. The first image is the primary one shown on cards.
@@ -288,16 +297,7 @@ const ImagesUploader = ({
   const readFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    Promise.all(
-      files.map(
-        (file) =>
-          new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          }),
-      ),
-    ).then((base64s) => onChange([...images, ...base64s]));
+    Promise.all(files.map((file) => compressImage(file))).then((base64s) => onChange([...images, ...base64s]));
     e.target.value = ''; // allow re-selecting the same file(s)
   };
 
@@ -363,18 +363,6 @@ const ImagesUploader = ({
   );
 };
 
-/**
- * Validates a making-charge / wastage value. Empty is allowed (charge is optional).
- * Returns an error message, or '' when valid.
- */
-const validateCharge = (type: ChargeType, value: string): string => {
-  if (value.trim() === '') return '';
-  const n = Number(value);
-  if (Number.isNaN(n)) return 'Enter a valid number';
-  if (n < 0) return 'Cannot be negative';
-  if (type === 'percentage' && n > 100) return 'Percentage cannot exceed 100';
-  return '';
-};
 
 /**
  * Input row for a per-product charge (making charge / wastage): a percentage/amount
@@ -433,6 +421,33 @@ const Admin = () => {
   const role = user ? getUserRole(user) : 'customer';
   const isStaffOnly = role === 'staff';
   const { toast } = useToast();
+
+  // Product form problems: `*Tried` turns on the client checks after the first save attempt;
+  // `*ServerErrs` holds the field the API rejected.
+  const [createTried, setCreateTried] = useState(false);
+  const [createServerErrs, setCreateServerErrs] = useState<ProductFieldErrors>({});
+  const [editTried, setEditTried] = useState(false);
+  const [editServerErrs, setEditServerErrs] = useState<ProductFieldErrors>({});
+
+  /** Runs the form checks; when something is wrong, says what and scrolls to it. Returns true to stop the save. */
+  const productFormBlocked = (form: ProductFormValues, setTried: (v: boolean) => void, setServer: (e: ProductFieldErrors) => void) => {
+    setTried(true);
+    setServer({});
+    const errs = Object.values(productFormErrors(form));
+    if (errs.length === 0) return false;
+    toast({ variant: 'destructive', title: 'Please fix the highlighted fields', description: errs.join(' · ') });
+    scrollToFirstError();
+    return true;
+  };
+
+  const productSaveFailed = (err: Error, setServer: (e: ProductFieldErrors) => void, title: string) => {
+    const field = err instanceof ApiError && err.field ? (err.field === 'image' ? 'images' : err.field) : undefined;
+    if (field) {
+      setServer({ [field]: err.message });
+      scrollToFirstError();
+    }
+    toast({ variant: 'destructive', title, description: err.message || 'Please try again.' });
+  };
   const navigate = useNavigate();
   // Route is /admin/* — the splat segment is the active tab; empty splat -> dashboard.
   const { '*': tabParam } = useParams();
@@ -931,8 +946,10 @@ const Admin = () => {
       setShowAddProduct(false);
       setProductForm({ name: '', price: '', originalPrice: '', images: [], material: '', category: '', subcategory: '', tags: [], weight: '', purity: '925', description: '', inStock: true, variants: [], isFixedPrice: false, makingChargeType: 'percentage', makingChargeValue: '', wastageType: 'percentage', wastageValue: '' });
       setTagDraft('');
+      setCreateTried(false);
       toast({ title: 'Product Created' });
     },
+    onError: (err) => productSaveFailed(err, setCreateServerErrs, "Couldn't create the product"),
   });
 
   const updateOrderStatusMutation = useMutation({
@@ -1234,6 +1251,7 @@ const Admin = () => {
       setEditingProduct(null);
       toast({ title: 'Product Updated' });
     },
+    onError: (err) => productSaveFailed(err, setEditServerErrs, "Couldn't save the product"),
   });
 
   const deleteOrderMutation = useMutation({
@@ -1579,10 +1597,10 @@ const Admin = () => {
   // Validation for the create / edit charge inputs (skipped when the product is fixed-price).
   const createMakingErr = productForm.isFixedPrice ? '' : validateCharge(productForm.makingChargeType, productForm.makingChargeValue);
   const createWastageErr = productForm.isFixedPrice ? '' : validateCharge(productForm.wastageType, productForm.wastageValue);
-  const createChargesInvalid = !!createMakingErr || !!createWastageErr;
+  const createErrors: ProductFieldErrors = { ...(createTried ? productFormErrors(productForm) : {}), ...createServerErrs };
   const editMakingErr = editProductForm.isFixedPrice ? '' : validateCharge(editProductForm.makingChargeType, editProductForm.makingChargeValue);
   const editWastageErr = editProductForm.isFixedPrice ? '' : validateCharge(editProductForm.wastageType, editProductForm.wastageValue);
-  const editChargesInvalid = !!editMakingErr || !!editWastageErr;
+  const editErrors: ProductFieldErrors = { ...(editTried ? productFormErrors(editProductForm) : {}), ...editServerErrs };
 
   // A delivery charge must be a non-negative number.
   const isValidCharge = (value: string) => {
@@ -1604,6 +1622,7 @@ const Admin = () => {
   };
 
   const handleCreateProduct = () => {
+    if (productFormBlocked(productForm, setCreateTried, setCreateServerErrs)) return;
     createProductMutation.mutate({
       name: productForm.name,
       price: Number(productForm.price),
@@ -1629,6 +1648,7 @@ const Admin = () => {
 
   const handleUpdateProduct = () => {
     if (!editingProduct) return;
+    if (productFormBlocked(editProductForm, setEditTried, setEditServerErrs)) return;
     updateProductMutation.mutate({
       id: editingProduct.id,
       data: {
@@ -1659,6 +1679,8 @@ const Admin = () => {
   };
 
   const openProductModal = (product: typeof allProducts[0], mode: 'view' | 'edit') => {
+    setEditTried(false);
+    setEditServerErrs({});
     setEditingProduct(product);
     setProductModalMode(mode);
     setEditProductForm({
@@ -1886,7 +1908,8 @@ const Admin = () => {
                       <div className="grid gap-4 py-4">
                         <div>
                           <Label htmlFor="prod-name">Product Name</Label>
-                          <Input id="prod-name" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} className="mt-1" />
+                          <Input id="prod-name" aria-invalid={!!createErrors.name} value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} className={`mt-1 ${createErrors.name ? 'border-destructive' : ''}`} />
+                          <FieldError msg={createErrors.name} />
                         </div>
                         <div className="rounded-md border border-border/60 p-3 space-y-3">
                           <div className="flex items-center justify-between">
@@ -1904,7 +1927,8 @@ const Admin = () => {
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <Label htmlFor="prod-price">Price (₹)</Label>
-                                <Input id="prod-price" type="number" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} className="mt-1" />
+                                <Input id="prod-price" type="number" aria-invalid={!!createErrors.price} value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} className={`mt-1 ${createErrors.price ? 'border-destructive' : ''}`} />
+                                <FieldError msg={createErrors.price} />
                               </div>
                               <div>
                                 <Label htmlFor="prod-original">Original Price (₹)</Label>
@@ -1917,7 +1941,7 @@ const Admin = () => {
                                 label="Making Charge"
                                 type={productForm.makingChargeType}
                                 value={productForm.makingChargeValue}
-                                error={createMakingErr}
+                                error={createMakingErr || (createErrors.makingCharge && 'Enter a valid making charge')}
                                 onTypeChange={(makingChargeType) => setProductForm({ ...productForm, makingChargeType })}
                                 onValueChange={(makingChargeValue) => setProductForm({ ...productForm, makingChargeValue })}
                               />
@@ -1925,17 +1949,20 @@ const Admin = () => {
                                 label="Wastage"
                                 type={productForm.wastageType}
                                 value={productForm.wastageValue}
-                                error={createWastageErr}
+                                error={createWastageErr || (createErrors.wastage && 'Enter a valid wastage')}
                                 onTypeChange={(wastageType) => setProductForm({ ...productForm, wastageType })}
                                 onValueChange={(wastageValue) => setProductForm({ ...productForm, wastageValue })}
                               />
                             </>
                           )}
                         </div>
-                        <ImagesUploader
-                          images={productForm.images}
-                          onChange={(images) => setProductForm({ ...productForm, images })}
-                        />
+                        <div>
+                          <ImagesUploader
+                            images={productForm.images}
+                            onChange={(images) => setProductForm({ ...productForm, images })}
+                          />
+                          <FieldError msg={createErrors.images} />
+                        </div>
                         <div className={`grid ${subcategoriesFor(productForm.category).length > 0 ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
                           <div>
                             <Label>Category</Label>
@@ -1950,6 +1977,7 @@ const Admin = () => {
                                 ))}
                               </SelectContent>
                             </Select>
+                            <FieldError msg={createErrors.category || createErrors.subcategory} />
                           </div>
                           {subcategoriesFor(productForm.category).length > 0 && (
                             <div>
@@ -1994,13 +2022,17 @@ const Admin = () => {
                         {!productForm.isFixedPrice && (
                           <div>
                             <Label htmlFor="prod-weight">Weight (e.g. 45g)</Label>
-                            <Input id="prod-weight" value={productForm.weight} onChange={(e) => setProductForm({ ...productForm, weight: e.target.value })} className="mt-1" />
+                            <Input id="prod-weight" aria-invalid={!!createErrors.weight} value={productForm.weight} onChange={(e) => setProductForm({ ...productForm, weight: e.target.value })} className={`mt-1 ${createErrors.weight ? 'border-destructive' : ''}`} />
+                            <FieldError msg={createErrors.weight} />
                           </div>
                         )}
-                        <VariantsEditor
-                          variants={productForm.variants}
-                          onChange={(variants) => setProductForm({ ...productForm, variants })}
-                        />
+                        <div>
+                          <VariantsEditor
+                            variants={productForm.variants}
+                            onChange={(variants) => setProductForm({ ...productForm, variants })}
+                          />
+                          <FieldError msg={createErrors.variants} />
+                        </div>
                         <TagsEditor
                           tags={productForm.tags}
                           draft={tagDraft}
@@ -2011,7 +2043,7 @@ const Admin = () => {
                           <Label htmlFor="prod-desc">Description</Label>
                           <Textarea id="prod-desc" value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} className="mt-1" rows={3} />
                         </div>
-                        <Button onClick={handleCreateProduct} disabled={createProductMutation.isPending || !productForm.name || !productForm.category || (productForm.isFixedPrice && !productForm.price) || createChargesInvalid}>
+                        <Button onClick={handleCreateProduct} disabled={createProductMutation.isPending}>
                           {createProductMutation.isPending ? 'Creating...' : 'Create Product'}
                         </Button>
                       </div>
@@ -2100,23 +2132,28 @@ const Admin = () => {
               <div className="grid gap-4 py-4">
                 <div>
                   <Label>Product Name</Label>
-                  <Input value={editProductForm.name} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })} className="mt-1" />
+                  <Input value={editProductForm.name} aria-invalid={!!editErrors.name} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, name: e.target.value })} className={`mt-1 ${editErrors.name ? 'border-destructive' : ''}`} />
+                  <FieldError msg={editErrors.name} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Price (₹)</Label>
-                    <Input type="number" value={editProductForm.price} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, price: e.target.value })} className="mt-1" />
+                    <Input type="number" value={editProductForm.price} aria-invalid={!!editErrors.price} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, price: e.target.value })} className={`mt-1 ${editErrors.price ? 'border-destructive' : ''}`} />
+                    <FieldError msg={editErrors.price} />
                   </div>
                   <div>
                     <Label>Original Price (₹)</Label>
                     <Input type="number" value={editProductForm.originalPrice} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, originalPrice: e.target.value })} className="mt-1" placeholder="Optional" />
                   </div>
                 </div>
-                <ImagesUploader
-                  images={editProductForm.images}
-                  disabled={productModalMode === 'view'}
-                  onChange={(images) => setEditProductForm({ ...editProductForm, images })}
-                />
+                <div>
+                  <ImagesUploader
+                    images={editProductForm.images}
+                    disabled={productModalMode === 'view'}
+                    onChange={(images) => setEditProductForm({ ...editProductForm, images })}
+                  />
+                  <FieldError msg={editErrors.images} />
+                </div>
                 <div className={`grid ${subcategoriesFor(editProductForm.category).length > 0 ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
                   <div>
                     <Label>Category</Label>
@@ -2135,6 +2172,7 @@ const Admin = () => {
                     ) : (
                       <Input value={editProductForm.category} disabled className="mt-1" />
                     )}
+                    <FieldError msg={editErrors.category || editErrors.subcategory} />
                   </div>
                   {subcategoriesFor(editProductForm.category).length > 0 && (
                     <div>
@@ -2191,14 +2229,18 @@ const Admin = () => {
                 {!editProductForm.isFixedPrice && (
                   <div>
                     <Label>Weight</Label>
-                    <Input value={editProductForm.weight} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, weight: e.target.value })} className="mt-1" placeholder="e.g. 45g" />
+                    <Input value={editProductForm.weight} aria-invalid={!!editErrors.weight} disabled={productModalMode === 'view'} onChange={(e) => setEditProductForm({ ...editProductForm, weight: e.target.value })} className={`mt-1 ${editErrors.weight ? 'border-destructive' : ''}`} placeholder="e.g. 45g" />
+                    <FieldError msg={editErrors.weight} />
                   </div>
                 )}
-                <VariantsEditor
-                  variants={editProductForm.variants}
-                  disabled={productModalMode === 'view'}
-                  onChange={(variants) => setEditProductForm({ ...editProductForm, variants })}
-                />
+                <div>
+                  <VariantsEditor
+                    variants={editProductForm.variants}
+                    disabled={productModalMode === 'view'}
+                    onChange={(variants) => setEditProductForm({ ...editProductForm, variants })}
+                  />
+                  <FieldError msg={editErrors.variants} />
+                </div>
                 <TagsEditor
                   tags={editProductForm.tags}
                   draft={editTagDraft}
@@ -2225,7 +2267,7 @@ const Admin = () => {
                         label="Making Charge"
                         type={editProductForm.makingChargeType}
                         value={editProductForm.makingChargeValue}
-                        error={editMakingErr}
+                        error={editMakingErr || (editErrors.makingCharge && 'Enter a valid making charge')}
                         disabled={productModalMode === 'view'}
                         onTypeChange={(makingChargeType) => setEditProductForm({ ...editProductForm, makingChargeType })}
                         onValueChange={(makingChargeValue) => setEditProductForm({ ...editProductForm, makingChargeValue })}
@@ -2234,7 +2276,7 @@ const Admin = () => {
                         label="Wastage"
                         type={editProductForm.wastageType}
                         value={editProductForm.wastageValue}
-                        error={editWastageErr}
+                        error={editWastageErr || (editErrors.wastage && 'Enter a valid wastage')}
                         disabled={productModalMode === 'view'}
                         onTypeChange={(wastageType) => setEditProductForm({ ...editProductForm, wastageType })}
                         onValueChange={(wastageValue) => setEditProductForm({ ...editProductForm, wastageValue })}
@@ -2249,13 +2291,7 @@ const Admin = () => {
                 {productModalMode === 'edit' && (
                   <Button
                     onClick={handleUpdateProduct}
-                    disabled={
-                      updateProductMutation.isPending ||
-                      !editProductForm.name ||
-                      !editProductForm.category ||
-                      (editProductForm.isFixedPrice && !editProductForm.price) ||
-                      editChargesInvalid
-                    }
+                    disabled={updateProductMutation.isPending}
                   >
                     {updateProductMutation.isPending ? 'Saving...' : 'Save Changes'}
                   </Button>
